@@ -2,12 +2,11 @@ package cart
 
 import (
 	"errors"
-	"warimas-be/internal/product"
 )
 
 // Service defines the business logic for carts.
 type Service interface {
-	AddToCart(userID, productID uint, quantity uint) (*product.Product, error)
+	AddToCart(userID, productID uint, quantity uint) (*CartItem, error)
 	GetCart(userID uint) ([]CartItem, error)
 	UpdateCartQuantity(userID, productID uint, quantity int) error
 	RemoveFromCart(userID, productID uint) error
@@ -25,7 +24,7 @@ func NewService(repo Repository) Service {
 }
 
 // AddToCart adds a product to a user's cart
-func (s *service) AddToCart(userID, productID uint, quantity uint) (*product.Product, error) {
+func (s *service) AddToCart(userID, productID uint, quantity uint) (*CartItem, error) {
 	if userID == 0 {
 		return nil, errors.New("user ID is required")
 	}

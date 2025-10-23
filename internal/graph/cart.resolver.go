@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -15,22 +16,13 @@ import (
 //     CartService cart.Service
 // }
 
-// Helper to extract userID from context (depends on your middleware)
-func getUserIDFromContext(ctx context.Context) (uint, error) {
-	userID, ok := ctx.Value("userID").(uint)
-	if !ok || userID == 0 {
-		return 0, fmt.Errorf("unauthorized")
-	}
-	return userID, nil
-}
-
 // Add to Cart
 func (r *mutationResolver) AddToCart(ctx context.Context, input model.AddToCartInput) (*model.AddToCartResponse, error) {
-	userID, err := getUserIDFromContext(ctx)
-	if err != nil {
+	userID, ok := GetUserIDFromContext(ctx)
+	if !ok {
 		return &model.AddToCartResponse{
 			Success: false,
-			Message: strPtr("Unauthorized"),
+			Message: utils.StrPtr("Unauthorized"),
 		}, nil
 	}
 
@@ -38,27 +30,28 @@ func (r *mutationResolver) AddToCart(ctx context.Context, input model.AddToCartI
 	if err != nil {
 		return &model.AddToCartResponse{
 			Success: false,
-			Message: strPtr(err.Error()),
+			Message: utils.StrPtr(err.Error()),
 		}, nil
 	}
 
-	product, err := r.CartSvc.AddToCart(userID, pid, uint(input.Quantity))
+	cartItemRes, err := r.CartSvc.AddToCart(uint(userID), pid, uint(input.Quantity))
 	if err != nil {
 		return &model.AddToCartResponse{
 			Success: false,
-			Message: strPtr(err.Error()),
+			Message: utils.StrPtr(err.Error()),
 		}, nil
 	}
 
 	cartItem := &model.CartItem{
+		ID:        fmt.Sprint(cartItemRes.ID),
 		UserID:    fmt.Sprint(userID),
-		ProductID: fmt.Sprint(input.ProductID),
+		ProductID: fmt.Sprint(cartItemRes.ProductID),
 		Quantity:  input.Quantity,
 		Product: &model.Product{
-			ID:    fmt.Sprint(product.ID),
-			Name:  product.Name,
-			Price: product.Price,
-			Stock: int32(product.Stock),
+			ID:    fmt.Sprint(cartItemRes.Product.ID),
+			Name:  cartItemRes.Product.Name,
+			Price: cartItemRes.Product.Price,
+			Stock: int32(cartItemRes.Product.Stock),
 		},
 		CreatedAt: time.Now().Format(time.RFC3339),
 		UpdatedAt: time.Now().Format(time.RFC3339),
@@ -66,66 +59,75 @@ func (r *mutationResolver) AddToCart(ctx context.Context, input model.AddToCartI
 
 	return &model.AddToCartResponse{
 		Success:  true,
-		Message:  strPtr("Added to cart"),
+		Message:  utils.StrPtr("Added to cart"),
 		CartItem: cartItem,
 	}, nil
 }
 
 // Update cart quantity
-func (r *mutationResolver) UpdateCart(ctx context.Context, input model.UpdateCartInput) (*model.AddToCartResponse, error) {
-	userID, err := getUserIDFromContext(ctx)
-	if err != nil {
-		return &model.AddToCartResponse{
+func (r *mutationResolver) UpdateCart(ctx context.Context, input model.UpdateCartInput) (*model.Response, error) {
+	userID, ok := GetUserIDFromContext(ctx)
+	if !ok {
+		return &model.Response{
 			Success: false,
-			Message: strPtr("Unauthorized"),
+			Message: utils.StrPtr("Unauthorized"),
 		}, nil
 	}
 
 	pid, err := utils.ToUint(input.ProductID)
 	if err != nil {
-		return &model.AddToCartResponse{
+		return &model.Response{
 			Success: false,
-			Message: strPtr(err.Error()),
+			Message: utils.StrPtr(err.Error()),
 		}, nil
 	}
 
-	err = r.CartSvc.UpdateCartQuantity(userID, pid, int(input.Quantity))
+	err = r.CartSvc.UpdateCartQuantity(uint(userID), pid, int(input.Quantity))
 	if err != nil {
-		return &model.AddToCartResponse{
+		return &model.Response{
 			Success: false,
-			Message: strPtr(err.Error()),
+			Message: utils.StrPtr(err.Error()),
 		}, nil
 	}
 
-	return &model.AddToCartResponse{
+	return &model.Response{
 		Success: true,
-		Message: strPtr("Cart updated"),
+		Message: utils.StrPtr("Cart updated"),
 	}, nil
 }
 
 // Remove item from cart
-func (r *mutationResolver) RemoveFromCart(ctx context.Context, productID string) (bool, error) {
-	userID, err := getUserIDFromContext(ctx)
-	if err != nil {
-		return false, err
+func (r *mutationResolver) RemoveFromCart(ctx context.Context, productID string) (*model.Response, error) {
+	userID, ok := GetUserIDFromContext(ctx)
+	if !ok {
+		return &model.Response{
+			Success: false,
+			Message: utils.StrPtr("Unauthorized"),
+		}, nil
 	}
 
-	pid := parseUint(productID)
-	err = r.CartSvc.RemoveFromCart(userID, pid)
+	pid := utils.ParseUint(productID)
+	err := r.CartSvc.RemoveFromCart(uint(userID), pid)
 	if err != nil {
-		return false, err
+		return &model.Response{
+			Success: false,
+			Message: utils.StrPtr(err.Error()),
+		}, nil
 	}
-	return true, nil
+	return &model.Response{
+		Success: true,
+		Message: utils.StrPtr("Cart updated"),
+	}, nil
 }
 
 // Get all items in my cart
 func (r *queryResolver) MyCart(ctx context.Context) ([]*model.CartItem, error) {
-	userID, err := getUserIDFromContext(ctx)
-	if err != nil {
-		return nil, err
+	userID, ok := GetUserIDFromContext(ctx)
+	if !ok {
+		return nil, errors.New("unauthorized: please login first")
 	}
 
-	items, err := r.CartSvc.GetCart(userID)
+	items, err := r.CartSvc.GetCart(uint(userID))
 	if err != nil {
 		return nil, err
 	}
@@ -149,16 +151,4 @@ func (r *queryResolver) MyCart(ctx context.Context) ([]*model.CartItem, error) {
 	}
 
 	return result, nil
-}
-
-// --- helpers ---
-
-func strPtr(s string) *string {
-	return &s
-}
-
-func parseUint(s string) uint {
-	var id uint
-	fmt.Sscan(s, &id)
-	return id
 }

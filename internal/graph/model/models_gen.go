@@ -64,6 +64,11 @@ type RegisterInput struct {
 	Password string `json:"password"`
 }
 
+type Response struct {
+	Success bool    `json:"success"`
+	Message *string `json:"message,omitempty"`
+}
+
 type UpdateCartInput struct {
 	ProductID string `json:"productId"`
 	Quantity  int32  `json:"quantity"`

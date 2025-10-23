@@ -63,6 +63,11 @@ type AddToCartResponse {
   cartItem: CartItem
 }
 
+type Response {
+  success: Boolean!
+  message: String
+}
+
 input UpdateCartInput {
   productId: ID!
   quantity: Int!
@@ -80,6 +85,6 @@ type Mutation {
   createProduct(input: NewProduct!): Product! @auth(role: ADMIN)
 
   addToCart(input: AddToCartInput!): AddToCartResponse! @auth(role: USER)
-  updateCart(input: UpdateCartInput!): AddToCartResponse!
-  removeFromCart(productId: ID!): Boolean!
+  updateCart(input: UpdateCartInput!): Response! @auth(role: USER)
+  removeFromCart(productId: ID!): Response! @auth(role: USER)
 }

@@ -7,7 +7,7 @@ import (
 )
 
 type Repository interface {
-	AddToCart(userID, productID uint, quantity uint) (*product.Product, error)
+	AddToCart(userID, productID uint, quantity uint) (*CartItem, error)
 	GetCart(userID uint) ([]CartItem, error)
 	UpdateCartQuantity(userID, productID uint, quantity int) error
 	RemoveFromCart(userID, productID uint) error
@@ -21,14 +21,14 @@ func NewRepository(db *sql.DB) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) AddToCart(userID, productID uint, quantity uint) (*product.Product, error) {
+func (r *repository) AddToCart(userID, productID uint, quantity uint) (*CartItem, error) {
 	// 1️⃣ Check if product exists
 	var p product.Product
-	err := r.db.QueryRow(
-		"SELECT id, name, price, stock FROM products WHERE id = $1",
-		productID,
-	).Scan(&p.ID, &p.Name, &p.Price, &p.Stock)
-
+	err := r.db.QueryRow(`
+		SELECT id, name, price, stock 
+		FROM products 
+		WHERE id = $1
+	`, productID).Scan(&p.ID, &p.Name, &p.Price, &p.Stock)
 	if err == sql.ErrNoRows {
 		return nil, errors.New("product not found")
 	}
@@ -37,37 +37,66 @@ func (r *repository) AddToCart(userID, productID uint, quantity uint) (*product.
 	}
 
 	// 2️⃣ Check if already in cart
-	var existingQty uint
-	err = r.db.QueryRow(
-		"SELECT quantity FROM carts WHERE user_id = $1 AND product_id = $2",
-		userID, productID,
-	).Scan(&existingQty)
+	var existingQty int
+	err = r.db.QueryRow(`
+		SELECT quantity FROM carts 
+		WHERE user_id = $1 AND product_id = $2
+	`, userID, productID).Scan(&existingQty)
 
 	switch err {
 	case sql.ErrNoRows:
-		// 3️⃣ Not in cart → insert
-		_, err = r.db.Exec(
-			"INSERT INTO carts (user_id, product_id, quantity) VALUES ($1, $2, $3)",
-			userID, productID, quantity,
-		)
+		// 3️⃣ Not in cart → insert new item
+		_, err = r.db.Exec(`
+			INSERT INTO carts (user_id, product_id, quantity) 
+			VALUES ($1, $2, $3)
+		`, userID, productID, quantity)
 		if err != nil {
 			return nil, err
 		}
+
 	case nil:
-		// 4️⃣ Already exists → update quantity
-		newQty := existingQty + quantity
-		_, err = r.db.Exec(
-			"UPDATE carts SET quantity = $1 WHERE user_id = $2 AND product_id = $3",
-			newQty, userID, productID,
-		)
+		// 4️⃣ Already in cart → update quantity
+		newQty := existingQty + int(quantity)
+		_, err = r.db.Exec(`
+			UPDATE carts 
+			SET quantity = $1, updated_at = NOW() 
+			WHERE user_id = $2 AND product_id = $3
+		`, newQty, userID, productID)
 		if err != nil {
 			return nil, err
 		}
+
 	default:
-		return nil, err // some other error
+		return nil, err
 	}
 
-	return &p, nil
+	// 5️⃣ Return the full CartItem (joined with product)
+	var ci CartItem
+	err = r.db.QueryRow(`
+		SELECT 
+			c.id, c.user_id, c.product_id, c.quantity, c.created_at, c.updated_at,
+			p.id, p.name, p.price, p.stock
+		FROM carts c
+		JOIN products p ON c.product_id = p.id
+		WHERE c.user_id = $1 AND c.product_id = $2
+	`, userID, productID).Scan(
+		&ci.ID,
+		&ci.UserID,
+		&ci.ProductID,
+		&ci.Quantity,
+		&ci.CreatedAt,
+		&ci.UpdatedAt,
+		&ci.Product.ID,
+		&ci.Product.Name,
+		&ci.Product.Price,
+		&ci.Product.Stock,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ci, nil
 }
 
 func (r *repository) GetCart(userID uint) ([]CartItem, error) {
