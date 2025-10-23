@@ -1,0 +1,85 @@
+directive @auth(role: Role = USER) on FIELD_DEFINITION
+
+enum Role {
+  USER
+  ADMIN
+}
+
+#  PRODUCT
+type Product {
+  id: ID!
+  name: String!
+  price: Float!
+  stock: Int!
+}
+
+input NewProduct {
+  name: String!
+  price: Float!
+  stock: Int!
+}
+
+# USER
+type User {
+  id: ID!
+  email: String!
+  role: Role!
+}
+
+input RegisterInput {
+  email: String!
+  password: String!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+type AuthResponse {
+  token: String!
+  user: User!
+}
+
+# CART
+type CartItem {
+  id: ID!
+  userId: ID!
+  productId: ID!
+  quantity: Int!
+  product: Product!
+  createdAt: String!
+  updatedAt: String!
+}
+
+input AddToCartInput {
+  productId: ID!
+  quantity: Int!
+}
+
+type AddToCartResponse {
+  success: Boolean!
+  message: String
+  cartItem: CartItem
+}
+
+input UpdateCartInput {
+  productId: ID!
+  quantity: Int!
+}
+
+type Query {
+  products: [Product!]!
+  myCart: [CartItem!]!
+}
+
+type Mutation {
+  register(input: RegisterInput!): AuthResponse!
+  login(input: LoginInput!): AuthResponse!
+
+  createProduct(input: NewProduct!): Product! @auth(role: ADMIN)
+
+  addToCart(input: AddToCartInput!): AddToCartResponse! @auth(role: USER)
+  updateCart(input: UpdateCartInput!): AddToCartResponse!
+  removeFromCart(productId: ID!): Boolean!
+}

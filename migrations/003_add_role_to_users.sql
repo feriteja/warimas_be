@@ -1,0 +1,5 @@
+-- +migrate Up
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'USER';
+
+-- +migrate Down
+ALTER TABLE users DROP COLUMN IF EXISTS role;

@@ -1,0 +1,62 @@
+# --- Go build artifacts ---
+bin/
+build/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# --- Dependency directories ---
+vendor/
+node_modules/
+
+# --- IDE / Editor files ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*.log
+
+# --- OS-specific ---
+.DS_Store
+Thumbs.db
+
+# --- Environment & secrets ---
+.env
+.env.*
+*.env.local
+.envrc
+
+# --- gqlgen generated code ---
+graph/generated.go
+graph/model/models_gen.go
+
+# --- Database ---
+*.db
+*.sqlite
+migrations/*.tmp
+
+# --- Logs & caches ---
+logs/
+*.log
+*.cache
+*.tmp
+
+# --- Coverage / Testing ---
+coverage.out
+*.coverprofile
+
+# --- Docker ---
+.docker/
+docker-compose.override.yml
+
+# --- Local config ---
+config.local.yaml
+config/*.local.yaml
+
+# --- Temporary data ---
+tmp/
+temp/
+.cache/
