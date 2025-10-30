@@ -18,6 +18,24 @@ type xenditGateway struct {
 	httpClient *http.Client
 }
 
+type XenditPaymentResponse struct {
+	ID            string  `json:"payment_request_id"`
+	ReferenceID   string  `json:"reference_id"`
+	Amount        float64 `json:"request_amount"`
+	ChannelCode   string  `json:"channel_code"`
+	Status        string  `json:"status"`
+	PaymentMethod string  `json:"type"`
+	ChannelProps  struct {
+		DisplayName string `json:"display_name"`
+		ExpiresAt   string `json:"expires_at"`
+	} `json:"channel_properties"`
+	Actions []struct {
+		Type       string `json:"type"`
+		Descriptor string `json:"descriptor"`
+		Value      string `json:"value"`
+	} `json:"actions"`
+}
+
 // Constructor
 func NewXenditGateway(apiKey string) Gateway {
 	xenditApiKey := os.Getenv("XENDIT_APIKEY")
@@ -98,16 +116,7 @@ func (x *xenditGateway) CreateInvoice(orderID uint,
 		return nil, fmt.Errorf("xendit: create invoice failed (%d): %s", resp.StatusCode, string(bodyBytes))
 	}
 
-	var res struct {
-		ID            string  `json:"payment_request_id"`
-		ReferenceID   string  `json:"reference_id"`
-		Amount        float64 `json:"request_amount"`
-		ChannelCode   string  `json:"channel_code"`
-		Status        string  `json:"status"`
-		PaymentMethod string  `json:"type"`
-		ExpireAt      string  `json:"channel_properties.expires_at"`
-		PaymentCode   string  `json:"actions.0.value"`
-	}
+	var res XenditPaymentResponse
 
 	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
 		return nil, fmt.Errorf("failed to decode xendit response: %w", err)
@@ -118,9 +127,9 @@ func (x *xenditGateway) CreateInvoice(orderID uint,
 		Amount:         res.Amount,
 		Status:         res.Status,
 		PaymentMethod:  res.PaymentMethod,
-		PaymentCode:    res.PaymentCode,
+		PaymentCode:    res.Actions[0].Value,
 		ChannelCode:    res.ChannelCode,
-		ExpirationTime: res.ExpireAt,
+		ExpirationTime: res.ChannelProps.ExpiresAt,
 	}, nil
 }
 
