@@ -5,7 +5,7 @@ enum Role {
   ADMIN
 }
 
-#  PRODUCT
+################  PRODUCT
 type Product {
   id: ID!
   name: String!
@@ -19,7 +19,7 @@ input NewProduct {
   stock: Int!
 }
 
-# USER
+################# USER
 type User {
   id: ID!
   email: String!
@@ -41,7 +41,7 @@ type AuthResponse {
   user: User!
 }
 
-# CART
+################# CART
 type CartItem {
   id: ID!
   userId: ID!
@@ -73,9 +73,55 @@ input UpdateCartInput {
   quantity: Int!
 }
 
+# --- ORDER ---
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELED
+}
+
+type OrderItem {
+  id: ID!
+  product: Product!
+  quantity: Int!
+  price: Float!
+}
+
+type Order {
+  id: ID!
+  total: Float!
+  status: OrderStatus!
+  createdAt: String!
+  updatedAt: String!
+  items: [OrderItem!]!
+}
+
+# input CreateOrderInput {
+# No input fields yet, order will be created from cart
+# }
+
+input UpdateOrderStatusInput {
+  orderId: ID!
+  status: OrderStatus!
+}
+
+type CreateOrderResponse {
+  success: Boolean!
+  message: String
+  order: Order
+  paymentURL: String!
+  paymentStat: String!
+}
+
 type Query {
   products: [Product!]!
-  myCart: [CartItem!]!
+
+  myCart: [CartItem!]! @auth(role: USER)
+
+  myOrders: [Order!]! @auth(role: USER)
+  orderDetail(orderId: ID!): Order! @auth(role: USER)
+  adminOrders: [Order!]! @auth(role: ADMIN)
 }
 
 type Mutation {
@@ -87,4 +133,8 @@ type Mutation {
   addToCart(input: AddToCartInput!): AddToCartResponse! @auth(role: USER)
   updateCart(input: UpdateCartInput!): Response! @auth(role: USER)
   removeFromCart(productId: ID!): Response! @auth(role: USER)
+
+  createOrder: CreateOrderResponse! @auth(role: USER)
+  updateOrderStatus(input: UpdateOrderStatusInput!): CreateOrderResponse!
+    @auth(role: ADMIN)
 }

@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"warimas-be/internal/graph/model"
+	"warimas-be/internal/utils"
 )
 
 // CreateProduct is the resolver for the createProduct field.
 func (r *mutationResolver) CreateProduct(ctx context.Context, input model.NewProduct) (*model.Product, error) {
 
-	_, ok := GetUserIDFromContext(ctx)
+	_, ok := utils.GetUserIDFromContext(ctx)
 	if !ok {
 		return nil, errors.New("unauthorized: please login first")
 	}

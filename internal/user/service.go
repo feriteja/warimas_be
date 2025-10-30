@@ -30,7 +30,7 @@ func (s *service) Register(email, password string) (string, User, error) {
 		return "", User{}, err
 	}
 
-	token, err := GenerateJWT(u.ID, string(u.Role))
+	token, err := GenerateJWT(u.ID, string(u.Role), email)
 	return token, u, err
 }
 
@@ -46,7 +46,7 @@ func (s *service) Login(email, password string) (string, User, error) {
 		return "", User{}, errors.New("invalid email or password")
 	}
 
-	token, err := GenerateJWT(u.ID, string(u.Role))
+	token, err := GenerateJWT(u.ID, string(u.Role), email)
 	return token, u, err
 }
 

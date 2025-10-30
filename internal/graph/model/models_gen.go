@@ -35,6 +35,14 @@ type CartItem struct {
 	UpdatedAt string   `json:"updatedAt"`
 }
 
+type CreateOrderResponse struct {
+	Success     bool    `json:"success"`
+	Message     *string `json:"message,omitempty"`
+	Order       *Order  `json:"order,omitempty"`
+	PaymentURL  string  `json:"paymentURL"`
+	PaymentStat string  `json:"paymentStat"`
+}
+
 type LoginInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -47,6 +55,22 @@ type NewProduct struct {
 	Name  string  `json:"name"`
 	Price float64 `json:"price"`
 	Stock int32   `json:"stock"`
+}
+
+type Order struct {
+	ID        string       `json:"id"`
+	Total     float64      `json:"total"`
+	Status    OrderStatus  `json:"status"`
+	CreatedAt string       `json:"createdAt"`
+	UpdatedAt string       `json:"updatedAt"`
+	Items     []*OrderItem `json:"items"`
+}
+
+type OrderItem struct {
+	ID       string   `json:"id"`
+	Product  *Product `json:"product"`
+	Quantity int32    `json:"quantity"`
+	Price    float64  `json:"price"`
 }
 
 type Product struct {
@@ -74,10 +98,74 @@ type UpdateCartInput struct {
 	Quantity  int32  `json:"quantity"`
 }
 
+type UpdateOrderStatusInput struct {
+	OrderID string      `json:"orderId"`
+	Status  OrderStatus `json:"status"`
+}
+
 type User struct {
 	ID    string `json:"id"`
 	Email string `json:"email"`
 	Role  Role   `json:"role"`
+}
+
+type OrderStatus string
+
+const (
+	OrderStatusPending  OrderStatus = "PENDING"
+	OrderStatusAccepted OrderStatus = "ACCEPTED"
+	OrderStatusRejected OrderStatus = "REJECTED"
+	OrderStatusCanceled OrderStatus = "CANCELED"
+)
+
+var AllOrderStatus = []OrderStatus{
+	OrderStatusPending,
+	OrderStatusAccepted,
+	OrderStatusRejected,
+	OrderStatusCanceled,
+}
+
+func (e OrderStatus) IsValid() bool {
+	switch e {
+	case OrderStatusPending, OrderStatusAccepted, OrderStatusRejected, OrderStatusCanceled:
+		return true
+	}
+	return false
+}
+
+func (e OrderStatus) String() string {
+	return string(e)
+}
+
+func (e *OrderStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = OrderStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid OrderStatus", str)
+	}
+	return nil
+}
+
+func (e OrderStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *OrderStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e OrderStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
 
 type Role string

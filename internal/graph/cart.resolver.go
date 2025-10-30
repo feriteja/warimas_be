@@ -18,7 +18,7 @@ import (
 
 // Add to Cart
 func (r *mutationResolver) AddToCart(ctx context.Context, input model.AddToCartInput) (*model.AddToCartResponse, error) {
-	userID, ok := GetUserIDFromContext(ctx)
+	userID, ok := utils.GetUserIDFromContext(ctx)
 	if !ok {
 		return &model.AddToCartResponse{
 			Success: false,
@@ -66,7 +66,7 @@ func (r *mutationResolver) AddToCart(ctx context.Context, input model.AddToCartI
 
 // Update cart quantity
 func (r *mutationResolver) UpdateCart(ctx context.Context, input model.UpdateCartInput) (*model.Response, error) {
-	userID, ok := GetUserIDFromContext(ctx)
+	userID, ok := utils.GetUserIDFromContext(ctx)
 	if !ok {
 		return &model.Response{
 			Success: false,
@@ -98,7 +98,7 @@ func (r *mutationResolver) UpdateCart(ctx context.Context, input model.UpdateCar
 
 // Remove item from cart
 func (r *mutationResolver) RemoveFromCart(ctx context.Context, productID string) (*model.Response, error) {
-	userID, ok := GetUserIDFromContext(ctx)
+	userID, ok := utils.GetUserIDFromContext(ctx)
 	if !ok {
 		return &model.Response{
 			Success: false,
@@ -122,7 +122,7 @@ func (r *mutationResolver) RemoveFromCart(ctx context.Context, productID string)
 
 // Get all items in my cart
 func (r *queryResolver) MyCart(ctx context.Context) ([]*model.CartItem, error) {
-	userID, ok := GetUserIDFromContext(ctx)
+	userID, ok := utils.GetUserIDFromContext(ctx)
 	if !ok {
 		return nil, errors.New("unauthorized: please login first")
 	}

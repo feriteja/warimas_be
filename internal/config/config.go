@@ -8,24 +8,26 @@ import (
 )
 
 type Config struct {
-	DBHost     string
-	DBUser     string
-	DBPassword string
-	DBName     string
-	DBPort     string
-	AppPort    string
+	DBHost          string
+	DBUser          string
+	DBPassword      string
+	DBName          string
+	DBPort          string
+	AppPort         string
+	XenditSecretKey string
 }
 
 func LoadConfig() *Config {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		DBHost:     os.Getenv("DB_HOST"),
-		DBUser:     os.Getenv("DB_USER"),
-		DBPassword: os.Getenv("DB_PASSWORD"),
-		DBName:     os.Getenv("DB_NAME"),
-		DBPort:     os.Getenv("DB_PORT"),
-		AppPort:    os.Getenv("APP_PORT"),
+		DBHost:          os.Getenv("DB_HOST"),
+		DBUser:          os.Getenv("DB_USER"),
+		DBPassword:      os.Getenv("DB_PASSWORD"),
+		DBName:          os.Getenv("DB_NAME"),
+		DBPort:          os.Getenv("DB_PORT"),
+		AppPort:         os.Getenv("APP_PORT"),
+		XenditSecretKey: os.Getenv("XENDIT_APIKEY"),
 	}
 
 	if cfg.DBHost == "" {
