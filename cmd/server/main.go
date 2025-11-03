@@ -13,6 +13,7 @@ import (
 	"warimas-be/internal/middleware"
 	"warimas-be/internal/order"
 	"warimas-be/internal/payment"
+	"warimas-be/internal/payment/webhook"
 	"warimas-be/internal/product"
 	"warimas-be/internal/user"
 
@@ -45,6 +46,7 @@ func main() {
 	// ✅ Add payment gateway initialization
 	paymentGateway := payment.NewXenditGateway(cfg.XenditSecretKey)
 	orderSvc := order.NewService(orderRepo, paymentRepo, paymentGateway)
+	webhookHandler := webhook.NewWebhookHandler(orderSvc, paymentGateway)
 
 	// GraphQL resolver
 	resolver := &graph.Resolver{
@@ -61,7 +63,7 @@ func main() {
 	// Routes
 	http.Handle("/", playground.Handler("GraphQL Playground", "/query"))
 	http.Handle("/query", middleware.LoggingMiddleware(middleware.AuthMiddleware(srv)))
-	// http.HandleFunc("/webhook/xendit", webhook.WebhookHandler)
+	http.HandleFunc("/webhook/payment", webhookHandler.PaymentWebhookHandler)
 
 	// Health or default route (optional)
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

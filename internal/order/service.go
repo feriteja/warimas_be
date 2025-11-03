@@ -3,6 +3,7 @@ package order
 import (
 	"errors"
 	"fmt"
+	"log"
 	"warimas-be/internal/payment"
 )
 
@@ -11,6 +12,8 @@ type Service interface {
 	GetOrders(userID uint, isAdmin bool) ([]Order, error)
 	GetOrderDetail(userID, orderID uint, isAdmin bool) (*Order, error)
 	UpdateOrderStatus(orderID uint, status OrderStatus) error
+	MarkAsPaid(referenceID string) error
+	MarkAsFailed(referenceID string) error
 }
 
 type service struct {
@@ -110,4 +113,44 @@ func (s *service) UpdateOrderStatus(orderID uint, status OrderStatus) error {
 	}
 
 	return s.repo.UpdateOrderStatus(orderID, status)
+}
+
+func (s *service) MarkAsPaid(referenceID string) error {
+	// order, err := s.repo.GetByReferenceID(referenceID)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// if order.Status == "PAID" {
+	// 	log.Printf("Order %s already marked as paid", referenceID)
+	// 	return nil
+	// }
+
+	err := s.repo.UpdateStatusByReferenceID(referenceID, "PAID")
+	if err != nil {
+		return err
+	}
+
+	log.Printf("✅ Order %s marked as PAID", referenceID)
+	return nil
+}
+
+func (s *service) MarkAsFailed(referenceID string) error {
+	order, err := s.repo.GetByReferenceID(referenceID)
+	if err != nil {
+		return err
+	}
+
+	if order.Status == "FAILED" {
+		log.Printf("Order %s already marked as failed", referenceID)
+		return nil
+	}
+
+	err = s.repo.UpdateStatusByReferenceID(referenceID, "FAILED")
+	if err != nil {
+		return err
+	}
+
+	log.Printf("❌ Order %s marked as FAILED", referenceID)
+	return nil
 }

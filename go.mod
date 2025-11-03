@@ -8,7 +8,6 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/vektah/gqlparser/v2 v2.5.30
-	github.com/xendit/xendit-go/v3 v3.7.0
 	golang.org/x/crypto v0.43.0
 )
 

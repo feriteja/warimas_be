@@ -25,6 +25,11 @@ type AuthResponse struct {
 	User  *User  `json:"user"`
 }
 
+type CartFilterInput struct {
+	Search  *string `json:"search,omitempty"`
+	InStock *bool   `json:"inStock,omitempty"`
+}
+
 type CartItem struct {
 	ID        string   `json:"id"`
 	UserID    string   `json:"userId"`
@@ -33,6 +38,11 @@ type CartItem struct {
 	Product   *Product `json:"product"`
 	CreatedAt string   `json:"createdAt"`
 	UpdatedAt string   `json:"updatedAt"`
+}
+
+type CartSortInput struct {
+	Field     CartSortField `json:"field"`
+	Direction SortDirection `json:"direction"`
 }
 
 type CreateOrderResponse struct {
@@ -66,6 +76,11 @@ type Order struct {
 	Items     []*OrderItem `json:"items"`
 }
 
+type OrderFilterInput struct {
+	Search  *string `json:"search,omitempty"`
+	InStock *bool   `json:"inStock,omitempty"`
+}
+
 type OrderItem struct {
 	ID       string   `json:"id"`
 	Product  *Product `json:"product"`
@@ -73,11 +88,29 @@ type OrderItem struct {
 	Price    float64  `json:"price"`
 }
 
+type OrderSortInput struct {
+	Field     OrderSortField `json:"field"`
+	Direction SortDirection  `json:"direction"`
+}
+
 type Product struct {
 	ID    string  `json:"id"`
 	Name  string  `json:"name"`
 	Price float64 `json:"price"`
 	Stock int32   `json:"stock"`
+}
+
+type ProductFilterInput struct {
+	Category *string  `json:"category,omitempty"`
+	MinPrice *float64 `json:"minPrice,omitempty"`
+	MaxPrice *float64 `json:"maxPrice,omitempty"`
+	Search   *string  `json:"search,omitempty"`
+	InStock  *bool    `json:"inStock,omitempty"`
+}
+
+type ProductSortInput struct {
+	Field     ProductSortField `json:"field"`
+	Direction SortDirection    `json:"direction"`
 }
 
 type Query struct {
@@ -107,6 +140,120 @@ type User struct {
 	ID    string `json:"id"`
 	Email string `json:"email"`
 	Role  Role   `json:"role"`
+}
+
+type CartSortField string
+
+const (
+	CartSortFieldName      CartSortField = "NAME"
+	CartSortFieldPrice     CartSortField = "PRICE"
+	CartSortFieldCreatedAt CartSortField = "CREATED_AT"
+)
+
+var AllCartSortField = []CartSortField{
+	CartSortFieldName,
+	CartSortFieldPrice,
+	CartSortFieldCreatedAt,
+}
+
+func (e CartSortField) IsValid() bool {
+	switch e {
+	case CartSortFieldName, CartSortFieldPrice, CartSortFieldCreatedAt:
+		return true
+	}
+	return false
+}
+
+func (e CartSortField) String() string {
+	return string(e)
+}
+
+func (e *CartSortField) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = CartSortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid CartSortField", str)
+	}
+	return nil
+}
+
+func (e CartSortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *CartSortField) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e CartSortField) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type OrderSortField string
+
+const (
+	OrderSortFieldName      OrderSortField = "NAME"
+	OrderSortFieldPrice     OrderSortField = "PRICE"
+	OrderSortFieldCreatedAt OrderSortField = "CREATED_AT"
+)
+
+var AllOrderSortField = []OrderSortField{
+	OrderSortFieldName,
+	OrderSortFieldPrice,
+	OrderSortFieldCreatedAt,
+}
+
+func (e OrderSortField) IsValid() bool {
+	switch e {
+	case OrderSortFieldName, OrderSortFieldPrice, OrderSortFieldCreatedAt:
+		return true
+	}
+	return false
+}
+
+func (e OrderSortField) String() string {
+	return string(e)
+}
+
+func (e *OrderSortField) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = OrderSortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid OrderSortField", str)
+	}
+	return nil
+}
+
+func (e OrderSortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *OrderSortField) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e OrderSortField) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
 
 type OrderStatus string
@@ -168,6 +315,63 @@ func (e OrderStatus) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type ProductSortField string
+
+const (
+	ProductSortFieldName      ProductSortField = "NAME"
+	ProductSortFieldPrice     ProductSortField = "PRICE"
+	ProductSortFieldCreatedAt ProductSortField = "CREATED_AT"
+)
+
+var AllProductSortField = []ProductSortField{
+	ProductSortFieldName,
+	ProductSortFieldPrice,
+	ProductSortFieldCreatedAt,
+}
+
+func (e ProductSortField) IsValid() bool {
+	switch e {
+	case ProductSortFieldName, ProductSortFieldPrice, ProductSortFieldCreatedAt:
+		return true
+	}
+	return false
+}
+
+func (e ProductSortField) String() string {
+	return string(e)
+}
+
+func (e *ProductSortField) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ProductSortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ProductSortField", str)
+	}
+	return nil
+}
+
+func (e ProductSortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *ProductSortField) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e ProductSortField) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type Role string
 
 const (
@@ -218,6 +422,61 @@ func (e *Role) UnmarshalJSON(b []byte) error {
 }
 
 func (e Role) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type SortDirection string
+
+const (
+	SortDirectionAsc  SortDirection = "ASC"
+	SortDirectionDesc SortDirection = "DESC"
+)
+
+var AllSortDirection = []SortDirection{
+	SortDirectionAsc,
+	SortDirectionDesc,
+}
+
+func (e SortDirection) IsValid() bool {
+	switch e {
+	case SortDirectionAsc, SortDirectionDesc:
+		return true
+	}
+	return false
+}
+
+func (e SortDirection) String() string {
+	return string(e)
+}
+
+func (e *SortDirection) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = SortDirection(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid SortDirection", str)
+	}
+	return nil
+}
+
+func (e SortDirection) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *SortDirection) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e SortDirection) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

@@ -11,6 +11,8 @@ type Repository interface {
 	GetOrders(userID uint, isAdmin bool) ([]Order, error)
 	GetOrderDetail(orderID uint) (*Order, error)
 	UpdateOrderStatus(orderID uint, status OrderStatus) error
+	UpdateStatusByReferenceID(referenceID string, status string) error
+	GetByReferenceID(referenceID string) (*Order, error)
 }
 
 type repository struct {
@@ -174,4 +176,47 @@ func (r *repository) UpdateOrderStatus(orderID uint, status OrderStatus) error {
 		return fmt.Errorf("order not found")
 	}
 	return nil
+}
+
+func (r *repository) UpdateStatusByReferenceID(referenceID string, status string) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+
+	queryOrder := `UPDATE orders SET status = $1 WHERE id = $2`
+	res, err := tx.Exec(queryOrder, status, referenceID)
+
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to update order status: %w", err)
+	}
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		tx.Rollback()
+		return fmt.Errorf("no order found with id: %s", referenceID)
+	}
+
+	queryPayment := `UPDATE payments SET status = $1 WHERE order_id = $2`
+	if _, err := tx.Exec(queryPayment, status, referenceID); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to update payment status: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+func (r *repository) GetByReferenceID(referenceID string) (*Order, error) {
+	query := `SELECT id, total, status FROM orders WHERE id = ? LIMIT 1`
+	row := r.db.QueryRow(query, referenceID)
+	var o Order
+	err := row.Scan(&o.ID, &o.Total, &o.Status)
+	if err != nil {
+		return nil, err
+	}
+	return &o, nil
 }

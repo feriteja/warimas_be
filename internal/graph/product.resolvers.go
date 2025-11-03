@@ -30,7 +30,10 @@ func (r *mutationResolver) CreateProduct(ctx context.Context, input model.NewPro
 }
 
 // Products is the resolver for the products field.
-func (r *queryResolver) Products(ctx context.Context) ([]*model.Product, error) {
+func (r *queryResolver) Products(ctx context.Context,
+	filter *model.ProductFilterInput,
+	sort *model.ProductSortInput,
+	limit, offset *int32) ([]*model.Product, error) {
 	products, err := r.ProductSvc.GetAll()
 	if err != nil {
 		return nil, err

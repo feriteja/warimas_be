@@ -106,7 +106,10 @@ func (r *mutationResolver) UpdateOrderStatus(ctx context.Context, input model.Up
 
 // --- QUERIES ---
 
-func (r *queryResolver) MyOrders(ctx context.Context) ([]*model.Order, error) {
+func (r *queryResolver) MyOrders(ctx context.Context,
+	filter *model.OrderFilterInput,
+	sort *model.OrderSortInput,
+	limit, offset *int32) ([]*model.Order, error) {
 	userID, ok := utils.GetUserIDFromContext(ctx)
 	if !ok {
 		return nil, fmt.Errorf("unauthorized")
@@ -139,7 +142,10 @@ func (r *queryResolver) OrderDetail(ctx context.Context, orderID string) (*model
 	return toGraphQLOrder(order), nil
 }
 
-func (r *queryResolver) AdminOrders(ctx context.Context) ([]*model.Order, error) {
+func (r *queryResolver) AdminOrders(ctx context.Context,
+	filter *model.OrderFilterInput,
+	sort *model.OrderSortInput,
+	limit, offset *int32) ([]*model.Order, error) {
 	orders, err := r.OrderSvc.GetOrders(0, true)
 	if err != nil {
 		return nil, err

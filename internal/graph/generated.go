@@ -112,11 +112,11 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		AdminOrders func(childComplexity int) int
-		MyCart      func(childComplexity int) int
-		MyOrders    func(childComplexity int) int
+		AdminOrders func(childComplexity int, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, offset *int32) int
+		MyCart      func(childComplexity int, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, offset *int32) int
+		MyOrders    func(childComplexity int, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, offset *int32) int
 		OrderDetail func(childComplexity int, orderID string) int
-		Products    func(childComplexity int) int
+		Products    func(childComplexity int, filter *model.ProductFilterInput, sort *model.ProductSortInput, limit *int32, offset *int32) int
 	}
 
 	Response struct {
@@ -142,11 +142,11 @@ type MutationResolver interface {
 	UpdateOrderStatus(ctx context.Context, input model.UpdateOrderStatusInput) (*model.CreateOrderResponse, error)
 }
 type QueryResolver interface {
-	Products(ctx context.Context) ([]*model.Product, error)
-	MyCart(ctx context.Context) ([]*model.CartItem, error)
-	MyOrders(ctx context.Context) ([]*model.Order, error)
+	Products(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, limit *int32, offset *int32) ([]*model.Product, error)
+	MyCart(ctx context.Context, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, offset *int32) ([]*model.CartItem, error)
+	MyOrders(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, offset *int32) ([]*model.Order, error)
 	OrderDetail(ctx context.Context, orderID string) (*model.Order, error)
-	AdminOrders(ctx context.Context) ([]*model.Order, error)
+	AdminOrders(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, offset *int32) ([]*model.Order, error)
 }
 
 type executableSchema struct {
@@ -450,19 +450,34 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.complexity.Query.AdminOrders(childComplexity), true
+		args, err := ec.field_Query_adminOrders_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.AdminOrders(childComplexity, args["filter"].(*model.OrderFilterInput), args["sort"].(*model.OrderSortInput), args["limit"].(*int32), args["offset"].(*int32)), true
 	case "Query.myCart":
 		if e.complexity.Query.MyCart == nil {
 			break
 		}
 
-		return e.complexity.Query.MyCart(childComplexity), true
+		args, err := ec.field_Query_myCart_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.MyCart(childComplexity, args["filter"].(*model.CartFilterInput), args["sort"].(*model.CartSortInput), args["limit"].(*int32), args["offset"].(*int32)), true
 	case "Query.myOrders":
 		if e.complexity.Query.MyOrders == nil {
 			break
 		}
 
-		return e.complexity.Query.MyOrders(childComplexity), true
+		args, err := ec.field_Query_myOrders_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.MyOrders(childComplexity, args["filter"].(*model.OrderFilterInput), args["sort"].(*model.OrderSortInput), args["limit"].(*int32), args["offset"].(*int32)), true
 	case "Query.orderDetail":
 		if e.complexity.Query.OrderDetail == nil {
 			break
@@ -479,7 +494,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.complexity.Query.Products(childComplexity), true
+		args, err := ec.field_Query_products_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Products(childComplexity, args["filter"].(*model.ProductFilterInput), args["sort"].(*model.ProductSortInput), args["limit"].(*int32), args["offset"].(*int32)), true
 
 	case "Response.message":
 		if e.complexity.Response.Message == nil {
@@ -522,8 +542,14 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	ec := executionContext{opCtx, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputAddToCartInput,
+		ec.unmarshalInputCartFilterInput,
+		ec.unmarshalInputCartSortInput,
 		ec.unmarshalInputLoginInput,
 		ec.unmarshalInputNewProduct,
+		ec.unmarshalInputOrderFilterInput,
+		ec.unmarshalInputOrderSortInput,
+		ec.unmarshalInputProductFilterInput,
+		ec.unmarshalInputProductSortInput,
 		ec.unmarshalInputRegisterInput,
 		ec.unmarshalInputUpdateCartInput,
 		ec.unmarshalInputUpdateOrderStatusInput,
@@ -742,6 +768,84 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_adminOrders_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "filter", ec.unmarshalOOrderFilterInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderFilterInput)
+	if err != nil {
+		return nil, err
+	}
+	args["filter"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "sort", ec.unmarshalOOrderSortInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderSortInput)
+	if err != nil {
+		return nil, err
+	}
+	args["sort"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint32)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "offset", ec.unmarshalOInt2ᚖint32)
+	if err != nil {
+		return nil, err
+	}
+	args["offset"] = arg3
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_myCart_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "filter", ec.unmarshalOCartFilterInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartFilterInput)
+	if err != nil {
+		return nil, err
+	}
+	args["filter"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "sort", ec.unmarshalOCartSortInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartSortInput)
+	if err != nil {
+		return nil, err
+	}
+	args["sort"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint32)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "offset", ec.unmarshalOInt2ᚖint32)
+	if err != nil {
+		return nil, err
+	}
+	args["offset"] = arg3
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_myOrders_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "filter", ec.unmarshalOOrderFilterInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderFilterInput)
+	if err != nil {
+		return nil, err
+	}
+	args["filter"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "sort", ec.unmarshalOOrderSortInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderSortInput)
+	if err != nil {
+		return nil, err
+	}
+	args["sort"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint32)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "offset", ec.unmarshalOInt2ᚖint32)
+	if err != nil {
+		return nil, err
+	}
+	args["offset"] = arg3
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_orderDetail_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -750,6 +854,32 @@ func (ec *executionContext) field_Query_orderDetail_args(ctx context.Context, ra
 		return nil, err
 	}
 	args["orderId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_products_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "filter", ec.unmarshalOProductFilterInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐProductFilterInput)
+	if err != nil {
+		return nil, err
+	}
+	args["filter"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "sort", ec.unmarshalOProductSortInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐProductSortInput)
+	if err != nil {
+		return nil, err
+	}
+	args["sort"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint32)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "offset", ec.unmarshalOInt2ᚖint32)
+	if err != nil {
+		return nil, err
+	}
+	args["offset"] = arg3
 	return args, nil
 }
 
@@ -2269,7 +2399,8 @@ func (ec *executionContext) _Query_products(ctx context.Context, field graphql.C
 		field,
 		ec.fieldContext_Query_products,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Query().Products(ctx)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().Products(ctx, fc.Args["filter"].(*model.ProductFilterInput), fc.Args["sort"].(*model.ProductSortInput), fc.Args["limit"].(*int32), fc.Args["offset"].(*int32))
 		},
 		nil,
 		ec.marshalNProduct2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐProductᚄ,
@@ -2278,7 +2409,7 @@ func (ec *executionContext) _Query_products(ctx context.Context, field graphql.C
 	)
 }
 
-func (ec *executionContext) fieldContext_Query_products(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_products(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -2298,6 +2429,17 @@ func (ec *executionContext) fieldContext_Query_products(_ context.Context, field
 			return nil, fmt.Errorf("no field named %q was found under type Product", field.Name)
 		},
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_products_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
 	return fc, nil
 }
 
@@ -2308,16 +2450,35 @@ func (ec *executionContext) _Query_myCart(ctx context.Context, field graphql.Col
 		field,
 		ec.fieldContext_Query_myCart,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Query().MyCart(ctx)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().MyCart(ctx, fc.Args["filter"].(*model.CartFilterInput), fc.Args["sort"].(*model.CartSortInput), fc.Args["limit"].(*int32), fc.Args["offset"].(*int32))
 		},
-		nil,
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalORole2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal []*model.CartItem
+					return zeroVal, err
+				}
+				if ec.directives.Auth == nil {
+					var zeroVal []*model.CartItem
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.directives.Auth(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
 		ec.marshalNCartItem2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartItemᚄ,
 		true,
 		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_Query_myCart(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_myCart(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -2343,6 +2504,17 @@ func (ec *executionContext) fieldContext_Query_myCart(_ context.Context, field g
 			return nil, fmt.Errorf("no field named %q was found under type CartItem", field.Name)
 		},
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_myCart_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
 	return fc, nil
 }
 
@@ -2353,7 +2525,8 @@ func (ec *executionContext) _Query_myOrders(ctx context.Context, field graphql.C
 		field,
 		ec.fieldContext_Query_myOrders,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Query().MyOrders(ctx)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().MyOrders(ctx, fc.Args["filter"].(*model.OrderFilterInput), fc.Args["sort"].(*model.OrderSortInput), fc.Args["limit"].(*int32), fc.Args["offset"].(*int32))
 		},
 		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
 			directive0 := next
@@ -2380,7 +2553,7 @@ func (ec *executionContext) _Query_myOrders(ctx context.Context, field graphql.C
 	)
 }
 
-func (ec *executionContext) fieldContext_Query_myOrders(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_myOrders(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -2403,6 +2576,17 @@ func (ec *executionContext) fieldContext_Query_myOrders(_ context.Context, field
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Order", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_myOrders_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -2487,7 +2671,8 @@ func (ec *executionContext) _Query_adminOrders(ctx context.Context, field graphq
 		field,
 		ec.fieldContext_Query_adminOrders,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Query().AdminOrders(ctx)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().AdminOrders(ctx, fc.Args["filter"].(*model.OrderFilterInput), fc.Args["sort"].(*model.OrderSortInput), fc.Args["limit"].(*int32), fc.Args["offset"].(*int32))
 		},
 		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
 			directive0 := next
@@ -2514,7 +2699,7 @@ func (ec *executionContext) _Query_adminOrders(ctx context.Context, field graphq
 	)
 }
 
-func (ec *executionContext) fieldContext_Query_adminOrders(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_adminOrders(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -2537,6 +2722,17 @@ func (ec *executionContext) fieldContext_Query_adminOrders(_ context.Context, fi
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Order", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_adminOrders_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -4274,6 +4470,78 @@ func (ec *executionContext) unmarshalInputAddToCartInput(ctx context.Context, ob
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputCartFilterInput(ctx context.Context, obj any) (model.CartFilterInput, error) {
+	var it model.CartFilterInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"search", "inStock"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "search":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("search"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Search = data
+		case "inStock":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("inStock"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.InStock = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputCartSortInput(ctx context.Context, obj any) (model.CartSortInput, error) {
+	var it model.CartSortInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	if _, present := asMap["direction"]; !present {
+		asMap["direction"] = "ASC"
+	}
+
+	fieldsInOrder := [...]string{"field", "direction"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "field":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			data, err := ec.unmarshalNCartSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartSortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Field = data
+		case "direction":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			data, err := ec.unmarshalNSortDirection2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Direction = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputLoginInput(ctx context.Context, obj any) (model.LoginInput, error) {
 	var it model.LoginInput
 	asMap := map[string]any{}
@@ -4343,6 +4611,171 @@ func (ec *executionContext) unmarshalInputNewProduct(ctx context.Context, obj an
 				return it, err
 			}
 			it.Stock = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputOrderFilterInput(ctx context.Context, obj any) (model.OrderFilterInput, error) {
+	var it model.OrderFilterInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"search", "inStock"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "search":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("search"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Search = data
+		case "inStock":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("inStock"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.InStock = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputOrderSortInput(ctx context.Context, obj any) (model.OrderSortInput, error) {
+	var it model.OrderSortInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	if _, present := asMap["direction"]; !present {
+		asMap["direction"] = "ASC"
+	}
+
+	fieldsInOrder := [...]string{"field", "direction"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "field":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			data, err := ec.unmarshalNOrderSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderSortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Field = data
+		case "direction":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			data, err := ec.unmarshalNSortDirection2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Direction = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputProductFilterInput(ctx context.Context, obj any) (model.ProductFilterInput, error) {
+	var it model.ProductFilterInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"category", "minPrice", "maxPrice", "search", "inStock"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "category":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("category"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Category = data
+		case "minPrice":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("minPrice"))
+			data, err := ec.unmarshalOFloat2ᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.MinPrice = data
+		case "maxPrice":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("maxPrice"))
+			data, err := ec.unmarshalOFloat2ᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.MaxPrice = data
+		case "search":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("search"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Search = data
+		case "inStock":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("inStock"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.InStock = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputProductSortInput(ctx context.Context, obj any) (model.ProductSortInput, error) {
+	var it model.ProductSortInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	if _, present := asMap["direction"]; !present {
+		asMap["direction"] = "ASC"
+	}
+
+	fieldsInOrder := [...]string{"field", "direction"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "field":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			data, err := ec.unmarshalNProductSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐProductSortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Field = data
+		case "direction":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			data, err := ec.unmarshalNSortDirection2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Direction = data
 		}
 	}
 
@@ -5626,6 +6059,16 @@ func (ec *executionContext) marshalNCartItem2ᚖwarimasᚑbeᚋinternalᚋgraph�
 	return ec._CartItem(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNCartSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartSortField(ctx context.Context, v any) (model.CartSortField, error) {
+	var res model.CartSortField
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNCartSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartSortField(ctx context.Context, sel ast.SelectionSet, v model.CartSortField) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) marshalNCreateOrderResponse2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCreateOrderResponse(ctx context.Context, sel ast.SelectionSet, v model.CreateOrderResponse) graphql.Marshaler {
 	return ec._CreateOrderResponse(ctx, sel, &v)
 }
@@ -5810,6 +6253,16 @@ func (ec *executionContext) marshalNOrderItem2ᚖwarimasᚑbeᚋinternalᚋgraph
 	return ec._OrderItem(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNOrderSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderSortField(ctx context.Context, v any) (model.OrderSortField, error) {
+	var res model.OrderSortField
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNOrderSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderSortField(ctx context.Context, sel ast.SelectionSet, v model.OrderSortField) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) unmarshalNOrderStatus2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderStatus(ctx context.Context, v any) (model.OrderStatus, error) {
 	var res model.OrderStatus
 	err := res.UnmarshalGQL(v)
@@ -5878,6 +6331,16 @@ func (ec *executionContext) marshalNProduct2ᚖwarimasᚑbeᚋinternalᚋgraph�
 	return ec._Product(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNProductSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐProductSortField(ctx context.Context, v any) (model.ProductSortField, error) {
+	var res model.ProductSortField
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNProductSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐProductSortField(ctx context.Context, sel ast.SelectionSet, v model.ProductSortField) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) unmarshalNRegisterInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐRegisterInput(ctx context.Context, v any) (model.RegisterInput, error) {
 	res, err := ec.unmarshalInputRegisterInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -5904,6 +6367,16 @@ func (ec *executionContext) unmarshalNRole2warimasᚑbeᚋinternalᚋgraphᚋmod
 }
 
 func (ec *executionContext) marshalNRole2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐRole(ctx context.Context, sel ast.SelectionSet, v model.Role) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNSortDirection2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐSortDirection(ctx context.Context, v any) (model.SortDirection, error) {
+	var res model.SortDirection
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNSortDirection2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐSortDirection(ctx context.Context, sel ast.SelectionSet, v model.SortDirection) graphql.Marshaler {
 	return v
 }
 
@@ -6226,6 +6699,14 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
+func (ec *executionContext) unmarshalOCartFilterInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartFilterInput(ctx context.Context, v any) (*model.CartFilterInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputCartFilterInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalOCartItem2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartItem(ctx context.Context, sel ast.SelectionSet, v *model.CartItem) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -6233,11 +6714,86 @@ func (ec *executionContext) marshalOCartItem2ᚖwarimasᚑbeᚋinternalᚋgraph�
 	return ec._CartItem(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalOCartSortInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartSortInput(ctx context.Context, v any) (*model.CartSortInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputCartSortInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOFloat2ᚖfloat64(ctx context.Context, v any) (*float64, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalFloatContext(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOFloat2ᚖfloat64(ctx context.Context, sel ast.SelectionSet, v *float64) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	_ = sel
+	res := graphql.MarshalFloatContext(*v)
+	return graphql.WrapContextMarshaler(ctx, res)
+}
+
+func (ec *executionContext) unmarshalOInt2ᚖint32(ctx context.Context, v any) (*int32, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalInt32(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOInt2ᚖint32(ctx context.Context, sel ast.SelectionSet, v *int32) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	_ = sel
+	_ = ctx
+	res := graphql.MarshalInt32(*v)
+	return res
+}
+
 func (ec *executionContext) marshalOOrder2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrder(ctx context.Context, sel ast.SelectionSet, v *model.Order) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._Order(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOOrderFilterInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderFilterInput(ctx context.Context, v any) (*model.OrderFilterInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputOrderFilterInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOOrderSortInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderSortInput(ctx context.Context, v any) (*model.OrderSortInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputOrderSortInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOProductFilterInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐProductFilterInput(ctx context.Context, v any) (*model.ProductFilterInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputProductFilterInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOProductSortInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐProductSortInput(ctx context.Context, v any) (*model.ProductSortInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputProductSortInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalORole2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐRole(ctx context.Context, v any) (*model.Role, error) {

@@ -2,12 +2,15 @@ package cart
 
 import (
 	"errors"
+	"warimas-be/internal/graph/model"
 )
 
 // Service defines the business logic for carts.
 type Service interface {
 	AddToCart(userID, productID uint, quantity uint) (*CartItem, error)
-	GetCart(userID uint) ([]CartItem, error)
+	GetCart(userID uint, filter *model.CartFilterInput,
+		sort *model.CartSortInput,
+		limit, offset *int32) ([]CartItem, error)
 	UpdateCartQuantity(userID, productID uint, quantity int) error
 	RemoveFromCart(userID, productID uint) error
 	ClearCart(userID uint) error
@@ -39,11 +42,14 @@ func (s *service) AddToCart(userID, productID uint, quantity uint) (*CartItem, e
 }
 
 // GetCart retrieves all cart items for a user
-func (s *service) GetCart(userID uint) ([]CartItem, error) {
+func (s *service) GetCart(userID uint,
+	filter *model.CartFilterInput,
+	sort *model.CartSortInput,
+	limit, offset *int32) ([]CartItem, error) {
 	if userID == 0 {
 		return nil, errors.New("user ID is required")
 	}
-	return s.repo.GetCart(userID)
+	return s.repo.GetCart(userID, filter, sort, limit, offset)
 }
 
 // UpdateCartQuantity updates the quantity of a specific product in the user's cart
@@ -80,15 +86,8 @@ func (s *service) ClearCart(userID uint) error {
 		return errors.New("user ID is required")
 	}
 
-	items, err := s.repo.GetCart(userID)
-	if err != nil {
+	if err := s.repo.ClearCart(userID); err != nil {
 		return err
-	}
-
-	for _, item := range items {
-		if err := s.repo.RemoveFromCart(userID, item.ProductID); err != nil {
-			return err
-		}
 	}
 
 	return nil

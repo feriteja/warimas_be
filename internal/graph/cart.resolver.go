@@ -121,13 +121,16 @@ func (r *mutationResolver) RemoveFromCart(ctx context.Context, productID string)
 }
 
 // Get all items in my cart
-func (r *queryResolver) MyCart(ctx context.Context) ([]*model.CartItem, error) {
+func (r *queryResolver) MyCart(ctx context.Context,
+	filter *model.CartFilterInput,
+	sort *model.CartSortInput,
+	limit, offset *int32) ([]*model.CartItem, error) {
 	userID, ok := utils.GetUserIDFromContext(ctx)
 	if !ok {
 		return nil, errors.New("unauthorized: please login first")
 	}
 
-	items, err := r.CartSvc.GetCart(uint(userID))
+	items, err := r.CartSvc.GetCart(uint(userID), filter, sort, limit, offset)
 	if err != nil {
 		return nil, err
 	}

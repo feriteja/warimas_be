@@ -5,7 +5,32 @@ enum Role {
   ADMIN
 }
 
+enum SortDirection {
+  ASC
+  DESC
+}
+
 ################  PRODUCT
+
+input ProductFilterInput {
+  category: String
+  minPrice: Float
+  maxPrice: Float
+  search: String
+  inStock: Boolean
+}
+
+enum ProductSortField {
+  NAME
+  PRICE
+  CREATED_AT
+}
+
+input ProductSortInput {
+  field: ProductSortField!
+  direction: SortDirection! = ASC
+}
+
 type Product {
   id: ID!
   name: String!
@@ -42,6 +67,23 @@ type AuthResponse {
 }
 
 ################# CART
+
+input CartFilterInput {
+  search: String
+  inStock: Boolean
+}
+
+enum CartSortField {
+  NAME
+  PRICE
+  CREATED_AT
+}
+
+input CartSortInput {
+  field: CartSortField!
+  direction: SortDirection! = ASC
+}
+
 type CartItem {
   id: ID!
   userId: ID!
@@ -81,6 +123,24 @@ enum OrderStatus {
   CANCELED
 }
 
+input OrderFilterInput {
+  search: String
+  status: String
+  dateFrom: DateTime
+  dateTo: DateTime
+}
+
+enum OrderSortField {
+  NAME
+  PRICE
+  CREATED_AT
+}
+
+input OrderSortInput {
+  field: OrderSortField!
+  direction: SortDirection! = ASC
+}
+
 type OrderItem {
   id: ID!
   product: Product!
@@ -115,13 +175,34 @@ type CreateOrderResponse {
 }
 
 type Query {
-  products: [Product!]!
+  products(
+    filter: ProductFilterInput
+    sort: ProductSortInput
+    limit: Int = 20
+    offset: Int = 0
+  ): [Product!]!
 
-  myCart: [CartItem!]! @auth(role: USER)
+  myCart(
+    filter: CartFilterInput
+    sort: CartSortInput
+    limit: Int = 20
+    offset: Int = 0
+  ): [CartItem!]! @auth(role: USER)
 
-  myOrders: [Order!]! @auth(role: USER)
+  myOrders(
+    filter: OrderFilterInput
+    sort: OrderSortInput
+    limit: Int = 20
+    offset: Int = 0
+  ): [Order!]! @auth(role: USER)
   orderDetail(orderId: ID!): Order! @auth(role: USER)
-  adminOrders: [Order!]! @auth(role: ADMIN)
+
+  adminOrders(
+    filter: OrderFilterInput
+    sort: OrderSortInput
+    limit: Int = 20
+    offset: Int = 0
+  ): [Order!]! @auth(role: ADMIN)
 }
 
 type Mutation {
