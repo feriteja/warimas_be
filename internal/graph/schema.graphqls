@@ -10,6 +10,8 @@ enum SortDirection {
   DESC
 }
 
+scalar DateTime
+
 ################  PRODUCT
 
 input ProductFilterInput {

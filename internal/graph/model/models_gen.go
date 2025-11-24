@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"time"
 )
 
 type AddToCartInput struct {
@@ -77,8 +78,10 @@ type Order struct {
 }
 
 type OrderFilterInput struct {
-	Search  *string `json:"search,omitempty"`
-	InStock *bool   `json:"inStock,omitempty"`
+	Search   *string    `json:"search,omitempty"`
+	Status   *string    `json:"status,omitempty"`
+	DateFrom *time.Time `json:"dateFrom,omitempty"`
+	DateTo   *time.Time `json:"dateTo,omitempty"`
 }
 
 type OrderItem struct {
