@@ -50,7 +50,7 @@ func (r *mutationResolver) AddToCart(ctx context.Context, input model.AddToCartI
 		Product: &model.Product{
 			ID:    fmt.Sprint(cartItemRes.Product.ID),
 			Name:  cartItemRes.Product.Name,
-			Price: cartItemRes.Product.Price,
+			Price: float64(cartItemRes.Product.Price),
 			Stock: int32(cartItemRes.Product.Stock),
 		},
 		CreatedAt: time.Now().Format(time.RFC3339),
@@ -145,7 +145,7 @@ func (r *queryResolver) MyCart(ctx context.Context,
 			Product: &model.Product{
 				ID:    fmt.Sprint(item.Product.ID),
 				Name:  item.Product.Name,
-				Price: item.Product.Price,
+				Price: float64(item.Product.Price),
 				Stock: int32(item.Product.Stock),
 			},
 			CreatedAt: item.CreatedAt.Format(time.RFC3339),

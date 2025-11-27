@@ -2,7 +2,7 @@ package cart
 
 import (
 	"time"
-	"warimas-be/internal/product"
+	"warimas-be/internal/graph/model"
 )
 
 type CartItem struct {
@@ -13,5 +13,5 @@ type CartItem struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 
-	Product product.Product
+	Product model.Product
 }

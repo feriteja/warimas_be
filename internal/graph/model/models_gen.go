@@ -96,13 +96,6 @@ type OrderSortInput struct {
 	Direction SortDirection  `json:"direction"`
 }
 
-type Product struct {
-	ID    string  `json:"id"`
-	Name  string  `json:"name"`
-	Price float64 `json:"price"`
-	Stock int32   `json:"stock"`
-}
-
 type ProductFilterInput struct {
 	Category *string  `json:"category,omitempty"`
 	MinPrice *float64 `json:"minPrice,omitempty"`
@@ -143,6 +136,34 @@ type User struct {
 	ID    string `json:"id"`
 	Email string `json:"email"`
 	Role  Role   `json:"role"`
+}
+
+type CategoryProduct struct {
+	CategoryName  *string    `json:"CategoryName,omitempty"`
+	TotalProducts int32      `json:"TotalProducts"`
+	Products      []*Product `json:"Products,omitempty"`
+}
+
+type Product struct {
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	Price      float64    `json:"price"`
+	Stock      int32      `json:"stock"`
+	SellerID   string     `json:"sellerId"`
+	CategoryID *string    `json:"categoryID,omitempty"`
+	CreatedAt  string     `json:"createdAt"`
+	Slug       string     `json:"slug"`
+	Variants   []*Variant `json:"variants,omitempty"`
+	ImageURL   string     `json:"imageUrl"`
+}
+
+type Variant struct {
+	ID        string  `json:"id"`
+	Name      string  `json:"name"`
+	ProductID string  `json:"productId"`
+	Price     float64 `json:"price"`
+	Stock     int32   `json:"stock"`
+	ImageURL  string  `json:"imageUrl"`
 }
 
 type CartSortField string

@@ -15,6 +15,7 @@ type Config struct {
 	DBPort          string
 	AppPort         string
 	XenditSecretKey string
+	AppEnv          string
 }
 
 func LoadConfig() *Config {
@@ -28,6 +29,7 @@ func LoadConfig() *Config {
 		DBPort:          os.Getenv("DB_PORT"),
 		AppPort:         os.Getenv("APP_PORT"),
 		XenditSecretKey: os.Getenv("XENDIT_APIKEY"),
+		AppEnv:          os.Getenv("APP_ENV"),
 	}
 
 	if cfg.DBHost == "" {

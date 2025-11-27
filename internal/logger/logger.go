@@ -1,99 +1,52 @@
 package logger
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"log"
 	"os"
-	"sync"
-	"time"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-type LogLevel string
+var log *zap.Logger
 
-const (
-	LevelDebug LogLevel = "DEBUG"
-	LevelInfo  LogLevel = "INFO"
-	LevelWarn  LogLevel = "WARN"
-	LevelError LogLevel = "ERROR"
-)
+// Init initializes zap logger depending on the environment.
+func Init(env string) {
+	var cfg zap.Config
 
-type Logger struct {
-	mu     sync.Mutex
-	level  LogLevel
-	writer io.Writer
-}
-
-type logEntry struct {
-	Time    string      `json:"time"`
-	Level   LogLevel    `json:"level"`
-	Message string      `json:"message"`
-	Fields  interface{} `json:"fields,omitempty"`
-}
-
-// global singleton
-var std = New(LevelInfo, os.Stdout)
-
-// New creates a new logger
-func New(level LogLevel, writer io.Writer) *Logger {
-	return &Logger{level: level, writer: writer}
-}
-
-// SetLevel allows changing log level dynamically
-func SetLevel(level LogLevel) {
-	std.level = level
-}
-
-// internal helper
-func (l *Logger) log(level LogLevel, msg string, fields interface{}) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	// Only log if level is >= configured level
-	if !shouldLog(l.level, level) {
-		return
+	if env == "production" {
+		cfg = zap.NewProductionConfig()
+		cfg.Encoding = "json"
+		cfg.EncoderConfig.TimeKey = "timestamp"
+		cfg.EncoderConfig.MessageKey = "message"
+		cfg.EncoderConfig.LevelKey = "level"
+		cfg.EncoderConfig.CallerKey = "caller"
+		cfg.EncoderConfig.EncodeLevel = zapcore.LowercaseLevelEncoder
+		cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+		cfg.OutputPaths = []string{"stdout"}
+	} else {
+		cfg = zap.NewDevelopmentConfig()
+		cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	}
 
-	entry := logEntry{
-		Time:    time.Now().Format(time.RFC3339),
-		Level:   level,
-		Message: msg,
-		Fields:  fields,
+	// Build logger
+	var err error
+	log, err = cfg.Build(zap.AddCaller(), zap.AddCallerSkip(1))
+	if err != nil {
+		panic(err)
 	}
-
-	data, _ := json.Marshal(entry)
-	fmt.Fprintln(l.writer, string(data))
 }
 
-// level filtering
-func shouldLog(current, incoming LogLevel) bool {
-	order := map[LogLevel]int{
-		LevelDebug: 1,
-		LevelInfo:  2,
-		LevelWarn:  3,
-		LevelError: 4,
+// L returns the global logger.
+func L() *zap.Logger {
+	if log == nil {
+		Init(os.Getenv("APP_ENV"))
 	}
-	return order[incoming] >= order[current]
+	return log
 }
 
-// Public helpers
-func Debug(msg string, fields ...interface{}) { std.log(LevelDebug, msg, join(fields...)) }
-func Info(msg string, fields ...interface{})  { std.log(LevelInfo, msg, join(fields...)) }
-func Warn(msg string, fields ...interface{})  { std.log(LevelWarn, msg, join(fields...)) }
-func Error(msg string, fields ...interface{}) { std.log(LevelError, msg, join(fields...)) }
-
-// join merges fields (if you want structured context)
-func join(fields ...interface{}) interface{} {
-	if len(fields) == 1 {
-		return fields[0]
+// Sync flushes logs.
+func Sync() {
+	if log != nil {
+		_ = log.Sync()
 	}
-	return fields
-}
-
-// Optional: redirect default `log` package output
-func RedirectStdLog() {
-	log.SetOutput(std.writer)
-	log.SetFlags(0)
-	log.SetPrefix("")
 }

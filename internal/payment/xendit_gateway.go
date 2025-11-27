@@ -10,7 +10,10 @@ import (
 	"net/http"
 	"os"
 	"time"
+
 	"warimas-be/internal/logger"
+
+	"go.uber.org/zap"
 )
 
 type xenditGateway struct {
@@ -36,30 +39,39 @@ type XenditPaymentResponse struct {
 	} `json:"actions"`
 }
 
-// Constructor
+// ----------------- Constructor -----------------
+
 func NewXenditGateway(apiKey string) Gateway {
-	xenditApiKey := os.Getenv("XENDIT_APIKEY")
-	if xenditApiKey == "" {
-		logger.Error("Xendit APIKEY is missing")
+	if apiKey == "" {
+		logger.L().Warn("Xendit API key is empty")
 	}
 
 	return &xenditGateway{
-		apiKey: xenditApiKey,
+		apiKey: apiKey,
 		httpClient: &http.Client{
 			Timeout: 15 * time.Second,
 		},
 	}
 }
 
-// --- CreateInvoice --------------------------------------------------
+// ----------------- CreateInvoice -----------------
 
-func (x *xenditGateway) CreateInvoice(orderID uint,
+func (x *xenditGateway) CreateInvoice(
+	orderID uint,
 	buyerName string,
 	amount float64,
 	customerEmail string,
 	items []OrderItem,
 	channelCode ChannelCode,
 ) (*PaymentResponse, error) {
+
+	log := logger.L().With(
+		zap.Uint("order_id", orderID),
+		zap.String("buyer", buyerName),
+		zap.Float64("amount", amount),
+		zap.String("channel", string(channelCode)),
+	)
+
 	expiry := time.Now().Add(24 * time.Hour).Format(time.RFC3339)
 
 	body := map[string]interface{}{
@@ -73,7 +85,7 @@ func (x *xenditGateway) CreateInvoice(orderID uint,
 			"reference_id": fmt.Sprintf("%d", orderID),
 			"email":        customerEmail,
 			"individual_detail": map[string]interface{}{
-				"given_names": "buyerName",
+				"given_names": buyerName,
 			},
 		},
 		"metadata": map[string]interface{}{
@@ -82,18 +94,20 @@ func (x *xenditGateway) CreateInvoice(orderID uint,
 		"channel_code": string(channelCode),
 		"channel_properties": map[string]interface{}{
 			"expires_at":   expiry,
-			"payer_name":   "buyerName",
-			"display_name": "buyerName",
+			"payer_name":   buyerName,
+			"display_name": buyerName,
 		},
 	}
 
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
+		log.Error("Failed to marshal payment request", zap.Error(err))
+		return nil, err
 	}
 
 	req, err := http.NewRequest("POST", "https://api.xendit.co/v3/payment_requests", bytes.NewBuffer(jsonBody))
 	if err != nil {
+		log.Error("Failed creating request", zap.Error(err))
 		return nil, err
 	}
 
@@ -102,24 +116,41 @@ func (x *xenditGateway) CreateInvoice(orderID uint,
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("api-version", "2024-11-11")
 
+	log.Info("Sending payment request to Xendit")
+
 	resp, err := x.httpClient.Do(req)
 	if err != nil {
-		logger.Error("payment failed", err)
+		log.Error("Xendit request failed", zap.Error(err))
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("body: %v", resp.Body)
+	bodyBytes, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("xendit: create invoice failed (%d): %s", resp.StatusCode, string(bodyBytes))
+		log.Error("Xendit returned non-success status",
+			zap.Int("status", resp.StatusCode),
+			zap.ByteString("response", bodyBytes),
+		)
+		return nil, fmt.Errorf("xendit error: %s", string(bodyBytes))
 	}
 
 	var res XenditPaymentResponse
+	if err := json.Unmarshal(bodyBytes, &res); err != nil {
+		log.Error("Failed decoding Xendit response", zap.Error(err))
+		return nil, err
+	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-		return nil, fmt.Errorf("failed to decode xendit response: %w", err)
+	log.Info("Xendit payment created",
+		zap.String("payment_id", res.ID),
+		zap.String("reference_id", res.ReferenceID),
+		zap.String("status", res.Status),
+	)
+
+	// Prevent panic if Actions is empty
+	var paymentCode string
+	if len(res.Actions) > 0 {
+		paymentCode = res.Actions[0].Value
 	}
 
 	return &PaymentResponse{
@@ -127,43 +158,55 @@ func (x *xenditGateway) CreateInvoice(orderID uint,
 		Amount:         res.Amount,
 		Status:         res.Status,
 		PaymentMethod:  res.PaymentMethod,
-		PaymentCode:    res.Actions[0].Value,
+		PaymentCode:    paymentCode,
 		ChannelCode:    res.ChannelCode,
 		ExpirationTime: res.ChannelProps.ExpiresAt,
 	}, nil
 }
 
-// --- GetPaymentStatus -----------------------------------------------
+// ----------------- GetPaymentStatus -----------------
 
 func (x *xenditGateway) GetPaymentStatus(externalID string) (*PaymentStatus, error) {
+	log := logger.L().With(zap.String("external_id", externalID))
+
 	url := fmt.Sprintf("https://api.xendit.co/v2/invoices?external_id=%s", externalID)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
+		log.Error("Failed building request", zap.Error(err))
 		return nil, err
 	}
 
 	req.SetBasicAuth(x.apiKey, "")
+
 	resp, err := x.httpClient.Do(req)
 	if err != nil {
+		log.Error("Request to Xendit failed", zap.Error(err))
 		return nil, err
 	}
 	defer resp.Body.Close()
 
+	bodyBytes, _ := io.ReadAll(resp.Body)
+
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("xendit: get status failed (%d): %s", resp.StatusCode, string(body))
+		log.Error("Xendit returned error",
+			zap.Int("http_status", resp.StatusCode),
+			zap.ByteString("response", bodyBytes),
+		)
+		return nil, fmt.Errorf("xendit error: %s", string(bodyBytes))
 	}
 
 	var invoices []struct {
 		Status string     `json:"status"`
 		PaidAt *time.Time `json:"paid_at"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&invoices); err != nil {
+	if err := json.Unmarshal(bodyBytes, &invoices); err != nil {
+		log.Error("Failed decoding invoice", zap.Error(err))
 		return nil, err
 	}
 
 	if len(invoices) == 0 {
+		log.Warn("Invoice not found")
 		return nil, errors.New("invoice not found")
 	}
 
@@ -173,43 +216,53 @@ func (x *xenditGateway) GetPaymentStatus(externalID string) (*PaymentStatus, err
 	}, nil
 }
 
-// --- CancelPayment --------------------------------------------------
+// ----------------- Cancel Payment -----------------
 
 func (x *xenditGateway) CancelPayment(externalID string) error {
+	log := logger.L().With(zap.String("external_id", externalID))
+
 	url := fmt.Sprintf("https://api.xendit.co/invoices/%s/expire!", externalID)
 
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
+		log.Error("Failed creating request", zap.Error(err))
 		return err
 	}
 
 	req.SetBasicAuth(x.apiKey, "")
+
 	resp, err := x.httpClient.Do(req)
 	if err != nil {
+		log.Error("Xendit request failed", zap.Error(err))
 		return err
 	}
 	defer resp.Body.Close()
 
+	bodyBytes, _ := io.ReadAll(resp.Body)
+
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("xendit: cancel payment failed (%d): %s", resp.StatusCode, string(body))
+		log.Error("Failed to cancel payment",
+			zap.Int("http_status", resp.StatusCode),
+			zap.ByteString("response", bodyBytes),
+		)
+		return fmt.Errorf("xendit cancel error: %s", string(bodyBytes))
 	}
 
+	log.Info("Payment cancelled successfully")
 	return nil
 }
 
-// --- VerifySignature ------------------------------------------------
+// ----------------- Verify Signature -----------------
 
-// For webhook verification using "x-callback-token" header
 func (x *xenditGateway) VerifySignature(r *http.Request) error {
-	signature := r.Header.Get("x-callback-token")
+	sig := r.Header.Get("x-callback-token")
 	expected := os.Getenv("XENDIT_CALLBACK_TOKEN")
 
 	if expected == "" {
-		return nil // Skip if not configured (e.g., local dev)
+		return nil // skip in dev
 	}
 
-	if signature != expected {
+	if sig != expected {
 		return errors.New("invalid webhook signature")
 	}
 	return nil

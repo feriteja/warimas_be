@@ -1,8 +1,8 @@
 package webhook
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -10,6 +10,8 @@ import (
 	"warimas-be/internal/logger"
 	"warimas-be/internal/order"
 	"warimas-be/internal/payment"
+
+	"go.uber.org/zap"
 )
 
 type WebhookPayload struct {
@@ -48,7 +50,6 @@ type WebhookPayload struct {
 	} `json:"data"`
 }
 
-// Handler depends on your order service and payment gateway
 type Handler struct {
 	OrderSvc order.Service
 	Gateway  payment.Gateway
@@ -61,20 +62,23 @@ func NewWebhookHandler(orderSvc order.Service, gateway payment.Gateway) *Handler
 	}
 }
 
-// WebhookHandler is the actual route handler
+// -------------------------- MAIN WEBHOOK HANDLER --------------------------
 func (h *Handler) PaymentWebhookHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	log := logger.FromCtx(ctx)
+
 	callbackToken := r.Header.Get("x-callback-token")
 	expectedToken := os.Getenv("XENDIT_WEBHOOK_TOKEN")
 
 	if callbackToken != expectedToken {
-		logger.Error("XENDIT_WEBHOOK_TOKEN doesn't match")
+		log.Warn("Webhook token mismatch")
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		logger.Error("Body request invalid")
+		log.Error("Failed reading webhook body", zap.Error(err))
 		http.Error(w, "Invalid body", http.StatusBadRequest)
 		return
 	}
@@ -82,52 +86,65 @@ func (h *Handler) PaymentWebhookHandler(w http.ResponseWriter, r *http.Request) 
 
 	var payload WebhookPayload
 	if err := json.Unmarshal(body, &payload); err != nil {
+		log.Error("Failed to parse webhook JSON", zap.Error(err))
 		http.Error(w, "Bad JSON", http.StatusBadRequest)
-		logger.Error("JSON unmarshal error", err)
 		return
 	}
 
-	// logger.Infof("✅ Webhook received: event=%s status=%s ref=%s",
-	// 	payload.Event,
-	// 	payload.Data.Status,
-	// 	payload.Data.ReferenceID,
-	// )
+	// Core log for tracking payment events
+	log.Info("Webhook received",
+		zap.String("event", payload.Event),
+		zap.String("status", payload.Data.Status),
+		zap.String("payment_id", payload.Data.PaymentID),
+		zap.String("reference_id", payload.Data.ReferenceID),
+	)
 
-	h.handleEvent(payload)
+	// Process event
+	h.handleEvent(ctx, payload)
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "Webhook received successfully")
+	w.Write([]byte("Webhook received"))
 }
 
-func (h *Handler) handleEvent(payload WebhookPayload) {
+// -------------------------- EVENT HANDLER --------------------------
+func (h *Handler) handleEvent(ctx context.Context, payload WebhookPayload) {
+	log := logger.FromCtx(ctx)
+
 	event := payload.Event
 	ref := payload.Data.ReferenceID
 
+	log = log.With(
+		zap.String("event", event),
+		zap.String("reference_id", ref),
+		zap.String("status", payload.Data.Status),
+	)
+
 	switch event {
+
 	case "payment.capture":
-		fmt.Println("masuk")
+		log.Info("Processing capture event")
+
 		if payload.Data.Status == "SUCCEEDED" {
 			if err := h.OrderSvc.MarkAsPaid(ref); err != nil {
-				logger.Error("❌ Failed to mark order as paid", map[string]interface{}{
-					"ref":   ref,
-					"error": err.Error(),
-				})
+				log.Error("Failed to mark order as PAID", zap.Error(err))
 				return
 			}
-			// logger.Infof("✅ Order %s marked as PAID", ref)
+			log.Info("Order marked as PAID")
 		}
 
 	case "payment.authorization":
-		// logger.Infof("⚙️ Payment authorized for ref %s", ref)
+		log.Info("Payment authorized")
 
 	case "payment.failed", "payment.failure":
+		log.Warn("Payment failed")
+
 		if err := h.OrderSvc.MarkAsFailed(ref); err != nil {
-			// logger.Errorf("❌ Failed to mark order as FAILED (%s): %v", ref, err)
+			log.Error("Failed to mark order as FAILED", zap.Error(err))
 			return
 		}
-		// logger.Infof("❌ Payment failed for order %s", ref)
+		log.Info("Order marked as FAILED")
 
 	default:
-		// logger.Infof("Unhandled event type: %s for ref %s", event, ref)
+		log.Warn("Unhandled webhook event")
 	}
 }

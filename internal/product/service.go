@@ -1,12 +1,15 @@
 package product
 
 import (
+	"context"
 	"errors"
+	"warimas-be/internal/graph/model"
+	servicepkg "warimas-be/internal/service"
 )
 
 type Service interface {
-	GetAll() ([]Product, error)
-	Create(name string, price float64, stock int) (Product, error)
+	GetAll(ctx context.Context, opts servicepkg.ProductQueryOptions) ([]model.CategoryProduct, error)
+	Create(name string, price float64, stock int) (model.Product, error)
 }
 
 type service struct {
@@ -17,22 +20,22 @@ func NewService(repo Repository) Service {
 	return &service{repo: repo}
 }
 
-func (s *service) GetAll() ([]Product, error) {
-	return s.repo.GetAll()
+func (s *service) GetAll(ctx context.Context, opts servicepkg.ProductQueryOptions) ([]model.CategoryProduct, error) {
+	return s.repo.GetAll(opts)
 }
 
-func (s *service) Create(name string, price float64, stock int) (Product, error) {
+func (s *service) Create(name string, price float64, stock int) (model.Product, error) {
 	if name == "" {
-		return Product{}, errors.New("name cannot be empty")
+		return model.Product{}, errors.New("name cannot be empty")
 	}
 	if price <= 0 {
-		return Product{}, errors.New("price must be positive")
+		return model.Product{}, errors.New("price must be positive")
 	}
 
-	newProduct := Product{
+	newProduct := model.Product{
 		Name:  name,
 		Price: price,
-		Stock: stock,
+		Stock: int32(stock),
 	}
 	return s.repo.Create(newProduct)
 }

@@ -33,11 +33,32 @@ input ProductSortInput {
   direction: SortDirection! = ASC
 }
 
-type Product {
+type product {
   id: ID!
   name: String!
   price: Float!
   stock: Int!
+  sellerId: ID!
+  categoryID: String
+  createdAt: String!
+  slug: String!
+  variants: [variant]
+  imageUrl: String!
+}
+
+type categoryProduct {
+  CategoryName: String
+  TotalProducts: Int!
+  Products: [product]
+}
+
+type variant {
+  id: ID!
+  name: String!
+  productId: ID!
+  price: Float!
+  stock: Int!
+  imageUrl: String!
 }
 
 input NewProduct {
@@ -91,7 +112,7 @@ type CartItem {
   userId: ID!
   productId: ID!
   quantity: Int!
-  product: Product!
+  product: product!
   createdAt: String!
   updatedAt: String!
 }
@@ -145,7 +166,7 @@ input OrderSortInput {
 
 type OrderItem {
   id: ID!
-  product: Product!
+  product: product!
   quantity: Int!
   price: Float!
 }
@@ -177,12 +198,12 @@ type CreateOrderResponse {
 }
 
 type Query {
-  products(
+  productsHome(
     filter: ProductFilterInput
     sort: ProductSortInput
     limit: Int = 20
     offset: Int = 0
-  ): [Product!]!
+  ): [categoryProduct!]!
 
   myCart(
     filter: CartFilterInput
@@ -211,7 +232,7 @@ type Mutation {
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
 
-  createProduct(input: NewProduct!): Product! @auth(role: ADMIN)
+  createProduct(input: NewProduct!): product! @auth(role: ADMIN)
 
   addToCart(input: AddToCartInput!): AddToCartResponse! @auth(role: USER)
   updateCart(input: UpdateCartInput!): Response! @auth(role: USER)

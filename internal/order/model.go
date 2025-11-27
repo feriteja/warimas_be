@@ -2,7 +2,7 @@ package order
 
 import (
 	"time"
-	"warimas-be/internal/product"
+	"warimas-be/internal/graph/model"
 )
 
 type OrderStatus string
@@ -30,5 +30,5 @@ type OrderItem struct {
 	ProductID uint
 	Quantity  int
 	Price     float64
-	Product   product.Product
+	Product   model.Product
 }

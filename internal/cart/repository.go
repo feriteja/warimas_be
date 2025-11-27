@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"warimas-be/internal/graph/model"
-	"warimas-be/internal/product"
 )
 
 type Repository interface {
@@ -29,7 +28,7 @@ func NewRepository(db *sql.DB) Repository {
 
 func (r *repository) AddToCart(userID, productID uint, quantity uint) (*CartItem, error) {
 	// 1️⃣ Check if product exists
-	var p product.Product
+	var p model.Product
 	err := r.db.QueryRow(`
 		SELECT id, name, price, stock 
 		FROM products 

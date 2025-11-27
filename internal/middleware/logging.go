@@ -1,42 +1,54 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"time"
+
 	"warimas-be/internal/logger"
-	"warimas-be/internal/utils"
+
+	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
-// responseRecorder lets us capture HTTP status codes
-type responseRecorder struct {
-	http.ResponseWriter
-	statusCode int
+const loggerKey contextKey = "requestLogger"
+
+// L extracts logger from context
+func L(ctx context.Context) *zap.Logger {
+	if l, ok := ctx.Value(loggerKey).(*zap.Logger); ok {
+		return l
+	}
+	return logger.L()
 }
 
-func (r *responseRecorder) WriteHeader(code int) {
-	r.statusCode = code
-	r.ResponseWriter.WriteHeader(code)
-}
-
-// LoggingMiddleware logs every HTTP request in structured JSON
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
 		start := time.Now()
 
-		// capture response status
-		rec := &responseRecorder{ResponseWriter: w, statusCode: http.StatusOK}
-		next.ServeHTTP(rec, r)
+		reqID := r.Header.Get("X-Request-ID")
+		if reqID == "" {
+			reqID = uuid.NewString()
+		}
 
-		duration := time.Since(start)
-		userID, _ := utils.GetUserIDFromContext(r.Context())
+		// Create logger bound to this request
+		reqLogger := logger.L().With(
+			zap.String("request_id", reqID),
+			zap.String("method", r.Method),
+			zap.String("path", r.URL.Path),
+		)
 
-		logger.Info("HTTP Request", map[string]interface{}{
-			"method":   r.Method,
-			"path":     r.URL.Path,
-			"status":   rec.statusCode,
-			"duration": duration.String(),
-			"remoteIP": r.RemoteAddr,
-			"userID":   userID,
-		})
+		// Put logger into request context
+		ctx := context.WithValue(r.Context(), loggerKey, reqLogger)
+		r = r.WithContext(ctx)
+
+		// Continue
+		next.ServeHTTP(w, r)
+
+		// Log request summary
+		reqLogger.Info("request completed",
+			zap.Duration("duration", time.Since(start)),
+			zap.String("ip", r.RemoteAddr),
+		)
 	})
 }

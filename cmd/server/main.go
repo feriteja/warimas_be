@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"warimas-be/internal/cart"
 	"warimas-be/internal/config"
@@ -19,13 +20,17 @@ import (
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"go.uber.org/zap"
 )
 
 func main() {
-	// Load config
+	env := os.Getenv("APP_ENV") // "development" or "production"
+	logger.Init(env)
+	defer logger.Sync()
+
 	cfg := config.LoadConfig()
 
-	logger.Debug("Connecting to database...")
+	logger.L().Info("Connecting to database...")
 
 	// Init DB
 	database := db.InitDB(cfg)
@@ -43,7 +48,6 @@ func main() {
 	userSvc := user.NewService(userRepo)
 	cartSvc := cart.NewService(cartRepo)
 
-	// ✅ Add payment gateway initialization
 	paymentGateway := payment.NewXenditGateway(cfg.XenditSecretKey)
 	orderSvc := order.NewService(orderRepo, paymentRepo, paymentGateway)
 	webhookHandler := webhook.NewWebhookHandler(orderSvc, paymentGateway)
@@ -52,28 +56,32 @@ func main() {
 	resolver := &graph.Resolver{
 		DB:         database,
 		ProductSvc: productSvc,
-		UserSvc:    userSvc, ///i put register & login here
+		UserSvc:    userSvc,
 		CartSvc:    cartSvc,
 		OrderSvc:   orderSvc,
 	}
 
-	// GraphQL server
 	srv := handler.NewDefaultServer(graph.NewSchema(resolver))
 
 	// Routes
 	http.Handle("/", playground.Handler("GraphQL Playground", "/query"))
-	http.Handle("/query", middleware.LoggingMiddleware(middleware.AuthMiddleware(srv)))
+	http.Handle("/query",
+		middleware.LoggingMiddleware(
+			middleware.AuthMiddleware(srv),
+		),
+	)
+
 	http.HandleFunc("/webhook/payment", webhookHandler.PaymentWebhookHandler)
 
-	// Health or default route (optional)
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "OK")
 	})
-	logger.Info("🚀 Starting Warimas Backend", map[string]interface{}{
-		"env":  "development",
-		"port": "8080",
-	})
-	log.Printf("🚀 GraphQL server running at http://localhost:%s/", cfg.AppPort)
+
+	logger.L().Info("🚀 Warimas Backend Started",
+		zap.String("env", cfg.AppEnv),
+		zap.String("port", cfg.AppPort),
+	)
+
 	log.Fatal(http.ListenAndServe(":"+cfg.AppPort, nil))
 }
