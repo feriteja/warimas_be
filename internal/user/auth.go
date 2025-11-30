@@ -1,6 +1,7 @@
 package user
 
 import (
+	"errors"
 	"os"
 	"time"
 
@@ -16,6 +17,8 @@ type CustomClaims struct {
 	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
+
+var ErrEmailExists = errors.New("email already registered")
 
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)

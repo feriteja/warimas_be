@@ -2,16 +2,15 @@ package cart
 
 import (
 	"time"
-	"warimas-be/internal/graph/model"
+	"warimas-be/internal/product"
 )
 
 type CartItem struct {
-	ID        uint `json:"id"`
-	UserID    uint `json:"user_id"`
-	ProductID uint `json:"productId"`
-	Quantity  int  `json:"quantity"`
+	ID        uint   `json:"id"`
+	UserID    string `json:"user_id"`
+	Quantity  int    `json:"quantity"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 
-	Product model.Product
+	Product product.Product
 }

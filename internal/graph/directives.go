@@ -3,7 +3,6 @@ package graph
 import (
 	"context"
 	"errors"
-	"fmt"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/utils"
 
@@ -11,11 +10,10 @@ import (
 )
 
 func AuthDirective(ctx context.Context, obj interface{}, next graphql.Resolver, role *model.Role) (res interface{}, err error) {
-	fmt.Printf("context role: %#v\n", ctx.Value(utils.UserRoleKey))
 
 	userRole, ok := ctx.Value(utils.UserRoleKey).(string)
 	if !ok || userRole == "" {
-		return nil, errors.New("unauthorizeda")
+		return nil, errors.New("unauthorized")
 	}
 
 	// Convert GraphQL enum to string

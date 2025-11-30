@@ -1,12 +1,18 @@
 package user
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"log"
+	"strings"
+	"warimas-be/internal/logger"
+
+	"go.uber.org/zap"
 )
 
 type Service interface {
-	Register(email, password string) (string, User, error)
+	Register(ctx context.Context, email, password string) (string, User, error)
 	Login(email, password string) (string, User, error)
 	GetUserByEmail(email string) (User, error)
 }
@@ -19,19 +25,36 @@ func NewService(repo Repository) Service {
 	return &service{repo: repo}
 }
 
-func (s *service) Register(email, password string) (string, User, error) {
+func (s *service) Register(ctx context.Context, email, password string) (string, User, error) {
+	log := logger.FromCtx(ctx)
+
 	hashed, err := HashPassword(password)
 	if err != nil {
+		log.Error("failed to hash password", zap.Error(err))
 		return "", User{}, err
 	}
 
-	u, err := s.repo.Create(email, hashed, string(RoleUser))
+	u, err := s.repo.Create(ctx, email, hashed, string(RoleUser))
 	if err != nil {
+		log.Error("failed to create user", zap.String("email", email), zap.Error(err))
+		if strings.Contains(err.Error(), "users_email_key") {
+			return "", User{}, ErrEmailExists
+		}
 		return "", User{}, err
 	}
 
 	token, err := GenerateJWT(u.ID, string(u.Role), email)
-	return token, u, err
+	if err != nil {
+		log.Error("failed to generate jwt", zap.String("user_id", fmt.Sprint(u.ID)), zap.Error(err))
+		return "", User{}, err
+	}
+
+	log.Info("register service completed",
+		zap.String("user_id", fmt.Sprint(u.ID)),
+		zap.String("email", email),
+	)
+
+	return token, u, nil
 }
 
 func (s *service) Login(email, password string) (string, User, error) {

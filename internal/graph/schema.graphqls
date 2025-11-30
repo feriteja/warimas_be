@@ -33,7 +33,7 @@ input ProductSortInput {
   direction: SortDirection! = ASC
 }
 
-type product {
+type Product {
   id: ID!
   name: String!
   price: Float!
@@ -42,23 +42,25 @@ type product {
   categoryID: String
   createdAt: String!
   slug: String!
-  variants: [variant]
+  variants: [Variant]
   imageUrl: String!
 }
 
 type categoryProduct {
   CategoryName: String
   TotalProducts: Int!
-  Products: [product]
+  Products: [Product]
 }
 
-type variant {
+type Variant {
   id: ID!
   name: String!
   productId: ID!
+  quantityType: String!
   price: Float!
   stock: Int!
   imageUrl: String!
+  subcategoryID: String
 }
 
 input NewProduct {
@@ -107,12 +109,32 @@ input CartSortInput {
   direction: SortDirection! = ASC
 }
 
+type ProductCart {
+  id: ID!
+  name: String!
+  sellerId: ID!
+  categoryID: String
+  slug: String!
+  variants: [VariantCart]
+  imageUrl: String!
+}
+
+type VariantCart {
+  id: ID!
+  name: String!
+  productId: ID!
+  quantityType: String!
+  price: Float!
+  qty: Int!
+  stock: Int!
+  imageUrl: String!
+  subcategoryID: String
+}
+
 type CartItem {
   id: ID!
   userId: ID!
-  productId: ID!
-  quantity: Int!
-  product: product!
+  product: ProductCart!
   createdAt: String!
   updatedAt: String!
 }
@@ -126,6 +148,12 @@ type AddToCartResponse {
   success: Boolean!
   message: String
   cartItem: CartItem
+}
+
+type MyCartResponse {
+  success: Boolean!
+  message: String
+  cartItem: [CartItem]
 }
 
 type Response {
@@ -166,7 +194,7 @@ input OrderSortInput {
 
 type OrderItem {
   id: ID!
-  product: product!
+  product: Product!
   quantity: Int!
   price: Float!
 }
@@ -210,7 +238,7 @@ type Query {
     sort: CartSortInput
     limit: Int = 20
     offset: Int = 0
-  ): [CartItem!]! @auth(role: USER)
+  ): MyCartResponse! @auth(role: USER)
 
   myOrders(
     filter: OrderFilterInput
@@ -232,7 +260,7 @@ type Mutation {
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
 
-  createProduct(input: NewProduct!): product! @auth(role: ADMIN)
+  createProduct(input: NewProduct!): Product! @auth(role: ADMIN)
 
   addToCart(input: AddToCartInput!): AddToCartResponse! @auth(role: USER)
   updateCart(input: UpdateCartInput!): Response! @auth(role: USER)

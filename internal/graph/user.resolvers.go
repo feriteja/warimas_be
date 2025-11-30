@@ -5,13 +5,24 @@ import (
 	"fmt"
 
 	"warimas-be/internal/graph/model"
+	"warimas-be/internal/logger"
+
+	"go.uber.org/zap"
 )
 
 func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error) {
-	token, u, err := r.UserSvc.Register(input.Email, input.Password)
+	log := logger.FromCtx(ctx)
+
+	token, u, err := r.UserSvc.Register(ctx, input.Email, input.Password)
 	if err != nil {
+		log.Warn("register failed", zap.String("email", input.Email), zap.Error(err))
 		return nil, err
 	}
+
+	log.Info("user registered successfully",
+		zap.String("user_id", fmt.Sprint(u.ID)),
+		zap.String("email", u.Email),
+	)
 
 	return &model.AuthResponse{
 		Token: token,

@@ -1,18 +1,19 @@
 package cart
 
 import (
+	"context"
 	"errors"
 	"warimas-be/internal/graph/model"
 )
 
 // Service defines the business logic for carts.
 type Service interface {
-	AddToCart(userID, productID uint, quantity uint) (*CartItem, error)
-	GetCart(userID uint, filter *model.CartFilterInput,
+	AddToCart(ctx context.Context, userID uint, variantId string, quantity uint) (*CartItem, error)
+	GetCart(ctx context.Context, userID uint, filter *model.CartFilterInput,
 		sort *model.CartSortInput,
-		limit, offset *int32) ([]CartItem, error)
-	UpdateCartQuantity(userID, productID uint, quantity int) error
-	RemoveFromCart(userID, productID uint) error
+		limit, offset *int32) ([]*model.CartItem, error)
+	UpdateCartQuantity(userID uint, productID string, quantity int) error
+	RemoveFromCart(userID uint, productID string) error
 	ClearCart(userID uint) error
 }
 
@@ -27,37 +28,37 @@ func NewService(repo Repository) Service {
 }
 
 // AddToCart adds a product to a user's cart
-func (s *service) AddToCart(userID, productID uint, quantity uint) (*CartItem, error) {
+func (s *service) AddToCart(ctx context.Context, userID uint, variantId string, quantity uint) (*CartItem, error) {
 	if userID == 0 {
 		return nil, errors.New("user ID is required")
 	}
-	if productID == 0 {
+	if variantId == "" {
 		return nil, errors.New("product ID is required")
 	}
 	if quantity == 0 {
 		return nil, errors.New("quantity must be greater than 0")
 	}
 
-	return s.repo.AddToCart(userID, productID, quantity)
+	return s.repo.AddToCart(ctx, userID, variantId, quantity)
 }
 
 // GetCart retrieves all cart items for a user
-func (s *service) GetCart(userID uint,
+func (s *service) GetCart(ctx context.Context, userID uint,
 	filter *model.CartFilterInput,
 	sort *model.CartSortInput,
-	limit, offset *int32) ([]CartItem, error) {
+	limit, offset *int32) ([]*model.CartItem, error) {
 	if userID == 0 {
 		return nil, errors.New("user ID is required")
 	}
-	return s.repo.GetCart(userID, filter, sort, limit, offset)
+	return s.repo.GetCart(ctx, userID, filter, sort, limit, offset)
 }
 
 // UpdateCartQuantity updates the quantity of a specific product in the user's cart
-func (s *service) UpdateCartQuantity(userID, productID uint, quantity int) error {
+func (s *service) UpdateCartQuantity(userID uint, productID string, quantity int) error {
 	if userID == 0 {
 		return errors.New("user ID is required")
 	}
-	if productID == 0 {
+	if productID == "" {
 		return errors.New("product ID is required")
 	}
 
@@ -70,11 +71,11 @@ func (s *service) UpdateCartQuantity(userID, productID uint, quantity int) error
 }
 
 // RemoveFromCart deletes a product from the user's cart
-func (s *service) RemoveFromCart(userID, productID uint) error {
+func (s *service) RemoveFromCart(userID uint, productID string) error {
 	if userID == 0 {
 		return errors.New("user ID is required")
 	}
-	if productID == 0 {
+	if productID == "" {
 		return errors.New("product ID is required")
 	}
 	return s.repo.RemoveFromCart(userID, productID)
