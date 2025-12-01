@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"warimas-be/internal/graph/model"
@@ -18,7 +20,7 @@ type Repository interface {
 	GetCart(ctx context.Context, userID uint,
 		filter *model.CartFilterInput,
 		sort *model.CartSortInput,
-		limit, offset *int32) ([]*model.CartItem, error)
+		limit, page *uint16) ([]*model.CartItem, error)
 	UpdateCartQuantity(userID uint, productID string, quantity int) error
 	RemoveFromCart(userID uint, productID string) error
 	ClearCart(userId uint) error
@@ -191,14 +193,79 @@ func (r *repository) GetCart(
 	userID uint,
 	filter *model.CartFilterInput,
 	sort *model.CartSortInput,
-	limit, offset *int32,
+	limit, page *uint16,
 ) ([]*model.CartItem, error) {
 
 	log := logger.FromCtx(ctx)
+	log.Info("GetCart started", zap.Uint("user_id", userID))
 
-	log.Info("GetCart started",
-		zap.Uint("user_id", userID),
-	)
+	// --- Dynamic query parts ---
+	where := []string{"c.user_id = $1"}
+	args := []interface{}{userID}
+	argIndex := 2
+
+	// ---------------- FILTERS ----------------
+
+	if filter != nil {
+
+		// Filter: InStock (bool)
+		if filter.InStock != nil {
+			if *filter.InStock {
+				// only include items with stock > 0
+				where = append(where, "v.stock > 0")
+			} else {
+				// only include items with stock = 0
+				where = append(where, "v.stock = 0")
+			}
+		}
+
+		// Filter: Search in product or variant name
+		if filter.Search != nil && *filter.Search != "" {
+			where = append(where, fmt.Sprintf("(p.name ILIKE $%d OR v.name ILIKE $%d)", argIndex, argIndex))
+			args = append(args, "%"+*filter.Search+"%")
+			argIndex++
+		}
+	}
+
+	// ---------------- SORT ----------------
+	orderBy := "c.created_at DESC" // default
+
+	if sort != nil {
+		switch sort.Field {
+		case "created_at":
+			orderBy = "c.created_at"
+		case "price":
+			orderBy = "v.price"
+		case "name":
+			orderBy = "p.name"
+		case "stock":
+			orderBy = "v.stock"
+		}
+
+		// direction
+		if sort.Direction == "asc" {
+			orderBy += " ASC"
+		} else {
+			orderBy += " DESC"
+		}
+	}
+
+	// ---------------- PAGINATION ----------------
+
+	// Default limit = 20
+	finalLimit := uint16(20)
+	if limit != nil {
+		finalLimit = *limit
+	}
+
+	finalPage := uint16(1)
+	if page != nil {
+		finalPage = *page
+	}
+
+	offset := (finalPage - 1) * finalLimit
+
+	// ---------------- BASE QUERY ----------------
 
 	query := `
         SELECT
@@ -226,21 +293,26 @@ func (r *repository) GetCart(
         FROM carts c
         JOIN variants v ON c.variant_id = v.id
         JOIN products p ON v.product_id = p.id
-        WHERE c.user_id = $1
-    `
+        WHERE ` + strings.Join(where, " AND ") + `
+        ORDER BY ` + orderBy + `
+        LIMIT $` + fmt.Sprint(argIndex) + ` OFFSET $` + fmt.Sprint(argIndex+1)
 
-	log.Debug("Executing GetCart query")
+	args = append(args, finalLimit, offset)
 
-	rows, err := r.db.QueryContext(ctx, query, userID)
+	log.Debug("Executing GetCart query",
+		zap.String("query", query),
+		zap.Any("args", args),
+	)
+
+	// Execute
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		log.Error("DB query failed in GetCart",
-			zap.Uint("user_id", userID),
-			zap.Error(err),
-		)
+		log.Error("DB query failed GetCart", zap.Error(err))
 		return nil, err
 	}
 	defer rows.Close()
 
+	// Parse
 	var items []*model.CartItem
 	rowCount := 0
 
@@ -257,7 +329,11 @@ func (r *repository) GetCart(
 		var variantImageUrl sql.NullString
 
 		err := rows.Scan(
-			&cart.ID, &cart.UserID, &variant.Qty, &cart.CreatedAt, &cart.UpdatedAt,
+			&cart.ID,
+			&cart.UserID,
+			&variant.Qty,
+			&cart.CreatedAt,
+			&cart.UpdatedAt,
 
 			&cart.Product.ID,
 			&cart.Product.Name,
@@ -277,18 +353,14 @@ func (r *repository) GetCart(
 		)
 
 		if err != nil {
-			log.Error("Failed to scan row in GetCart",
-				zap.Uint("user_id", userID),
-				zap.Error(err),
-			)
+			log.Error("Row scan failed GetCart", zap.Error(err))
 			return nil, err
 		}
 
-		// Assign nullable fields
 		cart.Product.ImageURL = productImageUrl.String
 		cart.Product.CategoryID = categoryID
-		variant.SubcategoryID = subcategoryID
 		variant.ImageURL = variantImageUrl.String
+		variant.SubcategoryID = subcategoryID
 
 		cart.Product.Variants = []*model.VariantCart{variant}
 

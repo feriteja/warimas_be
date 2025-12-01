@@ -121,6 +121,7 @@ type ProductCart {
 
 type VariantCart {
   id: ID!
+  cartId: ID!
   name: String!
   productId: ID!
   quantityType: String!
@@ -237,7 +238,7 @@ type Query {
     filter: CartFilterInput
     sort: CartSortInput
     limit: Int = 20
-    offset: Int = 0
+    page: Int = 0
   ): MyCartResponse! @auth(role: USER)
 
   myOrders(

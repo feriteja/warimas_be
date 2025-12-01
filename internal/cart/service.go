@@ -11,7 +11,7 @@ type Service interface {
 	AddToCart(ctx context.Context, userID uint, variantId string, quantity uint) (*CartItem, error)
 	GetCart(ctx context.Context, userID uint, filter *model.CartFilterInput,
 		sort *model.CartSortInput,
-		limit, offset *int32) ([]*model.CartItem, error)
+		limit, page *uint16) ([]*model.CartItem, error)
 	UpdateCartQuantity(userID uint, productID string, quantity int) error
 	RemoveFromCart(userID uint, productID string) error
 	ClearCart(userID uint) error
@@ -46,11 +46,11 @@ func (s *service) AddToCart(ctx context.Context, userID uint, variantId string, 
 func (s *service) GetCart(ctx context.Context, userID uint,
 	filter *model.CartFilterInput,
 	sort *model.CartSortInput,
-	limit, offset *int32) ([]*model.CartItem, error) {
+	limit, page *uint16) ([]*model.CartItem, error) {
 	if userID == 0 {
 		return nil, errors.New("user ID is required")
 	}
-	return s.repo.GetCart(ctx, userID, filter, sort, limit, offset)
+	return s.repo.GetCart(ctx, userID, filter, sort, limit, page)
 }
 
 // UpdateCartQuantity updates the quantity of a specific product in the user's cart

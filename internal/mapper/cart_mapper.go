@@ -8,13 +8,13 @@ import (
 	"warimas-be/internal/product"
 )
 
-func MapVariantToGQL(v product.Variant) *model.Variant {
+func MapVariantToGQL(v product.Variant) *model.VariantCart {
 	var imgURL string
 	if v.ImageUrl != nil {
 		imgURL = *v.ImageUrl
 	}
 
-	return &model.Variant{
+	return &model.VariantCart{
 		ID:            v.ID,
 		Name:          v.Name,
 		ProductID:     v.ProductID,
@@ -26,20 +26,18 @@ func MapVariantToGQL(v product.Variant) *model.Variant {
 	}
 }
 
-func MapVariantsToGQL(vars []*product.Variant) []*model.Variant {
-	res := make([]*model.Variant, 0, len(vars))
+func MapVariantsToGQL(vars []*product.Variant) []*model.VariantCart {
+	res := make([]*model.VariantCart, 0, len(vars))
 	for _, v := range vars {
 		res = append(res, MapVariantToGQL(*v))
 	}
 	return res
 }
 
-func MapProductToGQL(p product.Product) *model.Product {
-	return &model.Product{
+func MapProductToGQL(p product.Product) *model.ProductCart {
+	return &model.ProductCart{
 		ID:       fmt.Sprint(p.ID),
 		Name:     p.Name,
-		Price:    float64(p.Price),
-		Stock:    int32(p.Stock),
 		Variants: MapVariantsToGQL(p.Variants),
 	}
 }
@@ -48,7 +46,6 @@ func MapCartItemToGQL(ci cart.CartItem) *model.CartItem {
 	return &model.CartItem{
 		ID:        fmt.Sprint(ci.ID),
 		UserID:    fmt.Sprint(ci.UserID),
-		Quantity:  int32(ci.Quantity),
 		Product:   MapProductToGQL(ci.Product),
 		CreatedAt: ci.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: ci.UpdatedAt.Format(time.RFC3339),

@@ -151,7 +151,7 @@ func (r *queryResolver) MyCart(
 	ctx context.Context,
 	filter *model.CartFilterInput,
 	sort *model.CartSortInput,
-	limit, offset *int32,
+	limit, page *int32,
 ) (*model.MyCartResponse, error) {
 
 	log := logger.FromCtx(ctx)
@@ -159,7 +159,7 @@ func (r *queryResolver) MyCart(
 		zap.Any("filter", filter),
 		zap.Any("sort", sort),
 		zap.Any("limit", limit),
-		zap.Any("offset", offset),
+		zap.Any("offset", page),
 	)
 
 	// === USER ID ===
@@ -175,7 +175,14 @@ func (r *queryResolver) MyCart(
 	log.Info("User authenticated for MyCart", zap.Uint("user_id", uint(userID)))
 
 	// === FETCH DATA FROM SERVICE ===
-	items, err := r.CartSvc.GetCart(ctx, uint(userID), filter, sort, limit, offset)
+	var limitVal, pageVal uint16
+	if limit != nil {
+		limitVal = uint16(*limit)
+	}
+	if page != nil {
+		pageVal = uint16(*page)
+	}
+	items, err := r.CartSvc.GetCart(ctx, uint(userID), filter, sort, &limitVal, &pageVal)
 	if err != nil {
 		log.Error("Failed to fetch cart items",
 			zap.Uint("user_id", uint(userID)),
@@ -201,6 +208,7 @@ func (r *queryResolver) MyCart(
 
 		v := &model.VariantCart{
 			ID:            it.Product.Variants[0].ID,
+			CartID:        it.ID,
 			Name:          it.Product.Variants[0].Name,
 			ProductID:     it.Product.Variants[0].ProductID,
 			QuantityType:  it.Product.Variants[0].QuantityType,

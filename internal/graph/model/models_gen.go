@@ -178,6 +178,7 @@ type Variant struct {
 
 type VariantCart struct {
 	ID            string  `json:"id"`
+	CartID        string  `json:"cartId"`
 	Name          string  `json:"name"`
 	ProductID     string  `json:"productId"`
 	QuantityType  string  `json:"quantityType"`
