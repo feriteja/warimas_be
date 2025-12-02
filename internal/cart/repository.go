@@ -331,7 +331,7 @@ func (r *repository) GetCart(
 		err := rows.Scan(
 			&cart.ID,
 			&cart.UserID,
-			&variant.Qty,
+			&variant.Quantity,
 			&cart.CreatedAt,
 			&cart.UpdatedAt,
 

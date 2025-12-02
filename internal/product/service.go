@@ -10,6 +10,7 @@ import (
 type Service interface {
 	GetAll(ctx context.Context, opts servicepkg.ProductQueryOptions) ([]model.CategoryProduct, error)
 	Create(name string, price float64, stock int) (model.Product, error)
+	GetPackages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit, page int32) ([]*model.Package, error)
 }
 
 type service struct {
@@ -38,4 +39,16 @@ func (s *service) Create(name string, price float64, stock int) (model.Product, 
 		Stock: int32(stock),
 	}
 	return s.repo.Create(newProduct)
+}
+
+func (s *service) GetPackages(
+	ctx context.Context,
+	filter *model.PackageFilterInput,
+	sort *model.PackageSortInput,
+	limit, page int32,
+) ([]*model.Package, error) {
+
+	offset := page * limit
+
+	return s.repo.GetPackages(ctx, filter, sort, limit, offset)
 }

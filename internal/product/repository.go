@@ -1,7 +1,10 @@
 package product
 
 import (
+	"context"
 	"database/sql"
+	"fmt"
+	"strings"
 	"warimas-be/internal/graph/model"
 	servicepkg "warimas-be/internal/service"
 )
@@ -9,6 +12,7 @@ import (
 type Repository interface {
 	GetAll(opts servicepkg.ProductQueryOptions) ([]model.CategoryProduct, error)
 	Create(p model.Product) (model.Product, error)
+	GetPackages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit, offset int32) ([]*model.Package, error)
 }
 
 type repository struct {
@@ -181,4 +185,131 @@ func (r *repository) Create(p model.Product) (model.Product, error) {
 		p.Name, p.Price, p.Stock,
 	).Scan(&p.ID)
 	return p, err
+}
+
+func (r *repository) GetPackages(
+	ctx context.Context,
+	filter *model.PackageFilterInput,
+	sort *model.PackageSortInput,
+	limit, offset int32,
+) ([]*model.Package, error) {
+
+	query := `
+		SELECT
+			p.id,
+			p.name,
+			p.image_url,
+			p.user_id,
+			pi.id AS item_id,
+			pi.variant_id,
+			pi.name AS item_name,
+			pi.image_url AS item_image_url,
+			v.price AS variant_price,
+			pi.quantity,
+			pi.created_at,
+			pi.updated_at
+		FROM packages p
+		LEFT JOIN package_items pi ON p.id = pi.package_id
+		LEFT JOIN variants v ON pi.variant_id = v.id
+		WHERE 1=1
+	`
+
+	// Filtering
+	args := []interface{}{}
+	argIndex := 1
+
+	if filter != nil {
+		if filter.ID != nil {
+			query += fmt.Sprintf(" AND p.id = $%d", argIndex)
+			args = append(args, *filter.ID)
+			argIndex++
+		}
+		if filter.Name != nil && *filter.Name != "" {
+			query += fmt.Sprintf(" AND p.name ILIKE $%d", argIndex)
+			args = append(args, "%"+*filter.Name+"%")
+			argIndex++
+		}
+	}
+
+	// Sorting
+	if sort != nil {
+		switch sort.Field {
+		case model.PackageSortFieldName:
+			query += " ORDER BY p.name " + strings.ToUpper(string(sort.Direction))
+		case model.PackageSortFieldCreatedAt:
+			query += " ORDER BY p.created_at " + strings.ToUpper(string(sort.Direction))
+		default:
+			query += " ORDER BY p.created_at DESC"
+		}
+	} else {
+		query += " ORDER BY p.created_at DESC"
+	}
+
+	// Pagination
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	packagesMap := map[string]*model.Package{}
+
+	for rows.Next() {
+		var (
+			p            model.Package
+			pi           model.PackageItem
+			variantPrice sql.NullFloat64
+			imageURL     sql.NullString
+			userID       sql.NullString
+		)
+
+		err := rows.Scan(
+			&p.ID,
+			&p.Name,
+			&imageURL,
+			&userID,
+			&pi.ID,
+			&pi.VariantID,
+			&pi.Name,
+			&pi.ImageURL,
+			&variantPrice,
+			&pi.Quantity,
+			&pi.CreatedAt,
+			&pi.UpdatedAt,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if imageURL.Valid {
+			p.ImageURL = &imageURL.String
+		}
+		if userID.Valid {
+			p.UserID = &userID.String
+		}
+
+		// check if package exists already
+		if _, ok := packagesMap[p.ID]; !ok {
+			p.Items = []*model.PackageItem{}
+			packagesMap[p.ID] = &p
+		}
+
+		// If no item exists (NULL), skip append
+		if pi.ID != "" {
+			pi.Price = variantPrice.Float64
+			packagesMap[p.ID].Items = append(packagesMap[p.ID].Items, &pi)
+		}
+	}
+
+	// Convert map to slice
+	result := []*model.Package{}
+	for _, pkg := range packagesMap {
+		result = append(result, pkg)
+	}
+
+	return result, nil
 }

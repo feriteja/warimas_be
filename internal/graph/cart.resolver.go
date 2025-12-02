@@ -69,7 +69,7 @@ func (r *mutationResolver) AddToCart(ctx context.Context, input model.AddToCartI
 			Name:          item.Name,
 			ProductID:     item.ProductID,
 			QuantityType:  item.QuantityType,
-			Qty:           int32(cartItemRes.Quantity),
+			Quantity:      int32(cartItemRes.Quantity),
 			Price:         item.Price,
 			Stock:         int32(item.Stock),
 			ImageURL:      imgURL,
@@ -203,7 +203,7 @@ func (r *queryResolver) MyCart(
 		log.Debug("Processing cart item",
 			zap.String("cart_item_id", it.ID),
 			zap.String("product_id", it.Product.ID),
-			zap.Int("quantity", int(it.Product.Variants[0].Qty)),
+			zap.Int("quantity", int(it.Product.Variants[0].Quantity)),
 		)
 
 		v := &model.VariantCart{
@@ -212,7 +212,7 @@ func (r *queryResolver) MyCart(
 			Name:          it.Product.Variants[0].Name,
 			ProductID:     it.Product.Variants[0].ProductID,
 			QuantityType:  it.Product.Variants[0].QuantityType,
-			Qty:           it.Product.Variants[0].Qty,
+			Quantity:      it.Product.Variants[0].Quantity,
 			Price:         it.Product.Variants[0].Price,
 			Stock:         it.Product.Variants[0].Stock,
 			ImageURL:      it.Product.Variants[0].ImageURL,
@@ -265,7 +265,7 @@ func (r *queryResolver) MyCart(
 	)
 
 	return &model.MyCartResponse{
-		Success:  true,
-		CartItem: response,
+		Success: true,
+		Data:    response,
 	}, nil
 }

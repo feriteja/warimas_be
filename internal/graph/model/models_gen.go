@@ -61,9 +61,9 @@ type Mutation struct {
 }
 
 type MyCartResponse struct {
-	Success  bool        `json:"success"`
-	Message  *string     `json:"message,omitempty"`
-	CartItem []*CartItem `json:"cartItem,omitempty"`
+	Success bool        `json:"success"`
+	Message *string     `json:"message,omitempty"`
+	Data    []*CartItem `json:"data,omitempty"`
 }
 
 type NewProduct struct {
@@ -98,6 +98,42 @@ type OrderItem struct {
 type OrderSortInput struct {
 	Field     OrderSortField `json:"field"`
 	Direction SortDirection  `json:"direction"`
+}
+
+type Package struct {
+	ID       string         `json:"id"`
+	Name     string         `json:"name"`
+	ImageURL *string        `json:"imageUrl,omitempty"`
+	UserID   *string        `json:"userId,omitempty"`
+	Items    []*PackageItem `json:"items"`
+}
+
+type PackageFilterInput struct {
+	ID   *string `json:"id,omitempty"`
+	Name *string `json:"name,omitempty"`
+}
+
+type PackageItem struct {
+	ID        string  `json:"id"`
+	PackageID string  `json:"packageId"`
+	VariantID string  `json:"variantId"`
+	ImageURL  string  `json:"imageUrl"`
+	Name      string  `json:"name"`
+	Price     float64 `json:"price"`
+	Quantity  int32   `json:"quantity"`
+	CreatedAt string  `json:"createdAt"`
+	UpdatedAt string  `json:"updatedAt"`
+}
+
+type PackageResponse struct {
+	Success bool       `json:"success"`
+	Message *string    `json:"message,omitempty"`
+	Data    []*Package `json:"data,omitempty"`
+}
+
+type PackageSortInput struct {
+	Field     PackageSortField `json:"field"`
+	Direction SortDirection    `json:"direction"`
 }
 
 type Product struct {
@@ -183,7 +219,7 @@ type VariantCart struct {
 	ProductID     string  `json:"productId"`
 	QuantityType  string  `json:"quantityType"`
 	Price         float64 `json:"price"`
-	Qty           int32   `json:"qty"`
+	Quantity      int32   `json:"quantity"`
 	Stock         int32   `json:"stock"`
 	ImageURL      string  `json:"imageUrl"`
 	SubcategoryID *string `json:"subcategoryID,omitempty"`
@@ -363,6 +399,61 @@ func (e *OrderStatus) UnmarshalJSON(b []byte) error {
 }
 
 func (e OrderStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type PackageSortField string
+
+const (
+	PackageSortFieldName      PackageSortField = "NAME"
+	PackageSortFieldCreatedAt PackageSortField = "CREATED_AT"
+)
+
+var AllPackageSortField = []PackageSortField{
+	PackageSortFieldName,
+	PackageSortFieldCreatedAt,
+}
+
+func (e PackageSortField) IsValid() bool {
+	switch e {
+	case PackageSortFieldName, PackageSortFieldCreatedAt:
+		return true
+	}
+	return false
+}
+
+func (e PackageSortField) String() string {
+	return string(e)
+}
+
+func (e *PackageSortField) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = PackageSortField(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid PackageSortField", str)
+	}
+	return nil
+}
+
+func (e PackageSortField) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *PackageSortField) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e PackageSortField) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

@@ -69,3 +69,38 @@ func (r *queryResolver) ProductsHome(
 
 	return result, nil
 }
+
+func (r *queryResolver) PackageRecomamendation(
+	ctx context.Context,
+	filter *model.PackageFilterInput,
+	sort *model.PackageSortInput,
+	limit *int32,
+	page *int32,
+) (*model.PackageResponse, error) {
+
+	limitVal := int32(20)
+	pageVal := int32(0)
+
+	if limit != nil {
+		limitVal = *limit
+	}
+	if page != nil {
+		pageVal = *page
+	}
+
+	data, err := r.ProductSvc.GetPackages(ctx, filter, sort, limitVal, pageVal)
+	if err != nil {
+		msg := err.Error()
+		return &model.PackageResponse{
+			Success: false,
+			Message: &msg,
+			Data:    nil,
+		}, nil
+	}
+
+	return &model.PackageResponse{
+		Success: true,
+		Message: nil,
+		Data:    data,
+	}, nil
+}

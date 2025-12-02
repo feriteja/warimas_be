@@ -9,7 +9,8 @@ import (
 // Service defines the business logic for carts.
 type Service interface {
 	AddToCart(ctx context.Context, userID uint, variantId string, quantity uint) (*CartItem, error)
-	GetCart(ctx context.Context, userID uint, filter *model.CartFilterInput,
+	GetCart(ctx context.Context, userID uint,
+		filter *model.CartFilterInput,
 		sort *model.CartSortInput,
 		limit, page *uint16) ([]*model.CartItem, error)
 	UpdateCartQuantity(userID uint, productID string, quantity int) error

@@ -88,9 +88,9 @@ type ComplexityRoot struct {
 	}
 
 	MyCartResponse struct {
-		CartItem func(childComplexity int) int
-		Message  func(childComplexity int) int
-		Success  func(childComplexity int) int
+		Data    func(childComplexity int) int
+		Message func(childComplexity int) int
+		Success func(childComplexity int) int
 	}
 
 	Order struct {
@@ -107,6 +107,32 @@ type ComplexityRoot struct {
 		Price    func(childComplexity int) int
 		Product  func(childComplexity int) int
 		Quantity func(childComplexity int) int
+	}
+
+	Package struct {
+		ID       func(childComplexity int) int
+		ImageURL func(childComplexity int) int
+		Items    func(childComplexity int) int
+		Name     func(childComplexity int) int
+		UserID   func(childComplexity int) int
+	}
+
+	PackageItem struct {
+		CreatedAt func(childComplexity int) int
+		ID        func(childComplexity int) int
+		ImageURL  func(childComplexity int) int
+		Name      func(childComplexity int) int
+		PackageID func(childComplexity int) int
+		Price     func(childComplexity int) int
+		Quantity  func(childComplexity int) int
+		UpdatedAt func(childComplexity int) int
+		VariantID func(childComplexity int) int
+	}
+
+	PackageResponse struct {
+		Data    func(childComplexity int) int
+		Message func(childComplexity int) int
+		Success func(childComplexity int) int
 	}
 
 	Product struct {
@@ -133,11 +159,12 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		AdminOrders  func(childComplexity int, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, offset *int32) int
-		MyCart       func(childComplexity int, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) int
-		MyOrders     func(childComplexity int, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, offset *int32) int
-		OrderDetail  func(childComplexity int, orderID string) int
-		ProductsHome func(childComplexity int, filter *model.ProductFilterInput, sort *model.ProductSortInput, limit *int32, offset *int32) int
+		AdminOrders            func(childComplexity int, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, offset *int32) int
+		MyCart                 func(childComplexity int, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) int
+		MyOrders               func(childComplexity int, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, offset *int32) int
+		OrderDetail            func(childComplexity int, orderID string) int
+		PackageRecomamendation func(childComplexity int, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) int
+		ProductsHome           func(childComplexity int, filter *model.ProductFilterInput, sort *model.ProductSortInput, limit *int32, offset *int32) int
 	}
 
 	Response struct {
@@ -169,7 +196,7 @@ type ComplexityRoot struct {
 		Name          func(childComplexity int) int
 		Price         func(childComplexity int) int
 		ProductID     func(childComplexity int) int
-		Qty           func(childComplexity int) int
+		Quantity      func(childComplexity int) int
 		QuantityType  func(childComplexity int) int
 		Stock         func(childComplexity int) int
 		SubcategoryID func(childComplexity int) int
@@ -193,6 +220,7 @@ type MutationResolver interface {
 	UpdateOrderStatus(ctx context.Context, input model.UpdateOrderStatusInput) (*model.CreateOrderResponse, error)
 }
 type QueryResolver interface {
+	PackageRecomamendation(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) (*model.PackageResponse, error)
 	ProductsHome(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, limit *int32, offset *int32) ([]*model.CategoryProduct, error)
 	MyCart(ctx context.Context, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) (*model.MyCartResponse, error)
 	MyOrders(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, offset *int32) ([]*model.Order, error)
@@ -397,12 +425,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.UpdateOrderStatus(childComplexity, args["input"].(model.UpdateOrderStatusInput)), true
 
-	case "MyCartResponse.cartItem":
-		if e.complexity.MyCartResponse.CartItem == nil {
+	case "MyCartResponse.data":
+		if e.complexity.MyCartResponse.Data == nil {
 			break
 		}
 
-		return e.complexity.MyCartResponse.CartItem(childComplexity), true
+		return e.complexity.MyCartResponse.Data(childComplexity), true
 	case "MyCartResponse.message":
 		if e.complexity.MyCartResponse.Message == nil {
 			break
@@ -477,6 +505,111 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.OrderItem.Quantity(childComplexity), true
+
+	case "Package.id":
+		if e.complexity.Package.ID == nil {
+			break
+		}
+
+		return e.complexity.Package.ID(childComplexity), true
+	case "Package.imageUrl":
+		if e.complexity.Package.ImageURL == nil {
+			break
+		}
+
+		return e.complexity.Package.ImageURL(childComplexity), true
+	case "Package.items":
+		if e.complexity.Package.Items == nil {
+			break
+		}
+
+		return e.complexity.Package.Items(childComplexity), true
+	case "Package.name":
+		if e.complexity.Package.Name == nil {
+			break
+		}
+
+		return e.complexity.Package.Name(childComplexity), true
+	case "Package.userId":
+		if e.complexity.Package.UserID == nil {
+			break
+		}
+
+		return e.complexity.Package.UserID(childComplexity), true
+
+	case "PackageItem.createdAt":
+		if e.complexity.PackageItem.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.PackageItem.CreatedAt(childComplexity), true
+	case "PackageItem.id":
+		if e.complexity.PackageItem.ID == nil {
+			break
+		}
+
+		return e.complexity.PackageItem.ID(childComplexity), true
+	case "PackageItem.imageUrl":
+		if e.complexity.PackageItem.ImageURL == nil {
+			break
+		}
+
+		return e.complexity.PackageItem.ImageURL(childComplexity), true
+	case "PackageItem.name":
+		if e.complexity.PackageItem.Name == nil {
+			break
+		}
+
+		return e.complexity.PackageItem.Name(childComplexity), true
+	case "PackageItem.packageId":
+		if e.complexity.PackageItem.PackageID == nil {
+			break
+		}
+
+		return e.complexity.PackageItem.PackageID(childComplexity), true
+	case "PackageItem.price":
+		if e.complexity.PackageItem.Price == nil {
+			break
+		}
+
+		return e.complexity.PackageItem.Price(childComplexity), true
+	case "PackageItem.quantity":
+		if e.complexity.PackageItem.Quantity == nil {
+			break
+		}
+
+		return e.complexity.PackageItem.Quantity(childComplexity), true
+	case "PackageItem.updatedAt":
+		if e.complexity.PackageItem.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.PackageItem.UpdatedAt(childComplexity), true
+	case "PackageItem.variantId":
+		if e.complexity.PackageItem.VariantID == nil {
+			break
+		}
+
+		return e.complexity.PackageItem.VariantID(childComplexity), true
+
+	case "PackageResponse.data":
+		if e.complexity.PackageResponse.Data == nil {
+			break
+		}
+
+		return e.complexity.PackageResponse.Data(childComplexity), true
+	case "PackageResponse.message":
+		if e.complexity.PackageResponse.Message == nil {
+			break
+		}
+
+		return e.complexity.PackageResponse.Message(childComplexity), true
+	case "PackageResponse.success":
+		if e.complexity.PackageResponse.Success == nil {
+			break
+		}
+
+		return e.complexity.PackageResponse.Success(childComplexity), true
 
 	case "Product.categoryID":
 		if e.complexity.Product.CategoryID == nil {
@@ -626,6 +759,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.OrderDetail(childComplexity, args["orderId"].(string)), true
+	case "Query.packageRecomamendation":
+		if e.complexity.Query.PackageRecomamendation == nil {
+			break
+		}
+
+		args, err := ec.field_Query_packageRecomamendation_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.PackageRecomamendation(childComplexity, args["filter"].(*model.PackageFilterInput), args["sort"].(*model.PackageSortInput), args["limit"].(*int32), args["page"].(*int32)), true
 	case "Query.productsHome":
 		if e.complexity.Query.ProductsHome == nil {
 			break
@@ -755,12 +899,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.VariantCart.ProductID(childComplexity), true
-	case "VariantCart.qty":
-		if e.complexity.VariantCart.Qty == nil {
+	case "VariantCart.quantity":
+		if e.complexity.VariantCart.Quantity == nil {
 			break
 		}
 
-		return e.complexity.VariantCart.Qty(childComplexity), true
+		return e.complexity.VariantCart.Quantity(childComplexity), true
 	case "VariantCart.quantityType":
 		if e.complexity.VariantCart.QuantityType == nil {
 			break
@@ -814,6 +958,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputNewProduct,
 		ec.unmarshalInputOrderFilterInput,
 		ec.unmarshalInputOrderSortInput,
+		ec.unmarshalInputPackageFilterInput,
+		ec.unmarshalInputPackageSortInput,
 		ec.unmarshalInputProductFilterInput,
 		ec.unmarshalInputProductSortInput,
 		ec.unmarshalInputRegisterInput,
@@ -1120,6 +1266,32 @@ func (ec *executionContext) field_Query_orderDetail_args(ctx context.Context, ra
 		return nil, err
 	}
 	args["orderId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_packageRecomamendation_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "filter", ec.unmarshalOPackageFilterInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageFilterInput)
+	if err != nil {
+		return nil, err
+	}
+	args["filter"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "sort", ec.unmarshalOPackageSortInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageSortInput)
+	if err != nil {
+		return nil, err
+	}
+	args["sort"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint32)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "page", ec.unmarshalOInt2ᚖint32)
+	if err != nil {
+		return nil, err
+	}
+	args["page"] = arg3
 	return args, nil
 }
 
@@ -2246,14 +2418,14 @@ func (ec *executionContext) fieldContext_MyCartResponse_message(_ context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _MyCartResponse_cartItem(ctx context.Context, field graphql.CollectedField, obj *model.MyCartResponse) (ret graphql.Marshaler) {
+func (ec *executionContext) _MyCartResponse_data(ctx context.Context, field graphql.CollectedField, obj *model.MyCartResponse) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_MyCartResponse_cartItem,
+		ec.fieldContext_MyCartResponse_data,
 		func(ctx context.Context) (any, error) {
-			return obj.CartItem, nil
+			return obj.Data, nil
 		},
 		nil,
 		ec.marshalOCartItem2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartItem,
@@ -2262,7 +2434,7 @@ func (ec *executionContext) _MyCartResponse_cartItem(ctx context.Context, field 
 	)
 }
 
-func (ec *executionContext) fieldContext_MyCartResponse_cartItem(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_MyCartResponse_data(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "MyCartResponse",
 		Field:      field,
@@ -2604,6 +2776,531 @@ func (ec *executionContext) fieldContext_OrderItem_price(_ context.Context, fiel
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Package_id(ctx context.Context, field graphql.CollectedField, obj *model.Package) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Package_id,
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Package_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Package",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Package_name(ctx context.Context, field graphql.CollectedField, obj *model.Package) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Package_name,
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Package_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Package",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Package_imageUrl(ctx context.Context, field graphql.CollectedField, obj *model.Package) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Package_imageUrl,
+		func(ctx context.Context) (any, error) {
+			return obj.ImageURL, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Package_imageUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Package",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Package_userId(ctx context.Context, field graphql.CollectedField, obj *model.Package) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Package_userId,
+		func(ctx context.Context) (any, error) {
+			return obj.UserID, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Package_userId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Package",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Package_items(ctx context.Context, field graphql.CollectedField, obj *model.Package) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Package_items,
+		func(ctx context.Context) (any, error) {
+			return obj.Items, nil
+		},
+		nil,
+		ec.marshalNPackageItem2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageItemᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Package_items(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Package",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_PackageItem_id(ctx, field)
+			case "packageId":
+				return ec.fieldContext_PackageItem_packageId(ctx, field)
+			case "variantId":
+				return ec.fieldContext_PackageItem_variantId(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_PackageItem_imageUrl(ctx, field)
+			case "name":
+				return ec.fieldContext_PackageItem_name(ctx, field)
+			case "price":
+				return ec.fieldContext_PackageItem_price(ctx, field)
+			case "quantity":
+				return ec.fieldContext_PackageItem_quantity(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_PackageItem_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_PackageItem_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PackageItem", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PackageItem_id(ctx context.Context, field graphql.CollectedField, obj *model.PackageItem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PackageItem_id,
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PackageItem_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PackageItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PackageItem_packageId(ctx context.Context, field graphql.CollectedField, obj *model.PackageItem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PackageItem_packageId,
+		func(ctx context.Context) (any, error) {
+			return obj.PackageID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PackageItem_packageId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PackageItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PackageItem_variantId(ctx context.Context, field graphql.CollectedField, obj *model.PackageItem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PackageItem_variantId,
+		func(ctx context.Context) (any, error) {
+			return obj.VariantID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PackageItem_variantId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PackageItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PackageItem_imageUrl(ctx context.Context, field graphql.CollectedField, obj *model.PackageItem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PackageItem_imageUrl,
+		func(ctx context.Context) (any, error) {
+			return obj.ImageURL, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PackageItem_imageUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PackageItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PackageItem_name(ctx context.Context, field graphql.CollectedField, obj *model.PackageItem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PackageItem_name,
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PackageItem_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PackageItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PackageItem_price(ctx context.Context, field graphql.CollectedField, obj *model.PackageItem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PackageItem_price,
+		func(ctx context.Context) (any, error) {
+			return obj.Price, nil
+		},
+		nil,
+		ec.marshalNFloat2float64,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PackageItem_price(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PackageItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PackageItem_quantity(ctx context.Context, field graphql.CollectedField, obj *model.PackageItem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PackageItem_quantity,
+		func(ctx context.Context) (any, error) {
+			return obj.Quantity, nil
+		},
+		nil,
+		ec.marshalNInt2int32,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PackageItem_quantity(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PackageItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PackageItem_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.PackageItem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PackageItem_createdAt,
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PackageItem_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PackageItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PackageItem_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.PackageItem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PackageItem_updatedAt,
+		func(ctx context.Context) (any, error) {
+			return obj.UpdatedAt, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PackageItem_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PackageItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PackageResponse_success(ctx context.Context, field graphql.CollectedField, obj *model.PackageResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PackageResponse_success,
+		func(ctx context.Context) (any, error) {
+			return obj.Success, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PackageResponse_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PackageResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PackageResponse_message(ctx context.Context, field graphql.CollectedField, obj *model.PackageResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PackageResponse_message,
+		func(ctx context.Context) (any, error) {
+			return obj.Message, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_PackageResponse_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PackageResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PackageResponse_data(ctx context.Context, field graphql.CollectedField, obj *model.PackageResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PackageResponse_data,
+		func(ctx context.Context) (any, error) {
+			return obj.Data, nil
+		},
+		nil,
+		ec.marshalOPackage2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackage,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_PackageResponse_data(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PackageResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Package_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Package_name(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_Package_imageUrl(ctx, field)
+			case "userId":
+				return ec.fieldContext_Package_userId(ctx, field)
+			case "items":
+				return ec.fieldContext_Package_items(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Package", field.Name)
 		},
 	}
 	return fc, nil
@@ -3098,8 +3795,8 @@ func (ec *executionContext) fieldContext_ProductCart_variants(_ context.Context,
 				return ec.fieldContext_VariantCart_quantityType(ctx, field)
 			case "price":
 				return ec.fieldContext_VariantCart_price(ctx, field)
-			case "qty":
-				return ec.fieldContext_VariantCart_qty(ctx, field)
+			case "quantity":
+				return ec.fieldContext_VariantCart_quantity(ctx, field)
 			case "stock":
 				return ec.fieldContext_VariantCart_stock(ctx, field)
 			case "imageUrl":
@@ -3138,6 +3835,55 @@ func (ec *executionContext) fieldContext_ProductCart_imageUrl(_ context.Context,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_packageRecomamendation(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_packageRecomamendation,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().PackageRecomamendation(ctx, fc.Args["filter"].(*model.PackageFilterInput), fc.Args["sort"].(*model.PackageSortInput), fc.Args["limit"].(*int32), fc.Args["page"].(*int32))
+		},
+		nil,
+		ec.marshalNPackageResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageResponse,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_packageRecomamendation(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "success":
+				return ec.fieldContext_PackageResponse_success(ctx, field)
+			case "message":
+				return ec.fieldContext_PackageResponse_message(ctx, field)
+			case "data":
+				return ec.fieldContext_PackageResponse_data(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PackageResponse", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_packageRecomamendation_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -3238,8 +3984,8 @@ func (ec *executionContext) fieldContext_Query_myCart(ctx context.Context, field
 				return ec.fieldContext_MyCartResponse_success(ctx, field)
 			case "message":
 				return ec.fieldContext_MyCartResponse_message(ctx, field)
-			case "cartItem":
-				return ec.fieldContext_MyCartResponse_cartItem(ctx, field)
+			case "data":
+				return ec.fieldContext_MyCartResponse_data(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MyCartResponse", field.Name)
 		},
@@ -4136,14 +4882,14 @@ func (ec *executionContext) fieldContext_VariantCart_price(_ context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _VariantCart_qty(ctx context.Context, field graphql.CollectedField, obj *model.VariantCart) (ret graphql.Marshaler) {
+func (ec *executionContext) _VariantCart_quantity(ctx context.Context, field graphql.CollectedField, obj *model.VariantCart) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_VariantCart_qty,
+		ec.fieldContext_VariantCart_quantity,
 		func(ctx context.Context) (any, error) {
-			return obj.Qty, nil
+			return obj.Quantity, nil
 		},
 		nil,
 		ec.marshalNInt2int32,
@@ -4152,7 +4898,7 @@ func (ec *executionContext) _VariantCart_qty(ctx context.Context, field graphql.
 	)
 }
 
-func (ec *executionContext) fieldContext_VariantCart_qty(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_VariantCart_quantity(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "VariantCart",
 		Field:      field,
@@ -6074,6 +6820,78 @@ func (ec *executionContext) unmarshalInputOrderSortInput(ctx context.Context, ob
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputPackageFilterInput(ctx context.Context, obj any) (model.PackageFilterInput, error) {
+	var it model.PackageFilterInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "name"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputPackageSortInput(ctx context.Context, obj any) (model.PackageSortInput, error) {
+	var it model.PackageSortInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	if _, present := asMap["direction"]; !present {
+		asMap["direction"] = "ASC"
+	}
+
+	fieldsInOrder := [...]string{"field", "direction"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "field":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			data, err := ec.unmarshalNPackageSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageSortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Field = data
+		case "direction":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			data, err := ec.unmarshalNSortDirection2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Direction = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputProductFilterInput(ctx context.Context, obj any) (model.ProductFilterInput, error) {
 	var it model.ProductFilterInput
 	asMap := map[string]any{}
@@ -6592,8 +7410,8 @@ func (ec *executionContext) _MyCartResponse(ctx context.Context, sel ast.Selecti
 			}
 		case "message":
 			out.Values[i] = ec._MyCartResponse_message(ctx, field, obj)
-		case "cartItem":
-			out.Values[i] = ec._MyCartResponse_cartItem(ctx, field, obj)
+		case "data":
+			out.Values[i] = ec._MyCartResponse_data(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6712,6 +7530,181 @@ func (ec *executionContext) _OrderItem(ctx context.Context, sel ast.SelectionSet
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var packageImplementors = []string{"Package"}
+
+func (ec *executionContext) _Package(ctx context.Context, sel ast.SelectionSet, obj *model.Package) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, packageImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Package")
+		case "id":
+			out.Values[i] = ec._Package_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._Package_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "imageUrl":
+			out.Values[i] = ec._Package_imageUrl(ctx, field, obj)
+		case "userId":
+			out.Values[i] = ec._Package_userId(ctx, field, obj)
+		case "items":
+			out.Values[i] = ec._Package_items(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var packageItemImplementors = []string{"PackageItem"}
+
+func (ec *executionContext) _PackageItem(ctx context.Context, sel ast.SelectionSet, obj *model.PackageItem) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, packageItemImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PackageItem")
+		case "id":
+			out.Values[i] = ec._PackageItem_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "packageId":
+			out.Values[i] = ec._PackageItem_packageId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "variantId":
+			out.Values[i] = ec._PackageItem_variantId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "imageUrl":
+			out.Values[i] = ec._PackageItem_imageUrl(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._PackageItem_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "price":
+			out.Values[i] = ec._PackageItem_price(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "quantity":
+			out.Values[i] = ec._PackageItem_quantity(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._PackageItem_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._PackageItem_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var packageResponseImplementors = []string{"PackageResponse"}
+
+func (ec *executionContext) _PackageResponse(ctx context.Context, sel ast.SelectionSet, obj *model.PackageResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, packageResponseImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PackageResponse")
+		case "success":
+			out.Values[i] = ec._PackageResponse_success(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "message":
+			out.Values[i] = ec._PackageResponse_message(ctx, field, obj)
+		case "data":
+			out.Values[i] = ec._PackageResponse_data(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6895,6 +7888,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
+		case "packageRecomamendation":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_packageRecomamendation(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "productsHome":
 			field := field
 
@@ -7238,8 +8253,8 @@ func (ec *executionContext) _VariantCart(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "qty":
-			out.Values[i] = ec._VariantCart_qty(ctx, field, obj)
+		case "quantity":
+			out.Values[i] = ec._VariantCart_quantity(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -7933,6 +8948,84 @@ func (ec *executionContext) marshalNOrderStatus2warimasᚑbeᚋinternalᚋgraph�
 	return v
 }
 
+func (ec *executionContext) marshalNPackageItem2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageItemᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.PackageItem) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNPackageItem2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageItem(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNPackageItem2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageItem(ctx context.Context, sel ast.SelectionSet, v *model.PackageItem) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PackageItem(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNPackageResponse2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageResponse(ctx context.Context, sel ast.SelectionSet, v model.PackageResponse) graphql.Marshaler {
+	return ec._PackageResponse(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPackageResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageResponse(ctx context.Context, sel ast.SelectionSet, v *model.PackageResponse) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PackageResponse(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNPackageSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageSortField(ctx context.Context, v any) (model.PackageSortField, error) {
+	var res model.PackageSortField
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPackageSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageSortField(ctx context.Context, sel ast.SelectionSet, v model.PackageSortField) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) marshalNProduct2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐProduct(ctx context.Context, sel ast.SelectionSet, v model.Product) graphql.Marshaler {
 	return ec._Product(ctx, sel, &v)
 }
@@ -8478,6 +9571,24 @@ func (ec *executionContext) marshalOFloat2ᚖfloat64(ctx context.Context, sel as
 	return graphql.WrapContextMarshaler(ctx, res)
 }
 
+func (ec *executionContext) unmarshalOID2ᚖstring(ctx context.Context, v any) (*string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalID(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOID2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	_ = sel
+	_ = ctx
+	res := graphql.MarshalID(*v)
+	return res
+}
+
 func (ec *executionContext) unmarshalOInt2ᚖint32(ctx context.Context, v any) (*int32, error) {
 	if v == nil {
 		return nil, nil
@@ -8516,6 +9627,70 @@ func (ec *executionContext) unmarshalOOrderSortInput2ᚖwarimasᚑbeᚋinternal�
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputOrderSortInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOPackage2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackage(ctx context.Context, sel ast.SelectionSet, v []*model.Package) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOPackage2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackage(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	return ret
+}
+
+func (ec *executionContext) marshalOPackage2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackage(ctx context.Context, sel ast.SelectionSet, v *model.Package) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Package(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOPackageFilterInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageFilterInput(ctx context.Context, v any) (*model.PackageFilterInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputPackageFilterInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOPackageSortInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageSortInput(ctx context.Context, v any) (*model.PackageSortInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputPackageSortInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 

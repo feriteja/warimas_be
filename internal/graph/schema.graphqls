@@ -14,12 +14,27 @@ scalar DateTime
 
 ################  PRODUCT
 
+input PackageFilterInput {
+  id: ID
+  name: String
+}
+
+input PackageSortInput {
+  field: PackageSortField!
+  direction: SortDirection! = ASC
+}
+
 input ProductFilterInput {
   category: String
   minPrice: Float
   maxPrice: Float
   search: String
   inStock: Boolean
+}
+
+enum PackageSortField {
+  NAME
+  CREATED_AT
 }
 
 enum ProductSortField {
@@ -126,7 +141,7 @@ type VariantCart {
   productId: ID!
   quantityType: String!
   price: Float!
-  qty: Int!
+  quantity: Int!
   stock: Int!
   imageUrl: String!
   subcategoryID: String
@@ -136,6 +151,26 @@ type CartItem {
   id: ID!
   userId: ID!
   product: ProductCart!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type Package {
+  id: ID!
+  name: String!
+  imageUrl: String
+  userId: String
+  items: [PackageItem!]!
+}
+
+type PackageItem {
+  id: ID!
+  packageId: ID!
+  variantId: ID!
+  imageUrl: String!
+  name: String!
+  price: Float!
+  quantity: Int!
   createdAt: String!
   updatedAt: String!
 }
@@ -154,7 +189,13 @@ type AddToCartResponse {
 type MyCartResponse {
   success: Boolean!
   message: String
-  cartItem: [CartItem]
+  data: [CartItem]
+}
+
+type PackageResponse {
+  success: Boolean!
+  message: String
+  data: [Package]
 }
 
 type Response {
@@ -227,6 +268,13 @@ type CreateOrderResponse {
 }
 
 type Query {
+  packageRecomamendation(
+    filter: PackageFilterInput
+    sort: PackageSortInput
+    limit: Int = 20
+    page: Int = 0
+  ): PackageResponse!
+
   productsHome(
     filter: ProductFilterInput
     sort: ProductSortInput
