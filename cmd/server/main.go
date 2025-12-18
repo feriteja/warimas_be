@@ -16,6 +16,7 @@ import (
 	"warimas-be/internal/payment"
 	"warimas-be/internal/payment/webhook"
 	"warimas-be/internal/product"
+	"warimas-be/internal/transport"
 	"warimas-be/internal/user"
 
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -65,9 +66,16 @@ func main() {
 
 	// Routes
 	http.Handle("/", playground.Handler("GraphQL Playground", "/query"))
+	graphqlHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := transport.WithHTTP(r.Context(), r, w)
+		srv.ServeHTTP(w, r.WithContext(ctx))
+	})
+
 	http.Handle("/query",
-		middleware.LoggingMiddleware(
-			middleware.AuthMiddleware(srv),
+		middleware.CORS(
+			middleware.LoggingMiddleware(
+				middleware.AuthMiddleware(graphqlHandler),
+			),
 		),
 	)
 

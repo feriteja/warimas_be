@@ -30,6 +30,21 @@ func (r *mutationResolver) CreateProduct(ctx context.Context, input model.NewPro
 	}, nil
 }
 
+func (r *mutationResolver) CreateVariants(ctx context.Context, input []*model.NewVariant) ([]*model.Variant, error) {
+
+	_, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		return nil, errors.New("unauthorized: please login first")
+	}
+
+	v, err := r.ProductSvc.CreateVariants(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	return v, nil
+}
+
 // Products is the resolver for the products field.
 func (r *queryResolver) ProductsHome(
 	ctx context.Context,

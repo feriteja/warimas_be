@@ -76,12 +76,28 @@ type Variant {
   stock: Int!
   imageUrl: String!
   subcategoryID: String
+  categoryID: String
+  sellerId: ID!
+  createdAt: String!
 }
 
 input NewProduct {
   name: String!
   price: Float!
   stock: Int!
+  imageUrl: String
+  description: String
+}
+
+input NewVariant {
+  productId: ID!
+  quantityType: String!
+  name: String!
+  price: Float!
+  stock: Int!
+  imageUrl: String
+  description: String
+  subcategoryID: String!
 }
 
 ################# USER
@@ -102,8 +118,8 @@ input LoginInput {
 }
 
 type AuthResponse {
-  token: String!
   user: User!
+  token: String
 }
 
 ################# CART
@@ -310,6 +326,7 @@ type Mutation {
   login(input: LoginInput!): AuthResponse!
 
   createProduct(input: NewProduct!): Product! @auth(role: ADMIN)
+  createVariants(input: [NewVariant]!): [Variant]! @auth(role: ADMIN)
 
   addToCart(input: AddToCartInput!): AddToCartResponse! @auth(role: USER)
   updateCart(input: UpdateCartInput!): Response! @auth(role: USER)

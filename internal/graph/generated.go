@@ -80,6 +80,7 @@ type ComplexityRoot struct {
 		AddToCart         func(childComplexity int, input model.AddToCartInput) int
 		CreateOrder       func(childComplexity int) int
 		CreateProduct     func(childComplexity int, input model.NewProduct) int
+		CreateVariants    func(childComplexity int, input []*model.NewVariant) int
 		Login             func(childComplexity int, input model.LoginInput) int
 		Register          func(childComplexity int, input model.RegisterInput) int
 		RemoveFromCart    func(childComplexity int, productID string) int
@@ -179,12 +180,15 @@ type ComplexityRoot struct {
 	}
 
 	Variant struct {
+		CategoryID    func(childComplexity int) int
+		CreatedAt     func(childComplexity int) int
 		ID            func(childComplexity int) int
 		ImageURL      func(childComplexity int) int
 		Name          func(childComplexity int) int
 		Price         func(childComplexity int) int
 		ProductID     func(childComplexity int) int
 		QuantityType  func(childComplexity int) int
+		SellerID      func(childComplexity int) int
 		Stock         func(childComplexity int) int
 		SubcategoryID func(childComplexity int) int
 	}
@@ -213,6 +217,7 @@ type MutationResolver interface {
 	Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error)
 	Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error)
 	CreateProduct(ctx context.Context, input model.NewProduct) (*model.Product, error)
+	CreateVariants(ctx context.Context, input []*model.NewVariant) ([]*model.Variant, error)
 	AddToCart(ctx context.Context, input model.AddToCartInput) (*model.AddToCartResponse, error)
 	UpdateCart(ctx context.Context, input model.UpdateCartInput) (*model.Response, error)
 	RemoveFromCart(ctx context.Context, productID string) (*model.Response, error)
@@ -369,6 +374,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.CreateProduct(childComplexity, args["input"].(model.NewProduct)), true
+	case "Mutation.createVariants":
+		if e.complexity.Mutation.CreateVariants == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createVariants_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateVariants(childComplexity, args["input"].([]*model.NewVariant)), true
 	case "Mutation.login":
 		if e.complexity.Mutation.Login == nil {
 			break
@@ -814,6 +830,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.User.Role(childComplexity), true
 
+	case "Variant.categoryID":
+		if e.complexity.Variant.CategoryID == nil {
+			break
+		}
+
+		return e.complexity.Variant.CategoryID(childComplexity), true
+	case "Variant.createdAt":
+		if e.complexity.Variant.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.Variant.CreatedAt(childComplexity), true
 	case "Variant.id":
 		if e.complexity.Variant.ID == nil {
 			break
@@ -850,6 +878,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Variant.QuantityType(childComplexity), true
+	case "Variant.sellerId":
+		if e.complexity.Variant.SellerID == nil {
+			break
+		}
+
+		return e.complexity.Variant.SellerID(childComplexity), true
 	case "Variant.stock":
 		if e.complexity.Variant.Stock == nil {
 			break
@@ -956,6 +990,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCartSortInput,
 		ec.unmarshalInputLoginInput,
 		ec.unmarshalInputNewProduct,
+		ec.unmarshalInputNewVariant,
 		ec.unmarshalInputOrderFilterInput,
 		ec.unmarshalInputOrderSortInput,
 		ec.unmarshalInputPackageFilterInput,
@@ -1107,6 +1142,17 @@ func (ec *executionContext) field_Mutation_createProduct_args(ctx context.Contex
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNNewProduct2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐNewProduct)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createVariants_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNNewVariant2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐNewVariant)
 	if err != nil {
 		return nil, err
 	}
@@ -1472,35 +1518,6 @@ func (ec *executionContext) fieldContext_AddToCartResponse_cartItem(_ context.Co
 	return fc, nil
 }
 
-func (ec *executionContext) _AuthResponse_token(ctx context.Context, field graphql.CollectedField, obj *model.AuthResponse) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_AuthResponse_token,
-		func(ctx context.Context) (any, error) {
-			return obj.Token, nil
-		},
-		nil,
-		ec.marshalNString2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_AuthResponse_token(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AuthResponse",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _AuthResponse_user(ctx context.Context, field graphql.CollectedField, obj *model.AuthResponse) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1533,6 +1550,35 @@ func (ec *executionContext) fieldContext_AuthResponse_user(_ context.Context, fi
 				return ec.fieldContext_User_role(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AuthResponse_token(ctx context.Context, field graphql.CollectedField, obj *model.AuthResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_AuthResponse_token,
+		func(ctx context.Context) (any, error) {
+			return obj.Token, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_AuthResponse_token(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AuthResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1883,10 +1929,10 @@ func (ec *executionContext) fieldContext_Mutation_register(ctx context.Context, 
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "token":
-				return ec.fieldContext_AuthResponse_token(ctx, field)
 			case "user":
 				return ec.fieldContext_AuthResponse_user(ctx, field)
+			case "token":
+				return ec.fieldContext_AuthResponse_token(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type AuthResponse", field.Name)
 		},
@@ -1930,10 +1976,10 @@ func (ec *executionContext) fieldContext_Mutation_login(ctx context.Context, fie
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "token":
-				return ec.fieldContext_AuthResponse_token(ctx, field)
 			case "user":
 				return ec.fieldContext_AuthResponse_user(ctx, field)
+			case "token":
+				return ec.fieldContext_AuthResponse_token(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type AuthResponse", field.Name)
 		},
@@ -2027,6 +2073,89 @@ func (ec *executionContext) fieldContext_Mutation_createProduct(ctx context.Cont
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_createProduct_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createVariants(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_createVariants,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().CreateVariants(ctx, fc.Args["input"].([]*model.NewVariant))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalORole2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐRole(ctx, "ADMIN")
+				if err != nil {
+					var zeroVal []*model.Variant
+					return zeroVal, err
+				}
+				if ec.directives.Auth == nil {
+					var zeroVal []*model.Variant
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.directives.Auth(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
+		ec.marshalNVariant2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐVariant,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_createVariants(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Variant_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Variant_name(ctx, field)
+			case "productId":
+				return ec.fieldContext_Variant_productId(ctx, field)
+			case "quantityType":
+				return ec.fieldContext_Variant_quantityType(ctx, field)
+			case "price":
+				return ec.fieldContext_Variant_price(ctx, field)
+			case "stock":
+				return ec.fieldContext_Variant_stock(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_Variant_imageUrl(ctx, field)
+			case "subcategoryID":
+				return ec.fieldContext_Variant_subcategoryID(ctx, field)
+			case "categoryID":
+				return ec.fieldContext_Variant_categoryID(ctx, field)
+			case "sellerId":
+				return ec.fieldContext_Variant_sellerId(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Variant_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Variant", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createVariants_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -3578,6 +3707,12 @@ func (ec *executionContext) fieldContext_Product_variants(_ context.Context, fie
 				return ec.fieldContext_Variant_imageUrl(ctx, field)
 			case "subcategoryID":
 				return ec.fieldContext_Variant_subcategoryID(ctx, field)
+			case "categoryID":
+				return ec.fieldContext_Variant_categoryID(ctx, field)
+			case "sellerId":
+				return ec.fieldContext_Variant_sellerId(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Variant_createdAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Variant", field.Name)
 		},
@@ -4696,6 +4831,93 @@ func (ec *executionContext) _Variant_subcategoryID(ctx context.Context, field gr
 }
 
 func (ec *executionContext) fieldContext_Variant_subcategoryID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Variant",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Variant_categoryID(ctx context.Context, field graphql.CollectedField, obj *model.Variant) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Variant_categoryID,
+		func(ctx context.Context) (any, error) {
+			return obj.CategoryID, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Variant_categoryID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Variant",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Variant_sellerId(ctx context.Context, field graphql.CollectedField, obj *model.Variant) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Variant_sellerId,
+		func(ctx context.Context) (any, error) {
+			return obj.SellerID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Variant_sellerId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Variant",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Variant_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Variant) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Variant_createdAt,
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Variant_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Variant",
 		Field:      field,
@@ -6700,7 +6922,7 @@ func (ec *executionContext) unmarshalInputNewProduct(ctx context.Context, obj an
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "price", "stock"}
+	fieldsInOrder := [...]string{"name", "price", "stock", "imageUrl", "description"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -6728,6 +6950,96 @@ func (ec *executionContext) unmarshalInputNewProduct(ctx context.Context, obj an
 				return it, err
 			}
 			it.Stock = data
+		case "imageUrl":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("imageUrl"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ImageURL = data
+		case "description":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Description = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputNewVariant(ctx context.Context, obj any) (model.NewVariant, error) {
+	var it model.NewVariant
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"productId", "quantityType", "name", "price", "stock", "imageUrl", "description", "subcategoryID"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "productId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("productId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ProductID = data
+		case "quantityType":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quantityType"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuantityType = data
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "price":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("price"))
+			data, err := ec.unmarshalNFloat2float64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Price = data
+		case "stock":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("stock"))
+			data, err := ec.unmarshalNInt2int32(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Stock = data
+		case "imageUrl":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("imageUrl"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ImageURL = data
+		case "description":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Description = data
+		case "subcategoryID":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("subcategoryID"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SubcategoryID = data
 		}
 	}
 
@@ -7149,16 +7461,13 @@ func (ec *executionContext) _AuthResponse(ctx context.Context, sel ast.Selection
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("AuthResponse")
-		case "token":
-			out.Values[i] = ec._AuthResponse_token(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "user":
 			out.Values[i] = ec._AuthResponse_user(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "token":
+			out.Values[i] = ec._AuthResponse_token(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7330,6 +7639,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "createProduct":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createProduct(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createVariants":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createVariants(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -8189,6 +8505,18 @@ func (ec *executionContext) _Variant(ctx context.Context, sel ast.SelectionSet, 
 			}
 		case "subcategoryID":
 			out.Values[i] = ec._Variant_subcategoryID(ctx, field, obj)
+		case "categoryID":
+			out.Values[i] = ec._Variant_categoryID(ctx, field, obj)
+		case "sellerId":
+			out.Values[i] = ec._Variant_sellerId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._Variant_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -8816,6 +9144,21 @@ func (ec *executionContext) unmarshalNNewProduct2warimasᚑbeᚋinternalᚋgraph
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalNNewVariant2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐNewVariant(ctx context.Context, v any) ([]*model.NewVariant, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]*model.NewVariant, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalONewVariant2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐNewVariant(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
 func (ec *executionContext) marshalNOrder2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrder(ctx context.Context, sel ast.SelectionSet, v model.Order) graphql.Marshaler {
 	return ec._Order(ctx, sel, &v)
 }
@@ -9133,6 +9476,44 @@ func (ec *executionContext) marshalNUser2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmo
 		return graphql.Null
 	}
 	return ec._User(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNVariant2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐVariant(ctx context.Context, sel ast.SelectionSet, v []*model.Variant) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOVariant2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐVariant(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	return ret
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
@@ -9605,6 +9986,14 @@ func (ec *executionContext) marshalOInt2ᚖint32(ctx context.Context, sel ast.Se
 	_ = ctx
 	res := graphql.MarshalInt32(*v)
 	return res
+}
+
+func (ec *executionContext) unmarshalONewVariant2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐNewVariant(ctx context.Context, v any) (*model.NewVariant, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputNewVariant(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalOOrder2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrder(ctx context.Context, sel ast.SelectionSet, v *model.Order) graphql.Marshaler {

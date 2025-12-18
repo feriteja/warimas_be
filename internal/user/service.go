@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"warimas-be/internal/logger"
 
@@ -13,7 +12,7 @@ import (
 
 type Service interface {
 	Register(ctx context.Context, email, password string) (string, User, error)
-	Login(email, password string) (string, User, error)
+	Login(ctx context.Context, email, password string) (string, User, error)
 	GetUserByEmail(email string) (User, error)
 }
 
@@ -57,20 +56,49 @@ func (s *service) Register(ctx context.Context, email, password string) (string,
 	return token, u, nil
 }
 
-func (s *service) Login(email, password string) (string, User, error) {
+func (s *service) Login(ctx context.Context, email, password string) (string, User, error) {
+	log := logger.FromCtx(ctx)
+
+	log.Info("Login attempt",
+		zap.String("email", email),
+	)
+
 	u, err := s.repo.FindByEmail(email)
 	if err != nil {
-		log.Println("email not found")
-		return "", User{}, errors.New("invalid email or password")
+		log.Warn("Login failed: email not found",
+			zap.String("email", email),
+			zap.Error(err),
+		)
+		return "", User{}, errors.New("invalid credentials")
 	}
 
+	// Check password
 	if !CheckPasswordHash(password, u.Password) {
-		log.Println("password not match")
-		return "", User{}, errors.New("invalid email or password")
+		log.Warn("Login failed: incorrect password",
+			zap.String("email", email),
+			zap.Int("user_id", u.ID),
+		)
+		return "", User{}, errors.New("invalid credentials")
 	}
 
+	// Generate token
 	token, err := GenerateJWT(u.ID, string(u.Role), email)
-	return token, u, err
+	if err != nil {
+		log.Error("JWT generation failed",
+			zap.String("email", email),
+			zap.Int("user_id", u.ID),
+			zap.Error(err),
+		)
+		return "", User{}, errors.New("internal error")
+	}
+
+	log.Info("Login successful",
+		zap.String("email", email),
+		zap.Int("user_id", u.ID),
+		zap.String("role", string(u.Role)),
+	)
+
+	return token, u, nil
 }
 
 func (s *service) GetUserByEmail(email string) (User, error) {

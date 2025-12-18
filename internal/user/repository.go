@@ -28,7 +28,7 @@ func (r *repository) Create(ctx context.Context, email, password, role string) (
 	err := r.db.QueryRowContext(ctx,
 		"INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id, email, password, role",
 		email, password,
-	).Scan(&u.ID, &u.Email, &u.Password, u.Role)
+	).Scan(&u.ID, &u.Email, &u.Password, &u.Role)
 
 	if err != nil {
 		log.Error("db: failed to insert user",

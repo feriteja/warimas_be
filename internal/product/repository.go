@@ -3,6 +3,7 @@ package product
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"warimas-be/internal/graph/model"
@@ -12,6 +13,11 @@ import (
 type Repository interface {
 	GetAll(opts servicepkg.ProductQueryOptions) ([]model.CategoryProduct, error)
 	Create(p model.Product) (model.Product, error)
+	BulkCreateVariants(
+		ctx context.Context,
+		input []*model.NewVariant,
+		sellerID string,
+	) ([]*model.Variant, error)
 	GetPackages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit, offset int32) ([]*model.Package, error)
 }
 
@@ -185,6 +191,96 @@ func (r *repository) Create(p model.Product) (model.Product, error) {
 		p.Name, p.Price, p.Stock,
 	).Scan(&p.ID)
 	return p, err
+}
+
+func (r *repository) BulkCreateVariants(
+	ctx context.Context,
+	input []*model.NewVariant,
+	sellerID string,
+) ([]*model.Variant, error) {
+
+	if len(input) > 100 {
+		return nil, errors.New("max 100 variants per request")
+	}
+
+	query := `
+		INSERT INTO variants (
+			product_id,
+			name,
+			quantity_type,
+			price,
+			stock,
+			imageurl,
+			subcategory_id
+		) VALUES
+	`
+
+	args := []interface{}{}
+	valueStrings := []string{}
+
+	for i, v := range input {
+		idx := i * 7
+
+		valueStrings = append(valueStrings,
+			fmt.Sprintf("($%d,$%d,$%d,$%d,$%d,$%d,$%d)",
+				idx+1, idx+2, idx+3, idx+4,
+				idx+5, idx+6, idx+7,
+			),
+		)
+
+		args = append(args,
+			v.ProductID,
+			v.Name,
+			v.QuantityType,
+			v.Price,
+			v.Stock,
+			v.ImageURL,
+			v.SubcategoryID,
+		)
+	}
+
+	query += strings.Join(valueStrings, ",")
+	query += `
+		RETURNING 
+			id,
+			product_id,
+			name,
+			quantity_type,
+			price,
+			stock,
+			imageurl,
+			subcategory_id,
+			created_at
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var variants []*model.Variant
+
+	for rows.Next() {
+		var v model.Variant
+		err := rows.Scan(
+			&v.ID,
+			&v.ProductID,
+			&v.Name,
+			&v.QuantityType,
+			&v.Price,
+			&v.Stock,
+			&v.ImageURL,
+			&v.SubcategoryID,
+			&v.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		variants = append(variants, &v)
+	}
+
+	return variants, nil
 }
 
 func (r *repository) GetPackages(

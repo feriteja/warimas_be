@@ -3,9 +3,11 @@ package graph
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
+	"warimas-be/internal/transport"
 
 	"go.uber.org/zap"
 )
@@ -19,13 +21,24 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 		return nil, err
 	}
 
+	w := transport.GetResponseWriter(ctx) // <-- your helper
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true, // HTTPS only
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   60 * 60 * 24, // 24 hours
+	})
+
 	log.Info("user registered successfully",
 		zap.String("user_id", fmt.Sprint(u.ID)),
 		zap.String("email", u.Email),
 	)
 
 	return &model.AuthResponse{
-		Token: token,
+		Token: &token,
 		User: &model.User{
 			ID:    fmt.Sprint(u.ID),
 			Email: u.Email,
@@ -35,13 +48,40 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 }
 
 func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error) {
-	token, u, err := r.UserSvc.Login(input.Email, input.Password)
+	log := logger.FromCtx(ctx)
+
+	log.Info("Login resolver called",
+		zap.String("email", input.Email),
+	)
+
+	token, u, err := r.UserSvc.Login(ctx, input.Email, input.Password)
 	if err != nil {
+		log.Warn("Login failed",
+			zap.String("email", input.Email),
+			zap.Error(err),
+		)
 		return nil, err
 	}
 
+	w := transport.GetResponseWriter(ctx) // <-- your helper
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true, // HTTPS only
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   60 * 60 * 24, // 24 hours
+	})
+
+	log.Info("Login successful",
+		zap.String("user_id", fmt.Sprint(u.ID)),
+		zap.String("email", u.Email),
+		zap.String("role", string(u.Role)),
+	)
+
 	return &model.AuthResponse{
-		Token: token,
+		Token: &token,
 		User: &model.User{
 			ID:    fmt.Sprint(u.ID),
 			Email: u.Email,

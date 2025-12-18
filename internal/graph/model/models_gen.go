@@ -22,8 +22,8 @@ type AddToCartResponse struct {
 }
 
 type AuthResponse struct {
-	Token string `json:"token"`
-	User  *User  `json:"user"`
+	User  *User   `json:"user"`
+	Token *string `json:"token,omitempty"`
 }
 
 type CartFilterInput struct {
@@ -67,9 +67,22 @@ type MyCartResponse struct {
 }
 
 type NewProduct struct {
-	Name  string  `json:"name"`
-	Price float64 `json:"price"`
-	Stock int32   `json:"stock"`
+	Name        string  `json:"name"`
+	Price       float64 `json:"price"`
+	Stock       int32   `json:"stock"`
+	ImageURL    *string `json:"imageUrl,omitempty"`
+	Description *string `json:"description,omitempty"`
+}
+
+type NewVariant struct {
+	ProductID     string  `json:"productId"`
+	QuantityType  string  `json:"quantityType"`
+	Name          string  `json:"name"`
+	Price         float64 `json:"price"`
+	Stock         int32   `json:"stock"`
+	ImageURL      *string `json:"imageUrl,omitempty"`
+	Description   *string `json:"description,omitempty"`
+	SubcategoryID string  `json:"subcategoryID"`
 }
 
 type Order struct {
@@ -210,6 +223,9 @@ type Variant struct {
 	Stock         int32   `json:"stock"`
 	ImageURL      string  `json:"imageUrl"`
 	SubcategoryID *string `json:"subcategoryID,omitempty"`
+	CategoryID    *string `json:"categoryID,omitempty"`
+	SellerID      string  `json:"sellerId"`
+	CreatedAt     string  `json:"createdAt"`
 }
 
 type VariantCart struct {
