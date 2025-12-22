@@ -23,10 +23,10 @@ const (
 )
 
 // JWT secret
-var jwtKey = []byte(os.Getenv("SECRET_KEY"))
 
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var jwtKey = []byte(os.Getenv("JWT_SECRET"))
 
 		// 1️⃣ Extract token (cookie first, header fallback)
 		tokenStr := extractAccessToken(r)
@@ -59,6 +59,11 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		// 4️⃣ Inject user data into context
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, utils.UserIDKey, claims.UserID)
+
+		if claims.SellerID != nil {
+
+			ctx = context.WithValue(ctx, utils.SellerIDKey, *claims.SellerID)
+		}
 		ctx = context.WithValue(ctx, utils.UserEmailKey, claims.Email)
 		ctx = context.WithValue(ctx, utils.UserRoleKey, claims.Role)
 		ctx = context.WithValue(ctx, TokenClaimsKey, claims)

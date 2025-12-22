@@ -144,7 +144,7 @@ func (r *repository) GetOrderDetail(orderID uint) (*Order, error) {
 	}
 
 	rows, err := r.db.Query(`
-		SELECT oi.id, oi.product_id, oi.quantity, oi.price, p.name, p.stock
+		SELECT oi.id, oi.product_id, oi.quantity, oi.price, p.name
 		FROM order_items oi
 		JOIN products p ON oi.product_id = p.id
 		WHERE oi.order_id = $1
@@ -156,7 +156,7 @@ func (r *repository) GetOrderDetail(orderID uint) (*Order, error) {
 
 	for rows.Next() {
 		var item OrderItem
-		if err := rows.Scan(&item.ID, &item.ProductID, &item.Quantity, &item.Price, &item.Product.Name, &item.Product.Stock); err != nil {
+		if err := rows.Scan(&item.ID, &item.ProductID, &item.Quantity, &item.Price, &item.Product.Name); err != nil {
 			return nil, err
 		}
 		o.Items = append(o.Items, item)

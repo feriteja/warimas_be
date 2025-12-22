@@ -15,14 +15,13 @@ func MapVariantToGQL(v product.Variant) *model.VariantCart {
 	}
 
 	return &model.VariantCart{
-		ID:            v.ID,
-		Name:          v.Name,
-		ProductID:     v.ProductID,
-		QuantityType:  v.QuantityType,
-		Price:         v.Price,
-		Stock:         int32(v.Stock),
-		ImageURL:      imgURL,
-		SubcategoryID: v.SubcategoryId,
+		ID:           v.ID,
+		Name:         v.Name,
+		ProductID:    v.ProductID,
+		QuantityType: v.QuantityType,
+		Price:        v.Price,
+		Stock:        int32(v.Stock),
+		ImageURL:     imgURL,
 	}
 }
 

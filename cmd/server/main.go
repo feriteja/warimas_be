@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"warimas-be/internal/cart"
+	"warimas-be/internal/category"
 	"warimas-be/internal/config"
 	"warimas-be/internal/db"
 	"warimas-be/internal/graph"
@@ -43,11 +44,13 @@ func main() {
 	cartRepo := cart.NewRepository(database)
 	orderRepo := order.NewRepository(database)
 	paymentRepo := payment.NewRepository(database)
+	categoryRepo := category.NewRepository(database)
 
 	// Init services
 	productSvc := product.NewService(productRepo)
 	userSvc := user.NewService(userRepo)
 	cartSvc := cart.NewService(cartRepo)
+	categorySvc := category.NewService(categoryRepo)
 
 	paymentGateway := payment.NewXenditGateway(cfg.XenditSecretKey)
 	orderSvc := order.NewService(orderRepo, paymentRepo, paymentGateway)
@@ -55,11 +58,12 @@ func main() {
 
 	// GraphQL resolver
 	resolver := &graph.Resolver{
-		DB:         database,
-		ProductSvc: productSvc,
-		UserSvc:    userSvc,
-		CartSvc:    cartSvc,
-		OrderSvc:   orderSvc,
+		DB:          database,
+		ProductSvc:  productSvc,
+		UserSvc:     userSvc,
+		CartSvc:     cartSvc,
+		OrderSvc:    orderSvc,
+		CategorySvc: categorySvc,
 	}
 
 	srv := handler.NewDefaultServer(graph.NewSchema(resolver))

@@ -65,15 +65,14 @@ func (r *mutationResolver) AddToCart(ctx context.Context, input model.AddToCartI
 			imgURL = *item.ImageUrl
 		}
 		resultVariant = append(resultVariant, &model.VariantCart{
-			ID:            item.ID,
-			Name:          item.Name,
-			ProductID:     item.ProductID,
-			QuantityType:  item.QuantityType,
-			Quantity:      int32(cartItemRes.Quantity),
-			Price:         item.Price,
-			Stock:         int32(item.Stock),
-			ImageURL:      imgURL,
-			SubcategoryID: item.SubcategoryId,
+			ID:           item.ID,
+			Name:         item.Name,
+			ProductID:    item.ProductID,
+			QuantityType: item.QuantityType,
+			Quantity:     int32(cartItemRes.Quantity),
+			Price:        item.Price,
+			Stock:        int32(item.Stock),
+			ImageURL:     imgURL,
 		})
 	}
 
@@ -207,16 +206,15 @@ func (r *queryResolver) MyCart(
 		)
 
 		v := &model.VariantCart{
-			ID:            it.Product.Variants[0].ID,
-			CartID:        it.ID,
-			Name:          it.Product.Variants[0].Name,
-			ProductID:     it.Product.Variants[0].ProductID,
-			QuantityType:  it.Product.Variants[0].QuantityType,
-			Quantity:      it.Product.Variants[0].Quantity,
-			Price:         it.Product.Variants[0].Price,
-			Stock:         it.Product.Variants[0].Stock,
-			ImageURL:      it.Product.Variants[0].ImageURL,
-			SubcategoryID: it.Product.Variants[0].SubcategoryID,
+			ID:           it.Product.Variants[0].ID,
+			CartID:       it.ID,
+			Name:         it.Product.Variants[0].Name,
+			ProductID:    it.Product.Variants[0].ProductID,
+			QuantityType: it.Product.Variants[0].QuantityType,
+			Quantity:     it.Product.Variants[0].Quantity,
+			Price:        it.Product.Variants[0].Price,
+			Stock:        it.Product.Variants[0].Stock,
+			ImageURL:     it.Product.Variants[0].ImageURL,
 		}
 
 		if existing, found := group[it.Product.ID]; found {

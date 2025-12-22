@@ -51,17 +51,19 @@ input ProductSortInput {
 type Product {
   id: ID!
   name: String!
-  price: Float!
-  stock: Int!
   sellerId: ID!
-  categoryID: String
+  categoryID: String!
+  categoryName: String!
+  subcategoryID: String!
+  subcategoryName: String!
   createdAt: String!
   slug: String!
   variants: [Variant]
-  imageUrl: String!
+  imageUrl: String
+  description: String
 }
 
-type categoryProduct {
+type ProductByCategory {
   CategoryName: String
   TotalProducts: Int!
   Products: [Product]
@@ -75,18 +77,28 @@ type Variant {
   price: Float!
   stock: Int!
   imageUrl: String!
-  subcategoryID: String
   categoryID: String
   sellerId: ID!
   createdAt: String!
+  description: String
 }
 
 input NewProduct {
   name: String!
-  price: Float!
-  stock: Int!
   imageUrl: String
   description: String
+  categoryId: ID!
+  subcategoryID: String!
+}
+
+input UpdateProduct {
+  id: ID!
+  name: String
+  imageUrl: String
+  description: String
+  categoryId: ID
+  subcategoryID: String
+  status: String
 }
 
 input NewVariant {
@@ -97,7 +109,17 @@ input NewVariant {
   stock: Int!
   imageUrl: String
   description: String
-  subcategoryID: String!
+}
+
+input UpdateVariant {
+  id: ID!
+  productId: ID!
+  quantityType: String
+  name: String
+  price: Float
+  stock: Int
+  imageUrl: String
+  description: String
 }
 
 ################# USER
@@ -140,6 +162,17 @@ input CartSortInput {
   direction: SortDirection! = ASC
 }
 
+type Category {
+  id: ID!
+  name: String!
+}
+
+type Subcategory {
+  id: ID!
+  categoryID: ID!
+  name: String!
+}
+
 type ProductCart {
   id: ID!
   name: String!
@@ -160,7 +193,6 @@ type VariantCart {
   quantity: Int!
   stock: Int!
   imageUrl: String!
-  subcategoryID: String
 }
 
 type CartItem {
@@ -291,12 +323,19 @@ type Query {
     page: Int = 0
   ): PackageResponse!
 
+  productList(
+    filter: ProductFilterInput
+    sort: ProductSortInput
+    limit: Int = 20
+    offset: Int = 0
+  ): [Product!]!
+
   productsHome(
     filter: ProductFilterInput
     sort: ProductSortInput
     limit: Int = 20
     offset: Int = 0
-  ): [categoryProduct!]!
+  ): [ProductByCategory!]!
 
   myCart(
     filter: CartFilterInput
@@ -319,6 +358,14 @@ type Query {
     limit: Int = 20
     offset: Int = 0
   ): [Order!]! @auth(role: ADMIN)
+
+  category(filter: String, limit: Int = 20, offset: Int = 0): [Category!]!
+  subcategory(
+    filter: String
+    categoryID: ID!
+    limit: Int = 20
+    offset: Int = 0
+  ): [Subcategory!]!
 }
 
 type Mutation {
@@ -326,7 +373,9 @@ type Mutation {
   login(input: LoginInput!): AuthResponse!
 
   createProduct(input: NewProduct!): Product! @auth(role: ADMIN)
+  updateProduct(input: UpdateProduct!): Product! @auth(role: ADMIN)
   createVariants(input: [NewVariant]!): [Variant]! @auth(role: ADMIN)
+  updateVariants(input: [UpdateVariant]!): [Variant]! @auth(role: ADMIN)
 
   addToCart(input: AddToCartInput!): AddToCartResponse! @auth(role: USER)
   updateCart(input: UpdateCartInput!): Response! @auth(role: USER)
@@ -335,4 +384,7 @@ type Mutation {
   createOrder: CreateOrderResponse! @auth(role: USER)
   updateOrderStatus(input: UpdateOrderStatusInput!): CreateOrderResponse!
     @auth(role: ADMIN)
+
+  addCategory(name: String!): Category @auth(role: ADMIN)
+  addSubcategory(categoryID: ID!, name: String!): Subcategory @auth(role: ADMIN)
 }

@@ -79,7 +79,8 @@ func (r *repository) AddToCart(ctx context.Context, userID uint, variantId strin
 		WHERE user_id = $1 AND variant_id = $2
 	`, userID, variantId).Scan(&existingQty)
 
-	if err == sql.ErrNoRows {
+	switch err {
+	case sql.ErrNoRows:
 		// Insert new
 		log.Info("inserting new cart item")
 
@@ -93,7 +94,7 @@ func (r *repository) AddToCart(ctx context.Context, userID uint, variantId strin
 			return nil, err
 		}
 
-	} else if err == nil {
+	case nil:
 		// Update existing
 		newQty := existingQty + int(quantity)
 
@@ -121,7 +122,7 @@ func (r *repository) AddToCart(ctx context.Context, userID uint, variantId strin
 			return nil, err
 		}
 
-	} else {
+	default:
 		log.Error("database error checking existing cart item", zap.Error(err))
 		return nil, err
 	}
@@ -360,7 +361,6 @@ func (r *repository) GetCart(
 		cart.Product.ImageURL = productImageUrl.String
 		cart.Product.CategoryID = categoryID
 		variant.ImageURL = variantImageUrl.String
-		variant.SubcategoryID = subcategoryID
 
 		cart.Product.Variants = []*model.VariantCart{variant}
 

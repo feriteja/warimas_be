@@ -12,4 +12,5 @@ type User struct {
 	Email    string
 	Password string
 	Role     Role
+	SellerID *string
 }

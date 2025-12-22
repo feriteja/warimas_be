@@ -42,7 +42,7 @@ func (s *service) Register(ctx context.Context, email, password string) (string,
 		return "", User{}, err
 	}
 
-	token, err := GenerateJWT(u.ID, string(u.Role), email)
+	token, err := GenerateJWT(u.ID, string(u.Role), email, nil)
 	if err != nil {
 		log.Error("failed to generate jwt", zap.String("user_id", fmt.Sprint(u.ID)), zap.Error(err))
 		return "", User{}, err
@@ -82,7 +82,7 @@ func (s *service) Login(ctx context.Context, email, password string) (string, Us
 	}
 
 	// Generate token
-	token, err := GenerateJWT(u.ID, string(u.Role), email)
+	token, err := GenerateJWT(u.ID, string(u.Role), email, u.SellerID)
 	if err != nil {
 		log.Error("JWT generation failed",
 			zap.String("email", email),

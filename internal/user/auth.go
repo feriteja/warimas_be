@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -9,12 +10,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var jwtKey = []byte(os.Getenv("SECRET_KEY"))
-
 type CustomClaims struct {
-	UserID uint   `json:"user_id"`
-	Email  string `json:"email"`
-	Role   string `json:"role"`
+	UserID   uint    `json:"user_id"`
+	Email    string  `json:"email"`
+	Role     string  `json:"role"`
+	SellerID *string `json:"seller_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -29,28 +29,55 @@ func CheckPasswordHash(password, hash string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
 }
 
-func GenerateJWT(userID int, role, email string) (string, error) {
+func GenerateJWT(userID int, role, email string, sellerID *string) (string, error) {
+
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return "", errors.New("JWT_SECRET is not set")
+	}
+
+	jwtKey := []byte(secret)
 	claims := CustomClaims{
-		UserID: uint(userID),
-		Email:  email,
-		Role:   role,
+		UserID:   uint(userID),
+		Email:    email,
+		Role:     role,
+		SellerID: sellerID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	fmt.Println("JWT Secret Key:", string(jwtKey))
 	return token.SignedString(jwtKey)
 }
 
-func ParseJWT(tokenStr string) (jwt.MapClaims, error) {
-	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
-	})
+func ParseJWT(tokenStr string) (*CustomClaims, error) {
+	secret := (os.Getenv("JWT_SECRET"))
+	if secret == "" {
+		return nil, errors.New("JWT_SECRET is not set")
+	}
+
+	jwtKey := []byte(secret)
+
+	token, err := jwt.ParseWithClaims(
+		tokenStr,
+		&CustomClaims{},
+		func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, errors.New("unexpected signing method")
+			}
+			return jwtKey, nil
+		},
+	)
+
 	if err != nil {
 		return nil, err
 	}
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		return claims, nil
+
+	claims, ok := token.Claims.(*CustomClaims)
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid token")
 	}
-	return nil, err
+
+	return claims, nil
 }

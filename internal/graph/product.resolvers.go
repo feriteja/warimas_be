@@ -17,16 +17,32 @@ func (r *mutationResolver) CreateProduct(ctx context.Context, input model.NewPro
 		return nil, errors.New("unauthorized: please login first")
 	}
 
-	p, err := r.ProductSvc.Create(input.Name, input.Price, int(input.Stock))
+	p, err := r.ProductSvc.Create(ctx, input)
 	if err != nil {
 		return nil, err
 	}
 
 	return &model.Product{
-		ID:    fmt.Sprint(p.ID),
-		Name:  p.Name,
-		Price: p.Price,
-		Stock: int32(p.Stock),
+		ID:   fmt.Sprint(p.ID),
+		Name: p.Name,
+	}, nil
+}
+
+func (r *mutationResolver) UpdateProduct(ctx context.Context, input model.UpdateProduct) (*model.Product, error) {
+
+	_, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		return nil, errors.New("unauthorized: please login first")
+	}
+
+	p, err := r.ProductSvc.Update(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.Product{
+		ID:   fmt.Sprint(p.ID),
+		Name: p.Name,
 	}, nil
 }
 
@@ -45,13 +61,28 @@ func (r *mutationResolver) CreateVariants(ctx context.Context, input []*model.Ne
 	return v, nil
 }
 
+func (r *mutationResolver) UpdateVariants(ctx context.Context, input []*model.UpdateVariant) ([]*model.Variant, error) {
+
+	_, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		return nil, errors.New("unauthorized: please login first")
+	}
+
+	v, err := r.ProductSvc.UpdateVariants(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	return v, nil
+}
+
 // Products is the resolver for the products field.
 func (r *queryResolver) ProductsHome(
 	ctx context.Context,
 	filter *model.ProductFilterInput,
 	sort *model.ProductSortInput,
 	limit, offset *int32,
-) ([]*model.CategoryProduct, error) {
+) ([]*model.ProductByCategory, error) {
 
 	// 1. Prepare service options
 	opts := service.ProductQueryOptions{
@@ -62,20 +93,20 @@ func (r *queryResolver) ProductsHome(
 	}
 
 	// 2. Fetch grouped products
-	grouped, err := r.ProductSvc.GetAll(ctx, opts)
+	grouped, err := r.ProductSvc.GetProductsByGroup(ctx, opts)
 	if err != nil {
 		return nil, err
 	}
 
 	// 3. Convert service output -> GraphQL response
-	result := make([]*model.CategoryProduct, 0, len(grouped))
+	result := make([]*model.ProductByCategory, 0, len(grouped))
 
 	for _, g := range grouped {
 		if len(g.Products) == 0 {
 			continue // skip empty categories
 		}
 
-		result = append(result, &model.CategoryProduct{
+		result = append(result, &model.ProductByCategory{
 			CategoryName:  g.CategoryName,
 			TotalProducts: g.TotalProducts,
 			Products:      g.Products,
@@ -83,6 +114,30 @@ func (r *queryResolver) ProductsHome(
 	}
 
 	return result, nil
+}
+
+func (r *queryResolver) ProductList(
+	ctx context.Context,
+	filter *model.ProductFilterInput,
+	sort *model.ProductSortInput,
+	limit, offset *int32,
+) ([]*model.Product, error) {
+
+	// 1. Prepare service options
+	opts := service.ProductQueryOptions{
+		Filter: filter,
+		Sort:   sort,
+		Limit:  limit,
+		Offset: offset,
+	}
+
+	// 2. Fetch grouped products
+	product, err := r.ProductSvc.GetList(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return product, nil
 }
 
 func (r *queryResolver) PackageRecomamendation(

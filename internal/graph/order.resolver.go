@@ -14,7 +14,7 @@ import (
 func toGraphQLOrderItem(item order.OrderItem) *model.OrderItem {
 	return &model.OrderItem{
 		ID:       fmt.Sprint(item.ID),
-		Product:  &model.Product{ID: fmt.Sprint(item.Product.ID), Name: item.Product.Name, Price: item.Product.Price, Stock: int32(item.Product.Stock)},
+		Product:  &model.Product{ID: fmt.Sprint(item.Product.ID), Name: item.Product.Name},
 		Quantity: int32(item.Quantity),
 		Price:    item.Price,
 	}
