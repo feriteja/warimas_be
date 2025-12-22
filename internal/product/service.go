@@ -18,6 +18,7 @@ type Service interface {
 	CreateVariants(ctx context.Context, input []*model.NewVariant) ([]*model.Variant, error)
 	UpdateVariants(ctx context.Context, input []*model.UpdateVariant) ([]*model.Variant, error)
 	GetPackages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit, page int32) ([]*model.Package, error)
+	GetProductByID(ctx context.Context, productID string) (*model.Product, error)
 }
 
 type service struct {
@@ -151,4 +152,8 @@ func (s *service) GetPackages(
 	offset := page * limit
 
 	return s.repo.GetPackages(ctx, filter, sort, limit, offset)
+}
+
+func (s *service) GetProductByID(ctx context.Context, productID string) (*model.Product, error) {
+	return s.repo.GetProductByID(ctx, productID)
 }

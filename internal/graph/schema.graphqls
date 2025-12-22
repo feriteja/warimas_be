@@ -337,6 +337,8 @@ type Query {
     offset: Int = 0
   ): [ProductByCategory!]!
 
+  productDetail(productId: ID!): Product
+
   myCart(
     filter: CartFilterInput
     sort: CartSortInput

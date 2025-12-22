@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"warimas-be/internal/graph/model"
@@ -173,4 +174,19 @@ func (r *queryResolver) PackageRecomamendation(
 		Message: nil,
 		Data:    data,
 	}, nil
+}
+func (r *queryResolver) ProductDetail(
+	ctx context.Context,
+	productID string,
+) (*model.Product, error) {
+
+	product, err := r.ProductSvc.GetProductByID(ctx, productID)
+	if err == sql.ErrNoRows {
+		return nil, nil // ✅ allowed
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return product, nil
 }

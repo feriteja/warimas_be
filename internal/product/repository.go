@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"warimas-be/internal/graph/model"
 	servicepkg "warimas-be/internal/service"
@@ -29,6 +28,7 @@ type Repository interface {
 		sellerID string,
 	) ([]*model.Variant, error)
 	GetPackages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit, offset int32) ([]*model.Package, error)
+	GetProductByID(ctx context.Context, productID string) (*model.Product, error)
 }
 
 type repository struct {
@@ -406,12 +406,13 @@ func (r *repository) Create(ctx context.Context, input model.NewProduct, sellerI
 		return p, errors.New("categoryID is required")
 	}
 
-	log.Println("sellerID:", sellerID)
-	log.Println("categoryID:", input.CategoryID)
+	if input.SubcategoryID == "" {
+		return p, errors.New("subcategoryID is required")
+	}
 
 	err := r.db.QueryRow(
-		"INSERT INTO products (category_id, seller_id, name, slug, imageurl) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, imageurl",
-		input.CategoryID, sellerID, input.Name, utils.Slugify(input.Name, sellerID), input.ImageURL,
+		"INSERT INTO products (category_id, seller_id, name, slug, imageurl, subcategory_id, description) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, imageurl",
+		input.CategoryID, sellerID, input.Name, utils.Slugify(input.Name, sellerID), input.ImageURL, input.SubcategoryID, input.Description,
 	).Scan(&p.ID, &p.Name, &p.ImageURL)
 	return p, err
 }
@@ -426,7 +427,7 @@ func (r *repository) Update(
 		UPDATE products
 		SET %s
 		WHERE id = $%d AND seller_id = $%d
-		RETURNING id, name, imageurl, description, category_id, seller_id
+		RETURNING id, name, imageurl, description, category_id, seller_id, subcategory_id
 	`
 
 	setClauses := []string{}
@@ -463,6 +464,12 @@ func (r *repository) Update(
 		argPos++
 	}
 
+	if input.SubcategoryID != nil {
+		setClauses = append(setClauses, fmt.Sprintf("subcategory_id = $%d", argPos))
+		args = append(args, *input.SubcategoryID)
+		argPos++
+	}
+
 	// WHERE clause args
 	args = append(args, input.ID, sellerID)
 
@@ -481,6 +488,7 @@ func (r *repository) Update(
 		&product.Description,
 		&product.CategoryID,
 		&product.SellerID,
+		&product.SubcategoryID,
 	)
 
 	if err == sql.ErrNoRows {
@@ -801,4 +809,86 @@ func (r *repository) GetPackages(
 	}
 
 	return result, nil
+}
+
+func (r *repository) GetProductByID(
+	ctx context.Context,
+	productID string,
+) (*model.Product, error) {
+
+	query := `
+SELECT
+    p.id,
+    p.name,
+    p.seller_id,
+    p.category_id,
+    p.subcategory_id,
+    p.slug,
+    p.imageurl,
+    p.description,
+    p.created_at,
+
+    c.name AS category_name,
+    s.name AS subcategory_name,
+
+    COALESCE(
+        json_agg(
+            json_build_object(
+                'id', v.id,
+                'productId', v.product_id,
+                'name', v.name,
+                'price', v.price,
+                'stock', v.stock,
+                'imageUrl', v.imageurl,
+                'description', v.description
+            )
+        ) FILTER (WHERE v.id IS NOT NULL),
+        '[]'
+    ) AS variants
+FROM products p
+LEFT JOIN category c ON c.id = p.category_id
+LEFT JOIN subcategories s ON s.id = p.subcategory_id
+LEFT JOIN variants v ON v.product_id = p.id
+WHERE p.id = $1
+GROUP BY
+    p.id,
+    c.name,
+    s.name
+`
+
+	var (
+		product      model.Product
+		variantsJSON []byte
+	)
+
+	err := r.db.QueryRowContext(ctx, query, productID).Scan(
+		&product.ID,
+		&product.Name,
+		&product.SellerID,
+		&product.CategoryID,
+		&product.SubcategoryID,
+		&product.Slug,
+		&product.ImageURL,
+		&product.Description,
+		&product.CreatedAt,
+
+		&product.CategoryName,
+		&product.SubcategoryName,
+
+		&variantsJSON,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // ✅ GraphQL-friendly (Product nullable)
+		}
+		return nil, err
+	}
+
+	// Decode variants JSON
+	if err := json.Unmarshal(variantsJSON, &product.Variants); err != nil {
+		return nil, err
+	}
+
+	return &product, nil
 }

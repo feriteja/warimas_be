@@ -183,6 +183,7 @@ type ComplexityRoot struct {
 		MyOrders               func(childComplexity int, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, offset *int32) int
 		OrderDetail            func(childComplexity int, orderID string) int
 		PackageRecomamendation func(childComplexity int, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) int
+		ProductDetail          func(childComplexity int, productID string) int
 		ProductList            func(childComplexity int, filter *model.ProductFilterInput, sort *model.ProductSortInput, limit *int32, offset *int32) int
 		ProductsHome           func(childComplexity int, filter *model.ProductFilterInput, sort *model.ProductSortInput, limit *int32, offset *int32) int
 		Subcategory            func(childComplexity int, filter *string, categoryID string, limit *int32, offset *int32) int
@@ -251,6 +252,7 @@ type QueryResolver interface {
 	PackageRecomamendation(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) (*model.PackageResponse, error)
 	ProductList(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, limit *int32, offset *int32) ([]*model.Product, error)
 	ProductsHome(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, limit *int32, offset *int32) ([]*model.ProductByCategory, error)
+	ProductDetail(ctx context.Context, productID string) (*model.Product, error)
 	MyCart(ctx context.Context, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) (*model.MyCartResponse, error)
 	MyOrders(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, offset *int32) ([]*model.Order, error)
 	OrderDetail(ctx context.Context, orderID string) (*model.Order, error)
@@ -911,6 +913,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.PackageRecomamendation(childComplexity, args["filter"].(*model.PackageFilterInput), args["sort"].(*model.PackageSortInput), args["limit"].(*int32), args["page"].(*int32)), true
+	case "Query.productDetail":
+		if e.complexity.Query.ProductDetail == nil {
+			break
+		}
+
+		args, err := ec.field_Query_productDetail_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.ProductDetail(childComplexity, args["productId"].(string)), true
 	case "Query.productList":
 		if e.complexity.Query.ProductList == nil {
 			break
@@ -1551,6 +1564,17 @@ func (ec *executionContext) field_Query_packageRecomamendation_args(ctx context.
 		return nil, err
 	}
 	args["page"] = arg3
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_productDetail_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "productId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["productId"] = arg0
 	return args, nil
 }
 
@@ -4933,6 +4957,73 @@ func (ec *executionContext) fieldContext_Query_productsHome(ctx context.Context,
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_productsHome_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_productDetail(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_productDetail,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().ProductDetail(ctx, fc.Args["productId"].(string))
+		},
+		nil,
+		ec.marshalOProduct2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐProduct,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_productDetail(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Product_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Product_name(ctx, field)
+			case "sellerId":
+				return ec.fieldContext_Product_sellerId(ctx, field)
+			case "categoryID":
+				return ec.fieldContext_Product_categoryID(ctx, field)
+			case "categoryName":
+				return ec.fieldContext_Product_categoryName(ctx, field)
+			case "subcategoryID":
+				return ec.fieldContext_Product_subcategoryID(ctx, field)
+			case "subcategoryName":
+				return ec.fieldContext_Product_subcategoryName(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Product_createdAt(ctx, field)
+			case "slug":
+				return ec.fieldContext_Product_slug(ctx, field)
+			case "variants":
+				return ec.fieldContext_Product_variants(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_Product_imageUrl(ctx, field)
+			case "description":
+				return ec.fieldContext_Product_description(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Product", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_productDetail_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -9427,6 +9518,25 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "productDetail":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_productDetail(ctx, field)
 				return res
 			}
 
