@@ -215,12 +215,15 @@ SELECT
     p.id,
     p.name,
     p.seller_id,
+	COALESCE(sellers.name, 'Unknown') AS seller_name,
+	p.status,
     p.category_id,
     p.subcategory_id,
     p.slug,
     p.imageurl,
     p.description,
     p.created_at,
+	p.updated_at,
 
     c.name AS category_name,
     s.name AS subcategory_name,
@@ -240,6 +243,7 @@ SELECT
     ) AS variants
 
 FROM products p
+LEFT JOIN sellers ON sellers.id = p.seller_id
 LEFT JOIN category c ON c.id = p.category_id
 LEFT JOIN subcategories s ON s.id = p.subcategory_id
 LEFT JOIN variants v ON v.product_id = p.id
@@ -257,6 +261,16 @@ LEFT JOIN variants v ON v.product_id = p.id
 		if opts.Filter.Category != nil {
 			args = append(args, *opts.Filter.Category)
 			where = append(where, fmt.Sprintf("p.category_id = $%d", len(args)))
+		}
+
+		if opts.Filter.SellerName != nil && strings.TrimSpace(*opts.Filter.SellerName) != "" {
+			args = append(args, *opts.Filter.SellerName)
+			where = append(where, fmt.Sprintf("sellers.name ILIKE $%d", len(args)))
+		}
+
+		if opts.Filter.Status != nil {
+			args = append(args, *opts.Filter.Status)
+			where = append(where, fmt.Sprintf("p.status = $%d", len(args)))
 		}
 
 		if opts.Filter.Search != nil {
@@ -314,8 +328,10 @@ LEFT JOIN variants v ON v.product_id = p.id
 			p.imageurl,
 			p.description,
 			p.created_at,
+			p.updated_at,
 			c.name,
-			s.name
+			s.name,
+			sellers.name
 `
 
 	/* ---------------- SORTING ---------------- */
@@ -370,12 +386,15 @@ LEFT JOIN variants v ON v.product_id = p.id
 			&p.ID,
 			&p.Name,
 			&p.SellerID,
+			&p.SellerName,
+			&p.Status,
 			&p.CategoryID,
-			&p.SubcategoryID, // ✅ NULL-safe
+			&p.SubcategoryID,
 			&p.Slug,
 			&p.ImageURL,
 			&p.Description,
 			&p.CreatedAt,
+			&p.UpdatedAt,
 			&p.CategoryName,
 			&p.SubcategoryName,
 			&variantsJSON,

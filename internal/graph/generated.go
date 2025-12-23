@@ -154,9 +154,12 @@ type ComplexityRoot struct {
 		ImageURL        func(childComplexity int) int
 		Name            func(childComplexity int) int
 		SellerID        func(childComplexity int) int
+		SellerName      func(childComplexity int) int
 		Slug            func(childComplexity int) int
+		Status          func(childComplexity int) int
 		SubcategoryID   func(childComplexity int) int
 		SubcategoryName func(childComplexity int) int
+		UpdatedAt       func(childComplexity int) int
 		Variants        func(childComplexity int) int
 	}
 
@@ -760,12 +763,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Product.SellerID(childComplexity), true
+	case "Product.sellerName":
+		if e.complexity.Product.SellerName == nil {
+			break
+		}
+
+		return e.complexity.Product.SellerName(childComplexity), true
 	case "Product.slug":
 		if e.complexity.Product.Slug == nil {
 			break
 		}
 
 		return e.complexity.Product.Slug(childComplexity), true
+	case "Product.status":
+		if e.complexity.Product.Status == nil {
+			break
+		}
+
+		return e.complexity.Product.Status(childComplexity), true
 	case "Product.subcategoryID":
 		if e.complexity.Product.SubcategoryID == nil {
 			break
@@ -778,6 +793,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Product.SubcategoryName(childComplexity), true
+	case "Product.updatedAt":
+		if e.complexity.Product.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.Product.UpdatedAt(childComplexity), true
 	case "Product.variants":
 		if e.complexity.Product.Variants == nil {
 			break
@@ -2394,6 +2415,8 @@ func (ec *executionContext) fieldContext_Mutation_createProduct(ctx context.Cont
 				return ec.fieldContext_Product_name(ctx, field)
 			case "sellerId":
 				return ec.fieldContext_Product_sellerId(ctx, field)
+			case "sellerName":
+				return ec.fieldContext_Product_sellerName(ctx, field)
 			case "categoryID":
 				return ec.fieldContext_Product_categoryID(ctx, field)
 			case "categoryName":
@@ -2402,8 +2425,6 @@ func (ec *executionContext) fieldContext_Mutation_createProduct(ctx context.Cont
 				return ec.fieldContext_Product_subcategoryID(ctx, field)
 			case "subcategoryName":
 				return ec.fieldContext_Product_subcategoryName(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Product_createdAt(ctx, field)
 			case "slug":
 				return ec.fieldContext_Product_slug(ctx, field)
 			case "variants":
@@ -2412,6 +2433,12 @@ func (ec *executionContext) fieldContext_Mutation_createProduct(ctx context.Cont
 				return ec.fieldContext_Product_imageUrl(ctx, field)
 			case "description":
 				return ec.fieldContext_Product_description(ctx, field)
+			case "status":
+				return ec.fieldContext_Product_status(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Product_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Product_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Product", field.Name)
 		},
@@ -2479,6 +2506,8 @@ func (ec *executionContext) fieldContext_Mutation_updateProduct(ctx context.Cont
 				return ec.fieldContext_Product_name(ctx, field)
 			case "sellerId":
 				return ec.fieldContext_Product_sellerId(ctx, field)
+			case "sellerName":
+				return ec.fieldContext_Product_sellerName(ctx, field)
 			case "categoryID":
 				return ec.fieldContext_Product_categoryID(ctx, field)
 			case "categoryName":
@@ -2487,8 +2516,6 @@ func (ec *executionContext) fieldContext_Mutation_updateProduct(ctx context.Cont
 				return ec.fieldContext_Product_subcategoryID(ctx, field)
 			case "subcategoryName":
 				return ec.fieldContext_Product_subcategoryName(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Product_createdAt(ctx, field)
 			case "slug":
 				return ec.fieldContext_Product_slug(ctx, field)
 			case "variants":
@@ -2497,6 +2524,12 @@ func (ec *executionContext) fieldContext_Mutation_updateProduct(ctx context.Cont
 				return ec.fieldContext_Product_imageUrl(ctx, field)
 			case "description":
 				return ec.fieldContext_Product_description(ctx, field)
+			case "status":
+				return ec.fieldContext_Product_status(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Product_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Product_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Product", field.Name)
 		},
@@ -3482,6 +3515,8 @@ func (ec *executionContext) fieldContext_OrderItem_product(_ context.Context, fi
 				return ec.fieldContext_Product_name(ctx, field)
 			case "sellerId":
 				return ec.fieldContext_Product_sellerId(ctx, field)
+			case "sellerName":
+				return ec.fieldContext_Product_sellerName(ctx, field)
 			case "categoryID":
 				return ec.fieldContext_Product_categoryID(ctx, field)
 			case "categoryName":
@@ -3490,8 +3525,6 @@ func (ec *executionContext) fieldContext_OrderItem_product(_ context.Context, fi
 				return ec.fieldContext_Product_subcategoryID(ctx, field)
 			case "subcategoryName":
 				return ec.fieldContext_Product_subcategoryName(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Product_createdAt(ctx, field)
 			case "slug":
 				return ec.fieldContext_Product_slug(ctx, field)
 			case "variants":
@@ -3500,6 +3533,12 @@ func (ec *executionContext) fieldContext_OrderItem_product(_ context.Context, fi
 				return ec.fieldContext_Product_imageUrl(ctx, field)
 			case "description":
 				return ec.fieldContext_Product_description(ctx, field)
+			case "status":
+				return ec.fieldContext_Product_status(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Product_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Product_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Product", field.Name)
 		},
@@ -4177,6 +4216,35 @@ func (ec *executionContext) fieldContext_Product_sellerId(_ context.Context, fie
 	return fc, nil
 }
 
+func (ec *executionContext) _Product_sellerName(ctx context.Context, field graphql.CollectedField, obj *model.Product) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Product_sellerName,
+		func(ctx context.Context) (any, error) {
+			return obj.SellerName, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Product_sellerName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Product",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Product_categoryID(ctx context.Context, field graphql.CollectedField, obj *model.Product) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4281,35 +4349,6 @@ func (ec *executionContext) _Product_subcategoryName(ctx context.Context, field 
 }
 
 func (ec *executionContext) fieldContext_Product_subcategoryName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Product",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Product_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Product) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Product_createdAt,
-		func(ctx context.Context) (any, error) {
-			return obj.CreatedAt, nil
-		},
-		nil,
-		ec.marshalNString2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Product_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Product",
 		Field:      field,
@@ -4462,6 +4501,93 @@ func (ec *executionContext) fieldContext_Product_description(_ context.Context, 
 	return fc, nil
 }
 
+func (ec *executionContext) _Product_status(ctx context.Context, field graphql.CollectedField, obj *model.Product) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Product_status,
+		func(ctx context.Context) (any, error) {
+			return obj.Status, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Product_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Product",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Product_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Product) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Product_createdAt,
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Product_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Product",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Product_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.Product) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Product_updatedAt,
+		func(ctx context.Context) (any, error) {
+			return obj.UpdatedAt, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Product_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Product",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ProductByCategory_CategoryName(ctx context.Context, field graphql.CollectedField, obj *model.ProductByCategory) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4550,6 +4676,8 @@ func (ec *executionContext) fieldContext_ProductByCategory_Products(_ context.Co
 				return ec.fieldContext_Product_name(ctx, field)
 			case "sellerId":
 				return ec.fieldContext_Product_sellerId(ctx, field)
+			case "sellerName":
+				return ec.fieldContext_Product_sellerName(ctx, field)
 			case "categoryID":
 				return ec.fieldContext_Product_categoryID(ctx, field)
 			case "categoryName":
@@ -4558,8 +4686,6 @@ func (ec *executionContext) fieldContext_ProductByCategory_Products(_ context.Co
 				return ec.fieldContext_Product_subcategoryID(ctx, field)
 			case "subcategoryName":
 				return ec.fieldContext_Product_subcategoryName(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Product_createdAt(ctx, field)
 			case "slug":
 				return ec.fieldContext_Product_slug(ctx, field)
 			case "variants":
@@ -4568,6 +4694,12 @@ func (ec *executionContext) fieldContext_ProductByCategory_Products(_ context.Co
 				return ec.fieldContext_Product_imageUrl(ctx, field)
 			case "description":
 				return ec.fieldContext_Product_description(ctx, field)
+			case "status":
+				return ec.fieldContext_Product_status(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Product_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Product_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Product", field.Name)
 		},
@@ -4878,6 +5010,8 @@ func (ec *executionContext) fieldContext_Query_productList(ctx context.Context, 
 				return ec.fieldContext_Product_name(ctx, field)
 			case "sellerId":
 				return ec.fieldContext_Product_sellerId(ctx, field)
+			case "sellerName":
+				return ec.fieldContext_Product_sellerName(ctx, field)
 			case "categoryID":
 				return ec.fieldContext_Product_categoryID(ctx, field)
 			case "categoryName":
@@ -4886,8 +5020,6 @@ func (ec *executionContext) fieldContext_Query_productList(ctx context.Context, 
 				return ec.fieldContext_Product_subcategoryID(ctx, field)
 			case "subcategoryName":
 				return ec.fieldContext_Product_subcategoryName(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Product_createdAt(ctx, field)
 			case "slug":
 				return ec.fieldContext_Product_slug(ctx, field)
 			case "variants":
@@ -4896,6 +5028,12 @@ func (ec *executionContext) fieldContext_Query_productList(ctx context.Context, 
 				return ec.fieldContext_Product_imageUrl(ctx, field)
 			case "description":
 				return ec.fieldContext_Product_description(ctx, field)
+			case "status":
+				return ec.fieldContext_Product_status(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Product_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Product_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Product", field.Name)
 		},
@@ -4994,6 +5132,8 @@ func (ec *executionContext) fieldContext_Query_productDetail(ctx context.Context
 				return ec.fieldContext_Product_name(ctx, field)
 			case "sellerId":
 				return ec.fieldContext_Product_sellerId(ctx, field)
+			case "sellerName":
+				return ec.fieldContext_Product_sellerName(ctx, field)
 			case "categoryID":
 				return ec.fieldContext_Product_categoryID(ctx, field)
 			case "categoryName":
@@ -5002,8 +5142,6 @@ func (ec *executionContext) fieldContext_Query_productDetail(ctx context.Context
 				return ec.fieldContext_Product_subcategoryID(ctx, field)
 			case "subcategoryName":
 				return ec.fieldContext_Product_subcategoryName(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Product_createdAt(ctx, field)
 			case "slug":
 				return ec.fieldContext_Product_slug(ctx, field)
 			case "variants":
@@ -5012,6 +5150,12 @@ func (ec *executionContext) fieldContext_Query_productDetail(ctx context.Context
 				return ec.fieldContext_Product_imageUrl(ctx, field)
 			case "description":
 				return ec.fieldContext_Product_description(ctx, field)
+			case "status":
+				return ec.fieldContext_Product_status(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Product_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Product_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Product", field.Name)
 		},
@@ -8207,7 +8351,7 @@ func (ec *executionContext) unmarshalInputProductFilterInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"category", "minPrice", "maxPrice", "search", "inStock"}
+	fieldsInOrder := [...]string{"category", "minPrice", "maxPrice", "search", "inStock", "status", "sellerName"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -8249,6 +8393,20 @@ func (ec *executionContext) unmarshalInputProductFilterInput(ctx context.Context
 				return it, err
 			}
 			it.InStock = data
+		case "status":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Status = data
+		case "sellerName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sellerName"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SellerName = data
 		}
 	}
 
@@ -9277,6 +9435,11 @@ func (ec *executionContext) _Product(ctx context.Context, sel ast.SelectionSet, 
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "sellerName":
+			out.Values[i] = ec._Product_sellerName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "categoryID":
 			out.Values[i] = ec._Product_categoryID(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -9297,11 +9460,6 @@ func (ec *executionContext) _Product(ctx context.Context, sel ast.SelectionSet, 
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "createdAt":
-			out.Values[i] = ec._Product_createdAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "slug":
 			out.Values[i] = ec._Product_slug(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -9313,6 +9471,15 @@ func (ec *executionContext) _Product(ctx context.Context, sel ast.SelectionSet, 
 			out.Values[i] = ec._Product_imageUrl(ctx, field, obj)
 		case "description":
 			out.Values[i] = ec._Product_description(ctx, field, obj)
+		case "status":
+			out.Values[i] = ec._Product_status(ctx, field, obj)
+		case "createdAt":
+			out.Values[i] = ec._Product_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._Product_updatedAt(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

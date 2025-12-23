@@ -30,6 +30,8 @@ input ProductFilterInput {
   maxPrice: Float
   search: String
   inStock: Boolean
+  status: String
+  sellerName: String
 }
 
 enum PackageSortField {
@@ -52,15 +54,18 @@ type Product {
   id: ID!
   name: String!
   sellerId: ID!
+  sellerName: String!
   categoryID: String!
   categoryName: String!
   subcategoryID: String!
   subcategoryName: String!
-  createdAt: String!
   slug: String!
   variants: [Variant]
   imageUrl: String
   description: String
+  status: String
+  createdAt: String!
+  updatedAt: String
 }
 
 type ProductByCategory {

@@ -157,15 +157,18 @@ type Product struct {
 	ID              string     `json:"id"`
 	Name            string     `json:"name"`
 	SellerID        string     `json:"sellerId"`
+	SellerName      string     `json:"sellerName"`
 	CategoryID      string     `json:"categoryID"`
 	CategoryName    string     `json:"categoryName"`
 	SubcategoryID   string     `json:"subcategoryID"`
 	SubcategoryName string     `json:"subcategoryName"`
-	CreatedAt       string     `json:"createdAt"`
 	Slug            string     `json:"slug"`
 	Variants        []*Variant `json:"variants,omitempty"`
 	ImageURL        *string    `json:"imageUrl,omitempty"`
 	Description     *string    `json:"description,omitempty"`
+	Status          *string    `json:"status,omitempty"`
+	CreatedAt       string     `json:"createdAt"`
+	UpdatedAt       *string    `json:"updatedAt,omitempty"`
 }
 
 type ProductByCategory struct {
@@ -185,11 +188,13 @@ type ProductCart struct {
 }
 
 type ProductFilterInput struct {
-	Category *string  `json:"category,omitempty"`
-	MinPrice *float64 `json:"minPrice,omitempty"`
-	MaxPrice *float64 `json:"maxPrice,omitempty"`
-	Search   *string  `json:"search,omitempty"`
-	InStock  *bool    `json:"inStock,omitempty"`
+	Category   *string  `json:"category,omitempty"`
+	MinPrice   *float64 `json:"minPrice,omitempty"`
+	MaxPrice   *float64 `json:"maxPrice,omitempty"`
+	Search     *string  `json:"search,omitempty"`
+	InStock    *bool    `json:"inStock,omitempty"`
+	Status     *string  `json:"status,omitempty"`
+	SellerName *string  `json:"sellerName,omitempty"`
 }
 
 type ProductSortInput struct {
