@@ -6,3 +6,8 @@ const (
 	UserEmailKey contextKey = "email"
 	UserRoleKey  contextKey = "role"
 )
+
+const (
+	ProductStatusActive  = "active"
+	ProductStatusDisable = "disable"
+)

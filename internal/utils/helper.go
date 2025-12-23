@@ -77,10 +77,11 @@ func PtrInt32(i *int32) int32 {
 
 func HasAnyUpdateProductField(input model.UpdateProduct) bool {
 	return input.Name != nil ||
-
 		input.ImageURL != nil ||
 		input.Description != nil ||
-		input.CategoryID != nil
+		input.CategoryID != nil ||
+		input.SubcategoryID != nil ||
+		input.Status != nil
 }
 
 func HasAnyVariantUpdateField(v *model.UpdateVariant) bool {

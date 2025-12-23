@@ -7,9 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 	"warimas-be/internal/graph/model"
+	"warimas-be/internal/logger"
 	servicepkg "warimas-be/internal/service"
 	"warimas-be/internal/utils"
+
+	"go.uber.org/zap"
 )
 
 type Repository interface {
@@ -27,8 +31,8 @@ type Repository interface {
 		input []*model.UpdateVariant,
 		sellerID string,
 	) ([]*model.Variant, error)
-	GetPackages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit, offset int32) ([]*model.Package, error)
-	GetProductByID(ctx context.Context, productID string) (*model.Product, error)
+	GetPackages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit, offset int32, includeDisabled bool) ([]*model.Package, error)
+	GetProductByID(ctx context.Context, productID string, includeDisabled bool) (*model.Product, error)
 }
 
 type repository struct {
@@ -39,72 +43,83 @@ func NewRepository(db *sql.DB) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) GetProductsByGroup(ctx context.Context, opts servicepkg.ProductQueryOptions) ([]model.ProductByCategory, error) {
+func (r *repository) GetProductsByGroup(
+	ctx context.Context,
+	opts servicepkg.ProductQueryOptions,
+) ([]model.ProductByCategory, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "GetProductsByGroup"),
+	)
+
+	start := time.Now()
+	log.Info("start get products by group")
 
 	query := `
 	SELECT
 	    c.id AS category_id,
-     c.name AS category_name,
-     s.id AS subcategory_id,
-     s.name AS subcategory_name,
-    p_total.total_products,
+	    c.name AS category_name,
+	    s.id AS subcategory_id,
+	    s.name AS subcategory_name,
+	    p_total.total_products,
 
-    p.id AS product_id,
-    p.name AS product_name,
-    p.seller_id,
-    p.slug,
+	    p.id AS product_id,
+	    p.name AS product_name,
+	    p.seller_id,
+	    p.slug,
 
-    v.id AS variant_id,
-	v.product_id AS variant_product_id,
-    v.name AS variant_name,
-    v.price AS variant_price,
-    v.stock,
-    v.imageurl
+	    v.id AS variant_id,
+	    v.product_id AS variant_product_id,
+	    v.name AS variant_name,
+	    v.price AS variant_price,
+	    v.stock,
+	    v.imageurl
 
-FROM category c
+	FROM category c
 
--- Total products per category
-LEFT JOIN LATERAL (
-    SELECT COUNT(*) AS total_products
-    FROM products p
-    WHERE p.category_id = c.id
-) AS p_total ON true
+	-- Total products per category
+	LEFT JOIN LATERAL (
+	    SELECT COUNT(*) AS total_products
+	    FROM products p
+	    WHERE p.category_id = c.id
+	) AS p_total ON true
 
--- Limit 10 products per category
-LEFT JOIN LATERAL (
-    SELECT *
-    FROM products p
-    WHERE p.category_id = c.id
-    ORDER BY p.name
-    LIMIT 10
-) AS p ON true
+	-- Limit 10 products per category
+	LEFT JOIN LATERAL (
+	    SELECT *
+	    FROM products p
+	    WHERE p.category_id = c.id
+	    ORDER BY p.name
+	    LIMIT 10
+	) AS p ON true
 
--- Join variants
-LEFT JOIN variants v ON v.product_id = p.id
-LEFT JOIN subcategories s ON s.id = p.subcategory_id
+	-- Join variants
+	LEFT JOIN variants v ON v.product_id = p.id
+	LEFT JOIN subcategories s ON s.id = p.subcategory_id
 
+	ORDER BY c.name, p.name, v.name;
+	`
 
-ORDER BY c.name, p.name, v.name;
-
-`
-	rows, err := r.db.Query(query)
+	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
+		log.Error("failed to query products by group", zap.Error(err))
 		return nil, err
 	}
 	defer rows.Close()
 
-	categoryMap := make(map[string]*model.ProductByCategory)
-	productMap := make(map[string]*model.Product)
-	categoryOrder := []string{}
-	productCount := make(map[string]int) // track product count
+	categoryMap := make(map[string]*model.ProductByCategory, 16)
+	productMap := make(map[string]*model.Product, 64)
+	categoryOrder := make([]string, 0, 16)
+	productCount := make(map[string]int)
 	const limitPerCategory = 10
 
 	for rows.Next() {
 
 		var (
-			categoryId      sql.NullString
+			categoryID      sql.NullString
 			categoryName    sql.NullString
-			subcategoryId   sql.NullString
+			subcategoryID   sql.NullString
 			subcategoryName sql.NullString
 			totalProducts   sql.NullInt32
 
@@ -122,65 +137,70 @@ ORDER BY c.name, p.name, v.name;
 		)
 
 		if err := rows.Scan(
-			&categoryId,
+			&categoryID,
 			&categoryName,
-			&subcategoryId,
+			&subcategoryID,
 			&subcategoryName,
 			&totalProducts,
-
 			&pID, &pName, &pSellerID, &pSlug,
 			&vID, &vProdID, &vName, &vPrice, &vStock, &vImageURL,
 		); err != nil {
+			log.Error("failed to scan grouped product row", zap.Error(err))
 			return nil, err
 		}
 
-		cat := categoryId.String
+		if !categoryID.Valid {
+			// Should never happen, but stay defensive
+			continue
+		}
+
+		catID := categoryID.String
 
 		//--------------------------------------
 		// CATEGORY
 		//--------------------------------------
-		if _, exists := categoryMap[cat]; !exists {
-			categoryMap[cat] = &model.ProductByCategory{
-				CategoryName:  &cat,
-				TotalProducts: int32(totalProducts.Int32),
-				Products:      []*model.Product{},
+		if _, exists := categoryMap[catID]; !exists {
+			categoryMap[catID] = &model.ProductByCategory{
+				CategoryName:  &categoryName.String,
+				TotalProducts: totalProducts.Int32,
+				Products:      make([]*model.Product, 0, limitPerCategory),
 			}
-			categoryOrder = append(categoryOrder, cat)
-			productCount[cat] = 0
+			categoryOrder = append(categoryOrder, catID)
+			productCount[catID] = 0
 		}
 
 		//--------------------------------------
-		// PRODUCT (limit to 10)
+		// PRODUCT (limit to 10 per category)
 		//--------------------------------------
 		if pID.Valid {
 
-			// Skip if we already reached 10 products
-			if productCount[cat] >= limitPerCategory {
+			if productCount[catID] >= limitPerCategory {
 				continue
 			}
 
 			if _, exists := productMap[pID.String]; !exists {
-				productMap[pID.String] = &model.Product{
+				product := &model.Product{
 					ID:              pID.String,
 					Name:            pName.String,
 					SellerID:        pSellerID.String,
-					CategoryID:      categoryId.String,
+					CategoryID:      catID,
 					CategoryName:    categoryName.String,
-					SubcategoryID:   subcategoryId.String,
+					SubcategoryID:   subcategoryID.String,
 					SubcategoryName: subcategoryName.String,
 					Slug:            pSlug.String,
-					Variants:        []*model.Variant{},
+					Variants:        make([]*model.Variant, 0, 4),
 				}
 
-				categoryMap[cat].Products = append(categoryMap[cat].Products, productMap[pID.String])
-				productCount[cat]++
+				productMap[pID.String] = product
+				categoryMap[catID].Products = append(categoryMap[catID].Products, product)
+				productCount[catID]++
 			}
 		}
 
 		//--------------------------------------
-		// VARIANT (only add if product included)
+		// VARIANT
 		//--------------------------------------
-		if vID.Valid {
+		if vID.Valid && pID.Valid {
 			if prod, ok := productMap[pID.String]; ok {
 				prod.Variants = append(prod.Variants, &model.Variant{
 					ID:        vID.String,
@@ -194,13 +214,23 @@ ORDER BY c.name, p.name, v.name;
 		}
 	}
 
+	if err := rows.Err(); err != nil {
+		log.Error("rows iteration error", zap.Error(err))
+		return nil, err
+	}
+
 	//--------------------------------------
 	// Convert to ordered slice
 	//--------------------------------------
 	result := make([]model.ProductByCategory, 0, len(categoryOrder))
-	for _, cat := range categoryOrder {
-		result = append(result, *categoryMap[cat])
+	for _, catID := range categoryOrder {
+		result = append(result, *categoryMap[catID])
 	}
+
+	log.Info("success get products by group",
+		zap.Int("category_count", len(result)),
+		zap.Duration("duration", time.Since(start)),
+	)
 
 	return result, nil
 }
@@ -209,6 +239,15 @@ func (r *repository) GetList(
 	ctx context.Context,
 	opts servicepkg.ProductQueryOptions,
 ) ([]*model.Product, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "GetProductList"),
+		zap.Bool("include_disabled", opts.IncludeDisabled),
+	)
+
+	start := time.Now()
+	log.Info("start get product list")
 
 	query := `
 SELECT
@@ -254,6 +293,10 @@ LEFT JOIN variants v ON v.product_id = p.id
 		where []string
 	)
 
+	if !opts.IncludeDisabled {
+		where = append(where, fmt.Sprintf("p.status = '%s'", utils.ProductStatusActive))
+	}
+
 	/* ---------------- FILTERS ---------------- */
 
 	if opts.Filter != nil {
@@ -264,7 +307,7 @@ LEFT JOIN variants v ON v.product_id = p.id
 		}
 
 		if opts.Filter.SellerName != nil && strings.TrimSpace(*opts.Filter.SellerName) != "" {
-			args = append(args, *opts.Filter.SellerName)
+			args = append(args, "%"+strings.TrimSpace(*opts.Filter.SellerName)+"%")
 			where = append(where, fmt.Sprintf("sellers.name ILIKE $%d", len(args)))
 		}
 
@@ -359,22 +402,25 @@ LEFT JOIN variants v ON v.product_id = p.id
 	if opts.Limit != nil {
 		args = append(args, *opts.Limit)
 		query += fmt.Sprintf(" LIMIT $%d", len(args))
+		log = log.With(zap.Int("limit", int(*opts.Limit)))
 	}
 
 	if opts.Offset != nil {
 		args = append(args, *opts.Offset)
 		query += fmt.Sprintf(" OFFSET $%d", len(args))
+		log = log.With(zap.Int("offset", int(*opts.Offset)))
 	}
 
 	/* ---------------- EXECUTION ---------------- */
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
+		log.Error("failed to query product list", zap.Error(err))
 		return nil, err
 	}
 	defer rows.Close()
 
-	var products []*model.Product
+	products := make([]*model.Product, 0, 16)
 
 	for rows.Next() {
 		var (
@@ -382,7 +428,7 @@ LEFT JOIN variants v ON v.product_id = p.id
 			variantsJSON []byte
 		)
 
-		err := rows.Scan(
+		if err := rows.Scan(
 			&p.ID,
 			&p.Name,
 			&p.SellerID,
@@ -398,42 +444,115 @@ LEFT JOIN variants v ON v.product_id = p.id
 			&p.CategoryName,
 			&p.SubcategoryName,
 			&variantsJSON,
-		)
-		if err != nil {
+		); err != nil {
+			log.Error("failed to scan product row", zap.Error(err))
 			return nil, err
 		}
 
 		if err := json.Unmarshal(variantsJSON, &p.Variants); err != nil {
+			log.Error("failed to unmarshal variants",
+				zap.String("product_id", p.ID),
+				zap.Error(err),
+			)
 			return nil, err
 		}
 
 		products = append(products, &p)
 	}
 
+	if err := rows.Err(); err != nil {
+		log.Error("rows iteration error", zap.Error(err))
+		return nil, err
+	}
+
+	log.Info("success get product list",
+		zap.Int("product_count", len(products)),
+		zap.Duration("duration", time.Since(start)),
+	)
+
 	return products, nil
 }
 
-func (r *repository) Create(ctx context.Context, input model.NewProduct, sellerID string) (model.Product, error) {
+func (r *repository) Create(
+	ctx context.Context,
+	input model.NewProduct,
+	sellerID string,
+) (model.Product, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "CreateProduct"),
+		zap.String("seller_id", sellerID),
+		zap.String("category_id", input.CategoryID),
+		zap.String("subcategory_id", input.SubcategoryID),
+	)
+
+	start := time.Now()
+	log.Info("start create product")
 
 	var p model.Product
 
+	// 🔒 Validation
 	if sellerID == "" {
+		log.Warn("create product failed: missing sellerID")
 		return p, errors.New("sellerID is required")
 	}
 
+	if input.Name == "" {
+		log.Warn("create product failed: missing name")
+		return p, errors.New("name is required")
+	}
+
 	if input.CategoryID == "" {
+		log.Warn("create product failed: missing categoryID")
 		return p, errors.New("categoryID is required")
 	}
 
 	if input.SubcategoryID == "" {
+		log.Warn("create product failed: missing subcategoryID")
 		return p, errors.New("subcategoryID is required")
 	}
 
-	err := r.db.QueryRow(
-		"INSERT INTO products (category_id, seller_id, name, slug, imageurl, subcategory_id, description) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, imageurl",
-		input.CategoryID, sellerID, input.Name, utils.Slugify(input.Name, sellerID), input.ImageURL, input.SubcategoryID, input.Description,
-	).Scan(&p.ID, &p.Name, &p.ImageURL)
-	return p, err
+	slug := utils.Slugify(input.Name, sellerID)
+
+	err := r.db.QueryRowContext(
+		ctx,
+		`
+		INSERT INTO products (
+			category_id,
+			seller_id,
+			name,
+			slug,
+			imageurl,
+			subcategory_id,
+			description
+		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, name, imageurl
+		`,
+		input.CategoryID,
+		sellerID,
+		input.Name,
+		slug,
+		input.ImageURL,
+		input.SubcategoryID,
+		input.Description,
+	).Scan(
+		&p.ID,
+		&p.Name,
+		&p.ImageURL,
+	)
+
+	if err != nil {
+		log.Error("failed to create product", zap.Error(err))
+		return p, err
+	}
+
+	log.Info("success create product",
+		zap.String("product_id", p.ID),
+		zap.Duration("duration", time.Since(start)),
+	)
+
+	return p, nil
 }
 
 func (r *repository) Update(
@@ -442,58 +561,83 @@ func (r *repository) Update(
 	sellerID string,
 ) (model.Product, error) {
 
-	query := `
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "UpdateProduct"),
+		zap.String("product_id", input.ID),
+		zap.String("seller_id", sellerID),
+	)
+
+	start := time.Now()
+	log.Info("start update product")
+
+	queryTpl := `
 		UPDATE products
 		SET %s
 		WHERE id = $%d AND seller_id = $%d
-		RETURNING id, name, imageurl, description, category_id, seller_id, subcategory_id
+		RETURNING id, name, imageurl, description, category_id, seller_id, subcategory_id, status
 	`
 
-	setClauses := []string{}
-	args := []any{}
+	setClauses := make([]string, 0, 6)
+	args := make([]any, 0, 8)
+	updatedFields := make([]string, 0, 6)
 	argPos := 1
 
 	if input.Name != nil {
-		setClauses = append(setClauses, fmt.Sprintf("name = $%d, slug = $%d", argPos, argPos+1))
+		setClauses = append(setClauses,
+			fmt.Sprintf("name = $%d, slug = $%d", argPos, argPos+1),
+		)
 		args = append(args, *input.Name, utils.Slugify(*input.Name, sellerID))
+		updatedFields = append(updatedFields, "name", "slug")
 		argPos += 2
 	}
 
 	if input.Status != nil {
 		setClauses = append(setClauses, fmt.Sprintf("status = $%d", argPos))
 		args = append(args, *input.Status)
+		updatedFields = append(updatedFields, "status")
 		argPos++
 	}
 
 	if input.ImageURL != nil {
 		setClauses = append(setClauses, fmt.Sprintf("imageurl = $%d", argPos))
 		args = append(args, *input.ImageURL)
+		updatedFields = append(updatedFields, "imageurl")
 		argPos++
 	}
 
 	if input.Description != nil {
 		setClauses = append(setClauses, fmt.Sprintf("description = $%d", argPos))
 		args = append(args, *input.Description)
+		updatedFields = append(updatedFields, "description")
 		argPos++
 	}
 
 	if input.CategoryID != nil {
 		setClauses = append(setClauses, fmt.Sprintf("category_id = $%d", argPos))
 		args = append(args, *input.CategoryID)
+		updatedFields = append(updatedFields, "category_id")
 		argPos++
 	}
 
 	if input.SubcategoryID != nil {
 		setClauses = append(setClauses, fmt.Sprintf("subcategory_id = $%d", argPos))
 		args = append(args, *input.SubcategoryID)
+		updatedFields = append(updatedFields, "subcategory_id")
 		argPos++
+	}
+
+	// 🚨 No fields to update
+	if len(setClauses) == 0 {
+		log.Warn("update product skipped: no fields to update")
+		return model.Product{}, errors.New("no fields to update")
 	}
 
 	// WHERE clause args
 	args = append(args, input.ID, sellerID)
 
 	finalQuery := fmt.Sprintf(
-		query,
+		queryTpl,
 		strings.Join(setClauses, ", "),
 		argPos,
 		argPos+1,
@@ -508,13 +652,25 @@ func (r *repository) Update(
 		&product.CategoryID,
 		&product.SellerID,
 		&product.SubcategoryID,
+		&product.Status,
 	)
 
-	if err == sql.ErrNoRows {
-		return model.Product{}, errors.New("product not found or not owned by seller")
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Warn("product not found or not owned by seller")
+			return model.Product{}, errors.New("product not found or not owned by seller")
+		}
+
+		log.Error("failed to update product", zap.Error(err))
+		return model.Product{}, err
 	}
 
-	return product, err
+	log.Info("success update product",
+		zap.Strings("updated_fields", updatedFields),
+		zap.Duration("duration", time.Since(start)),
+	)
+
+	return product, nil
 }
 
 func (r *repository) BulkCreateVariants(
@@ -523,7 +679,21 @@ func (r *repository) BulkCreateVariants(
 	sellerID string,
 ) ([]*model.Variant, error) {
 
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "BulkCreateVariants"),
+		zap.String("seller_id", sellerID),
+		zap.Int("variant_count", len(input)),
+	)
+
+	start := time.Now()
+	log.Info("start bulk create variants")
+
 	if len(input) > 100 {
+		log.Warn("bulk create variants exceeds limit",
+			zap.Int("limit", 100),
+			zap.Int("received", len(input)),
+		)
 		return nil, errors.New("max 100 variants per request")
 	}
 
@@ -539,16 +709,16 @@ func (r *repository) BulkCreateVariants(
 		) VALUES
 	`
 
-	args := []interface{}{}
-	valueStrings := []string{}
+	args := make([]any, 0, len(input)*7)
+	valueStrings := make([]string, 0, len(input))
 
 	for i, v := range input {
 		idx := i * 7
 
 		valueStrings = append(valueStrings,
 			fmt.Sprintf("($%d,$%d,$%d,$%d,$%d,$%d,$%d)",
-				idx+1, idx+2, idx+3, idx+4,
-				idx+5, idx+6, idx+7,
+				idx+1, idx+2, idx+3,
+				idx+4, idx+5, idx+6, idx+7,
 			),
 		)
 
@@ -578,15 +748,16 @@ func (r *repository) BulkCreateVariants(
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
+		log.Error("failed to execute bulk insert variants", zap.Error(err))
 		return nil, err
 	}
 	defer rows.Close()
 
-	var variants []*model.Variant
+	variants := make([]*model.Variant, 0, len(input))
 
 	for rows.Next() {
 		var v model.Variant
-		err := rows.Scan(
+		if err := rows.Scan(
 			&v.ID,
 			&v.ProductID,
 			&v.Name,
@@ -595,12 +766,23 @@ func (r *repository) BulkCreateVariants(
 			&v.Stock,
 			&v.ImageURL,
 			&v.CreatedAt,
-		)
-		if err != nil {
+		); err != nil {
+			log.Error("failed to scan created variant", zap.Error(err))
 			return nil, err
 		}
+
 		variants = append(variants, &v)
 	}
+
+	if err := rows.Err(); err != nil {
+		log.Error("rows iteration error", zap.Error(err))
+		return nil, err
+	}
+
+	log.Info("success bulk create variants",
+		zap.Int("created_count", len(variants)),
+		zap.Duration("duration", time.Since(start)),
+	)
 
 	return variants, nil
 }
@@ -611,11 +793,25 @@ func (r *repository) BulkUpdateVariants(
 	sellerID string,
 ) ([]*model.Variant, error) {
 
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "BulkUpdateVariants2"),
+		zap.String("seller_id", sellerID),
+		zap.Int("variant_count", len(input)),
+	)
+
+	start := time.Now()
+	log.Info("start bulk update variants")
+
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
+		log.Error("failed to begin transaction", zap.Error(err))
 		return nil, err
 	}
-	defer tx.Rollback()
+
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	var updatedVariants []*model.Variant
 
@@ -629,35 +825,38 @@ func (r *repository) BulkUpdateVariants(
 			args = append(args, *v.QuantityType)
 			argPos++
 		}
-
 		if v.Name != nil {
 			setClauses = append(setClauses, fmt.Sprintf("name = $%d", argPos))
 			args = append(args, *v.Name)
 			argPos++
 		}
-
 		if v.Price != nil {
 			setClauses = append(setClauses, fmt.Sprintf("price = $%d", argPos))
 			args = append(args, *v.Price)
 			argPos++
 		}
-
 		if v.Stock != nil {
 			setClauses = append(setClauses, fmt.Sprintf("stock = $%d", argPos))
 			args = append(args, *v.Stock)
 			argPos++
 		}
-
 		if v.ImageURL != nil {
 			setClauses = append(setClauses, fmt.Sprintf("imageurl = $%d", argPos))
 			args = append(args, *v.ImageURL)
 			argPos++
 		}
-
 		if v.Description != nil {
 			setClauses = append(setClauses, fmt.Sprintf("description = $%d", argPos))
 			args = append(args, *v.Description)
 			argPos++
+		}
+
+		// ✅ Safety guard
+		if len(setClauses) == 0 {
+			log.Warn("skip update variant: no fields to update",
+				zap.String("variant_id", v.ID),
+			)
+			continue
 		}
 
 		// WHERE args
@@ -680,7 +879,7 @@ func (r *repository) BulkUpdateVariants(
 		)
 
 		var variant model.Variant
-		err := tx.QueryRowContext(ctx, query, args...).Scan(
+		if err := tx.QueryRowContext(ctx, query, args...).Scan(
 			&variant.ID,
 			&variant.ProductID,
 			&variant.Name,
@@ -688,8 +887,13 @@ func (r *repository) BulkUpdateVariants(
 			&variant.Stock,
 			&variant.ImageURL,
 			&variant.Description,
-		)
-		if err != nil {
+		); err != nil {
+
+			log.Error("failed to update variant",
+				zap.String("variant_id", v.ID),
+				zap.String("product_id", v.ProductID),
+				zap.Error(err),
+			)
 			return nil, err
 		}
 
@@ -697,8 +901,14 @@ func (r *repository) BulkUpdateVariants(
 	}
 
 	if err := tx.Commit(); err != nil {
+		log.Error("failed to commit transaction", zap.Error(err))
 		return nil, err
 	}
+
+	log.Info("success bulk update variants",
+		zap.Int("updated_count", len(updatedVariants)),
+		zap.Duration("duration", time.Since(start)),
+	)
 
 	return updatedVariants, nil
 }
@@ -708,7 +918,18 @@ func (r *repository) GetPackages(
 	filter *model.PackageFilterInput,
 	sort *model.PackageSortInput,
 	limit, offset int32,
+	includeDisabled bool,
 ) ([]*model.Package, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "GetPackages"),
+		zap.Int32("limit", limit),
+		zap.Int32("offset", offset),
+		zap.Bool("include_disabled", includeDisabled),
+	)
+
+	log.Debug("start get packages")
 
 	query := `
 		SELECT
@@ -730,30 +951,37 @@ func (r *repository) GetPackages(
 		WHERE 1=1
 	`
 
-	// Filtering
-	args := []interface{}{}
+	args := []any{}
 	argIndex := 1
 
+	// Filtering
 	if filter != nil {
 		if filter.ID != nil {
 			query += fmt.Sprintf(" AND p.id = $%d", argIndex)
 			args = append(args, *filter.ID)
 			argIndex++
+
+			log.Debug("apply filter", zap.String("filter", "id"))
 		}
+
 		if filter.Name != nil && *filter.Name != "" {
 			query += fmt.Sprintf(" AND p.name ILIKE $%d", argIndex)
 			args = append(args, "%"+*filter.Name+"%")
 			argIndex++
+
+			log.Debug("apply filter", zap.String("filter", "name"))
 		}
 	}
 
 	// Sorting
 	if sort != nil {
+		dir := strings.ToUpper(string(sort.Direction))
+
 		switch sort.Field {
 		case model.PackageSortFieldName:
-			query += " ORDER BY p.name " + strings.ToUpper(string(sort.Direction))
+			query += " ORDER BY p.name " + dir
 		case model.PackageSortFieldCreatedAt:
-			query += " ORDER BY p.created_at " + strings.ToUpper(string(sort.Direction))
+			query += " ORDER BY p.created_at " + dir
 		default:
 			query += " ORDER BY p.created_at DESC"
 		}
@@ -767,11 +995,12 @@ func (r *repository) GetPackages(
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
+		log.Error("failed to query packages", zap.Error(err))
 		return nil, err
 	}
 	defer rows.Close()
 
-	packagesMap := map[string]*model.Package{}
+	packagesMap := make(map[string]*model.Package)
 
 	for rows.Next() {
 		var (
@@ -782,7 +1011,7 @@ func (r *repository) GetPackages(
 			userID       sql.NullString
 		)
 
-		err := rows.Scan(
+		if err := rows.Scan(
 			&p.ID,
 			&p.Name,
 			&imageURL,
@@ -795,9 +1024,8 @@ func (r *repository) GetPackages(
 			&pi.Quantity,
 			&pi.CreatedAt,
 			&pi.UpdatedAt,
-		)
-
-		if err != nil {
+		); err != nil {
+			log.Error("failed to scan package row", zap.Error(err))
 			return nil, err
 		}
 
@@ -808,24 +1036,37 @@ func (r *repository) GetPackages(
 			p.UserID = &userID.String
 		}
 
-		// check if package exists already
-		if _, ok := packagesMap[p.ID]; !ok {
+		// create package if not exists
+		pkg, exists := packagesMap[p.ID]
+		if !exists {
 			p.Items = []*model.PackageItem{}
 			packagesMap[p.ID] = &p
+			pkg = &p
 		}
 
-		// If no item exists (NULL), skip append
+		// append item if exists
 		if pi.ID != "" {
-			pi.Price = variantPrice.Float64
-			packagesMap[p.ID].Items = append(packagesMap[p.ID].Items, &pi)
+			if variantPrice.Valid {
+				pi.Price = variantPrice.Float64
+			}
+			pkg.Items = append(pkg.Items, &pi)
 		}
 	}
 
-	// Convert map to slice
-	result := []*model.Package{}
+	if err := rows.Err(); err != nil {
+		log.Error("rows iteration error", zap.Error(err))
+		return nil, err
+	}
+
+	// Convert map → slice
+	result := make([]*model.Package, 0, len(packagesMap))
 	for _, pkg := range packagesMap {
 		result = append(result, pkg)
 	}
+
+	log.Info("success get packages",
+		zap.Int("package_count", len(result)),
+	)
 
 	return result, nil
 }
@@ -833,54 +1074,81 @@ func (r *repository) GetPackages(
 func (r *repository) GetProductByID(
 	ctx context.Context,
 	productID string,
+	includeDisabled bool,
 ) (*model.Product, error) {
 
-	query := `
-SELECT
-    p.id,
-    p.name,
-    p.seller_id,
-    p.category_id,
-    p.subcategory_id,
-    p.slug,
-    p.imageurl,
-    p.description,
-    p.created_at,
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "GetProductByID"),
+		zap.String("product_id", productID),
+		zap.Bool("include_disabled", includeDisabled),
+	)
 
-    c.name AS category_name,
-    s.name AS subcategory_name,
+	log.Debug("start get product by id")
 
-    COALESCE(
-        json_agg(
-            json_build_object(
-                'id', v.id,
-                'productId', v.product_id,
-                'name', v.name,
-                'price', v.price,
-                'stock', v.stock,
-                'imageUrl', v.imageurl,
-                'description', v.description
-            )
-        ) FILTER (WHERE v.id IS NOT NULL),
-        '[]'
-    ) AS variants
-FROM products p
-LEFT JOIN category c ON c.id = p.category_id
-LEFT JOIN subcategories s ON s.id = p.subcategory_id
-LEFT JOIN variants v ON v.product_id = p.id
-WHERE p.id = $1
-GROUP BY
-    p.id,
-    c.name,
-    s.name
-`
+	query := `SELECT
+		p.id,
+		p.name,
+		p.seller_id,
+		p.category_id,
+		p.subcategory_id,
+		p.slug,
+		p.imageurl,
+		p.description,
+		p.created_at,
+
+		c.name AS category_name,
+		s.name AS subcategory_name,
+
+		COALESCE(
+			json_agg(
+				json_build_object(
+					'id', v.id,
+					'productId', v.product_id,
+					'name', v.name,
+					'price', v.price,
+					'stock', v.stock,
+					'imageUrl', v.imageurl,
+					'description', v.description
+				)
+			) FILTER (WHERE v.id IS NOT NULL),
+			'[]'::json
+		) AS variants
+	FROM products p
+	LEFT JOIN category c ON c.id = p.category_id
+	LEFT JOIN subcategories s ON s.id = p.subcategory_id
+	LEFT JOIN variants v ON v.product_id = p.id
+	WHERE p.id = $1
+	`
 
 	var (
 		product      model.Product
 		variantsJSON []byte
 	)
 
-	err := r.db.QueryRowContext(ctx, query, productID).Scan(
+	args := []any{productID}
+
+	if !includeDisabled {
+		query += " AND p.status = $2"
+		args = append(args, utils.ProductStatusActive)
+	}
+
+	query += `
+	GROUP BY
+		p.id,
+		p.name,
+		p.seller_id,
+		p.category_id,
+		p.subcategory_id,
+		p.slug,
+		p.imageurl,
+		p.description,
+		p.created_at,
+		c.name,
+		s.name;
+	`
+
+	err := r.db.QueryRowContext(ctx, query, args...).Scan(
 		&product.ID,
 		&product.Name,
 		&product.SellerID,
@@ -890,24 +1158,33 @@ GROUP BY
 		&product.ImageURL,
 		&product.Description,
 		&product.CreatedAt,
-
 		&product.CategoryName,
 		&product.SubcategoryName,
-
 		&variantsJSON,
 	)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nil // ✅ GraphQL-friendly (Product nullable)
+			log.Warn("product not found")
+			return nil, nil // GraphQL-friendly
 		}
+
+		log.Error("failed to query product",
+			zap.Error(err),
+		)
 		return nil, err
 	}
 
-	// Decode variants JSON
 	if err := json.Unmarshal(variantsJSON, &product.Variants); err != nil {
+		log.Error("failed to unmarshal variants",
+			zap.Error(err),
+		)
 		return nil, err
 	}
+
+	log.Info("success get product by id",
+		zap.Int("variant_count", len(product.Variants)),
+	)
 
 	return &product, nil
 }

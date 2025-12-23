@@ -34,6 +34,12 @@ func (s *service) GetProductsByGroup(ctx context.Context, opts servicepkg.Produc
 }
 
 func (s *service) GetList(ctx context.Context, opts servicepkg.ProductQueryOptions) ([]*model.Product, error) {
+
+	role := utils.GetUserRoleFromContext(ctx)
+	if role == "ADMIN" {
+		opts.IncludeDisabled = true
+	}
+
 	return s.repo.GetList(ctx, opts)
 }
 
@@ -151,9 +157,22 @@ func (s *service) GetPackages(
 
 	offset := page * limit
 
-	return s.repo.GetPackages(ctx, filter, sort, limit, offset)
+	role := utils.GetUserRoleFromContext(ctx)
+	IncludeDisabled := false
+	if role == "ADMIN" {
+		IncludeDisabled = true
+	}
+
+	return s.repo.GetPackages(ctx, filter, sort, limit, offset, IncludeDisabled)
 }
 
 func (s *service) GetProductByID(ctx context.Context, productID string) (*model.Product, error) {
-	return s.repo.GetProductByID(ctx, productID)
+
+	role := utils.GetUserRoleFromContext(ctx)
+	IncludeDisabled := false
+	if role == "ADMIN" {
+		IncludeDisabled = true
+	}
+
+	return s.repo.GetProductByID(ctx, productID, IncludeDisabled)
 }
