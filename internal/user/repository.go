@@ -43,7 +43,7 @@ func (r *repository) Create(ctx context.Context, email, password, role string) (
 func (r *repository) FindByEmail(email string) (User, error) {
 	var u User
 	err := r.db.QueryRow(
-		"SELECT u.id, u.email, u.password, u.role, s.id FROM users u JOIN sellers s ON u.id = s.user_id WHERE u.email=$1",
+		"SELECT u.id, u.email, u.password, u.role, s.id FROM users u LEFT JOIN sellers s ON u.id = s.user_id WHERE u.email=$1",
 		email,
 	).Scan(&u.ID, &u.Email, &u.Password, &u.Role, &u.SellerID)
 
