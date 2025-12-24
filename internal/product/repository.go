@@ -10,15 +10,14 @@ import (
 	"time"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
-	servicepkg "warimas-be/internal/service"
 	"warimas-be/internal/utils"
 
 	"go.uber.org/zap"
 )
 
 type Repository interface {
-	GetProductsByGroup(ctx context.Context, opts servicepkg.ProductQueryOptions) ([]model.ProductByCategory, error)
-	GetList(ctx context.Context, opts servicepkg.ProductQueryOptions) ([]*model.Product, error)
+	GetProductsByGroup(ctx context.Context, opts ProductQueryOptions) ([]model.ProductByCategory, error)
+	GetList(ctx context.Context, opts ProductQueryOptions) ([]*Product, int, error)
 	Create(ctx context.Context, input model.NewProduct, sellerID string) (model.Product, error)
 	Update(ctx context.Context, input model.UpdateProduct, sellerID string) (model.Product, error)
 	BulkCreateVariants(
@@ -46,7 +45,7 @@ func NewRepository(db *sql.DB) Repository {
 
 func (r *repository) GetProductsByGroup(
 	ctx context.Context,
-	opts servicepkg.ProductQueryOptions,
+	opts ProductQueryOptions,
 ) ([]model.ProductByCategory, error) {
 
 	log := logger.FromCtx(ctx).With(
@@ -238,206 +237,155 @@ func (r *repository) GetProductsByGroup(
 
 func (r *repository) GetList(
 	ctx context.Context,
-	opts servicepkg.ProductQueryOptions,
-) ([]*model.Product, error) {
+	opts ProductQueryOptions,
+) ([]*Product, int, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
 		zap.String("method", "GetProductList"),
-		zap.Bool("include_disabled", opts.IncludeDisabled),
 	)
 
 	start := time.Now()
-	log.Info("start get product list")
 
-	query := `
-SELECT
-    p.id,
-    p.name,
-    p.seller_id,
-	COALESCE(sellers.name, 'Unknown') AS seller_name,
-	p.status,
-    p.category_id,
-    p.subcategory_id,
-    p.slug,
-    p.imageurl,
-    p.description,
-    p.created_at,
-	p.updated_at,
-
-    c.name AS category_name,
-    s.name AS subcategory_name,
-
-    COALESCE(
-        json_agg(
-            json_build_object(
-                'id', v.id,
-                'productId', v.product_id,
-                'name', v.name,
-                'price', v.price,
-                'stock', v.stock,
-                'imageUrl', v.imageurl
-            )
-        ) FILTER (WHERE v.id IS NOT NULL),
-        '[]'
-    ) AS variants
-
-FROM products p
-LEFT JOIN sellers ON sellers.id = p.seller_id
-LEFT JOIN category c ON c.id = p.category_id
-LEFT JOIN subcategories s ON s.id = p.subcategory_id
-LEFT JOIN variants v ON v.product_id = p.id
-`
+	baseQuery := `
+		FROM products p
+		LEFT JOIN sellers ON sellers.id = p.seller_id
+		LEFT JOIN category c ON c.id = p.category_id
+		LEFT JOIN subcategories s ON s.id = p.subcategory_id
+		LEFT JOIN variants v ON v.product_id = p.id
+	`
 
 	var (
 		args  []any
 		where []string
 	)
 
+	/* ---------- VISIBILITY ---------- */
+
 	if !opts.IncludeDisabled {
-		where = append(where, fmt.Sprintf("p.status = '%s'", utils.ProductStatusActive))
+		where = append(where, "p.status = 'active'")
 	}
 
-	/* ---------------- FILTERS ---------------- */
+	if opts.SellerID != nil {
+		args = append(args, *opts.SellerID)
+		where = append(where, fmt.Sprintf("p.seller_id = $%d", len(args)))
+	}
 
-	if opts.Filter != nil {
+	/* ---------- FILTERS ---------- */
 
-		if opts.Filter.Category != nil {
-			args = append(args, *opts.Filter.Category)
-			where = append(where, fmt.Sprintf("p.category_id = $%d", len(args)))
-		}
+	if opts.CategoryID != nil {
+		args = append(args, *opts.CategoryID)
+		where = append(where, fmt.Sprintf("p.category_id = $%d", len(args)))
+	}
 
-		if opts.Filter.SellerName != nil && strings.TrimSpace(*opts.Filter.SellerName) != "" {
-			args = append(args, "%"+strings.TrimSpace(*opts.Filter.SellerName)+"%")
-			where = append(where, fmt.Sprintf("sellers.name ILIKE $%d", len(args)))
-		}
+	if opts.SellerName != nil {
+		args = append(args, "%"+*opts.SellerName+"%")
+		where = append(where, fmt.Sprintf("sellers.name ILIKE $%d", len(args)))
+	}
 
-		if opts.Filter.Status != nil {
-			args = append(args, *opts.Filter.Status)
-			where = append(where, fmt.Sprintf("p.status = $%d", len(args)))
-		}
+	if opts.Search != nil {
+		args = append(args, "%"+*opts.Search+"%")
+		where = append(where, fmt.Sprintf("p.name ILIKE $%d", len(args)))
+	}
 
-		if opts.Filter.Search != nil {
-			args = append(args, "%"+*opts.Filter.Search+"%")
-			where = append(where, fmt.Sprintf("p.name ILIKE $%d", len(args)))
-		}
-
-		if opts.Filter.MinPrice != nil {
-			args = append(args, *opts.Filter.MinPrice)
-			where = append(where, fmt.Sprintf(`
-				EXISTS (
-					SELECT 1 FROM variants v2
-					WHERE v2.product_id = p.id
-					AND v2.price >= $%d
-				)
-			`, len(args)))
-		}
-
-		if opts.Filter.MaxPrice != nil {
-			args = append(args, *opts.Filter.MaxPrice)
-			where = append(where, fmt.Sprintf(`
-				EXISTS (
-					SELECT 1 FROM variants v2
-					WHERE v2.product_id = p.id
-					AND v2.price <= $%d
-				)
-			`, len(args)))
-		}
-
-		if opts.Filter.InStock != nil && *opts.Filter.InStock {
-			where = append(where, `
-				EXISTS (
-					SELECT 1 FROM variants v2
-					WHERE v2.product_id = p.id
-					AND v2.stock > 0
-				)
-			`)
-		}
+	if opts.InStock != nil && *opts.InStock {
+		where = append(where, `
+		EXISTS (
+			SELECT 1 FROM variants v2
+			WHERE v2.product_id = p.id
+			AND v2.stock > 0
+		)
+	`)
 	}
 
 	if len(where) > 0 {
-		query += " WHERE " + strings.Join(where, " AND ")
+		baseQuery += " WHERE " + strings.Join(where, " AND ")
 	}
 
-	/* ---------------- GROUP BY ---------------- */
+	/* ---------- COUNT QUERY ---------- */
 
-	query += `
-		GROUP BY
-			p.id,
-			p.name,
-			p.seller_id,
-			p.category_id,
-			p.subcategory_id,
-			p.slug,
-			p.imageurl,
-			p.description,
-			p.created_at,
-			p.updated_at,
-			c.name,
-			s.name,
-			sellers.name
+	countQuery := "SELECT COUNT(DISTINCT p.id) " + baseQuery
+
+	var total int
+	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		log.Error("count query failed", zap.Error(err))
+		return nil, 0, err
+	}
+
+	/* ---------- DATA QUERY ---------- */
+
+	selectQuery := `
+SELECT
+	p.id,
+	p.name,
+	p.seller_id,
+	COALESCE(sellers.name, 'Unknown') AS seller_name,
+	p.status,
+	p.category_id,
+	p.subcategory_id,
+	p.slug,
+	p.imageurl,
+	p.description,
+	p.created_at,
+	p.updated_at,
+	c.name AS category_name,
+	s.name AS subcategory_name,
+	COALESCE(
+		json_agg(
+			json_build_object(
+				'id', v.id,
+				'productId', v.product_id,
+				'name', v.name,
+				'price', v.price,
+				'stock', v.stock,
+				'imageUrl', v.imageurl
+			)
+		) FILTER (WHERE v.id IS NOT NULL),
+		'[]'
+	) AS variants
+` + baseQuery + `
+GROUP BY
+	p.id, sellers.name, c.name, s.name
 `
 
-	/* ---------------- SORTING ---------------- */
+	/* ---------- SORT ---------- */
 
-	if opts.Sort != nil {
-		dir := "ASC"
-		if opts.Sort.Direction == model.SortDirectionDesc {
-			dir = "DESC"
-		}
+	orderBy := "p.created_at"
 
-		switch opts.Sort.Field {
-		case model.ProductSortFieldPrice:
-			query += fmt.Sprintf(" ORDER BY MIN(v.price) %s", dir)
-		case model.ProductSortFieldName:
-			query += fmt.Sprintf(" ORDER BY p.name %s", dir)
-		default:
-			query += " ORDER BY p.created_at DESC"
-		}
-	} else {
-		query += " ORDER BY p.created_at DESC"
+	switch opts.SortField {
+	case ProductSortFieldPrice:
+		orderBy = "MIN(v.price)"
+	case ProductSortFieldName:
+		orderBy = "p.name"
 	}
 
-	/* ---------------- PAGINATION ---------------- */
-
-	// Apply pagination only when limit & page are valid
-	// Defaults
-	limit := int32(20)
-	page := int32(1)
-
-	// Override if provided
-	if opts.Limit != nil && *opts.Limit > 0 {
-		limit = *opts.Limit
-	}
-	if opts.Page != nil && *opts.Page > 0 {
-		page = *opts.Page
+	dir := "DESC"
+	if opts.SortDirection == SortDirectionAsc {
+		dir = "ASC"
 	}
 
-	offset := (page - 1) * limit
+	selectQuery += " ORDER BY " + orderBy + " " + dir
 
-	args = append(args, limit, offset)
-	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)-1, len(args))
+	/* ---------- PAGINATION ---------- */
 
-	log = log.With(
-		zap.Int("limit", int(limit)),
-		zap.Int("page", int(page)),
-		zap.Int("offset", int(offset)),
-	)
+	offset := (opts.Page - 1) * opts.Limit
+	args = append(args, opts.Limit, offset)
+	selectQuery += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)-1, len(args))
 
-	/* ---------------- EXECUTION ---------------- */
+	/* ---------- EXEC ---------- */
 
-	rows, err := r.db.QueryContext(ctx, query, args...)
+	rows, err := r.db.QueryContext(ctx, selectQuery, args...)
 	if err != nil {
-		log.Error("failed to query product list", zap.Error(err))
-		return nil, err
+		log.Error("query failed", zap.Error(err))
+		return nil, 0, err
 	}
 	defer rows.Close()
 
-	products := make([]*model.Product, 0, 16)
+	var products []*Product
 
 	for rows.Next() {
 		var (
-			p            model.Product
+			p            Product
 			variantsJSON []byte
 		)
 
@@ -458,32 +406,26 @@ LEFT JOIN variants v ON v.product_id = p.id
 			&p.SubcategoryName,
 			&variantsJSON,
 		); err != nil {
-			log.Error("failed to scan product row", zap.Error(err))
-			return nil, err
+			return nil, 0, err
 		}
 
-		if err := json.Unmarshal(variantsJSON, &p.Variants); err != nil {
-			log.Error("failed to unmarshal variants",
-				zap.String("product_id", p.ID),
-				zap.Error(err),
-			)
-			return nil, err
-		}
-
+		_ = json.Unmarshal(variantsJSON, &p.Variants)
 		products = append(products, &p)
 	}
 
+	// ✅ THIS IS THE CORRECT PLACE
 	if err := rows.Err(); err != nil {
-		log.Error("rows iteration error", zap.Error(err))
-		return nil, err
+		log.Error("rows iteration failed", zap.Error(err))
+		return nil, 0, err
 	}
 
-	log.Info("success get product list",
-		zap.Int("product_count", len(products)),
+	log.Info("get product list success",
+		zap.Int("count", len(products)),
+		zap.Int("total", total),
 		zap.Duration("duration", time.Since(start)),
 	)
 
-	return products, nil
+	return products, total, nil
 }
 
 func (r *repository) Create(

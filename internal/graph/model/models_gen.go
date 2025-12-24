@@ -156,6 +156,13 @@ type PackageSortInput struct {
 	Direction SortDirection    `json:"direction"`
 }
 
+type PageInfo struct {
+	HasNextPage     bool    `json:"hasNextPage"`
+	HasPreviousPage bool    `json:"hasPreviousPage"`
+	StartCursor     *string `json:"startCursor,omitempty"`
+	EndCursor       *string `json:"endCursor,omitempty"`
+}
+
 type Product struct {
 	ID              string     `json:"id"`
 	Name            string     `json:"name"`
@@ -198,14 +205,34 @@ type ProductCart struct {
 	UpdatedAt       *string  `json:"updatedAt,omitempty"`
 }
 
+type ProductConnection struct {
+	Edges      []*ProductEdge `json:"edges"`
+	PageInfo   *PageInfo      `json:"pageInfo"`
+	TotalCount int32          `json:"totalCount"`
+}
+
+type ProductEdge struct {
+	Node   *Product `json:"node"`
+	Cursor string   `json:"cursor"`
+}
+
 type ProductFilterInput struct {
-	Category   *string  `json:"category,omitempty"`
+	CategoryID *string  `json:"categoryId,omitempty"`
 	MinPrice   *float64 `json:"minPrice,omitempty"`
 	MaxPrice   *float64 `json:"maxPrice,omitempty"`
 	Search     *string  `json:"search,omitempty"`
 	InStock    *bool    `json:"inStock,omitempty"`
 	Status     *string  `json:"status,omitempty"`
 	SellerName *string  `json:"sellerName,omitempty"`
+}
+
+type ProductPage struct {
+	Items      []*Product `json:"items"`
+	Page       int32      `json:"page"`
+	Limit      int32      `json:"limit"`
+	TotalCount int32      `json:"totalCount"`
+	TotalPages int32      `json:"totalPages"`
+	HasNext    bool       `json:"hasNext"`
 }
 
 type ProductSortInput struct {

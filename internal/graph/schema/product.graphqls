@@ -1,0 +1,127 @@
+input PackageFilterInput {
+  id: ID
+  name: String
+}
+
+input PackageSortInput {
+  field: PackageSortField!
+  direction: SortDirection! = ASC
+}
+
+input ProductFilterInput {
+  categoryId: String
+  minPrice: Float
+  maxPrice: Float
+  search: String
+  inStock: Boolean
+  status: String
+  sellerName: String
+}
+
+enum PackageSortField {
+  NAME
+  CREATED_AT
+}
+
+enum ProductSortField {
+  NAME
+  PRICE
+  CREATED_AT
+}
+
+input ProductSortInput {
+  field: ProductSortField!
+  direction: SortDirection! = ASC
+}
+
+type Product {
+  id: ID!
+  name: String!
+  sellerId: ID!
+  sellerName: String!
+  categoryID: String!
+  categoryName: String!
+  subcategoryID: String!
+  subcategoryName: String!
+  slug: String!
+  variants: [Variant]
+  imageUrl: String
+  description: String
+  status: String
+  createdAt: String!
+  updatedAt: String
+}
+
+type ProductCart {
+  id: ID!
+  name: String!
+  sellerId: ID!
+  sellerName: String!
+  categoryID: String!
+  categoryName: String!
+  subcategoryID: String!
+  subcategoryName: String!
+  slug: String!
+  variant: Variant
+  imageUrl: String
+  description: String
+  status: String
+  createdAt: String!
+  updatedAt: String
+}
+
+type ProductByCategory {
+  CategoryName: String
+  TotalProducts: Int!
+  Products: [Product]
+}
+
+type ProductPage {
+  items: [Product!]!
+  page: Int!
+  limit: Int!
+  totalCount: Int!
+  totalPages: Int!
+  hasNext: Boolean!
+}
+
+input NewProduct {
+  name: String!
+  imageUrl: String
+  description: String
+  categoryId: ID!
+  subcategoryID: String!
+}
+
+input UpdateProduct {
+  id: ID!
+  name: String
+  imageUrl: String
+  description: String
+  categoryId: ID
+  subcategoryID: String
+  status: String
+}
+
+extend type Query {
+  productList(
+    filter: ProductFilterInput
+    sort: ProductSortInput
+    page: Int = 1
+    limit: Int = 20
+  ): ProductPage!
+
+  productsHome(
+    filter: ProductFilterInput
+    sort: ProductSortInput
+    limit: Int = 20
+    page: Int = 1
+  ): [ProductByCategory!]!
+
+  productDetail(productId: ID!): Product
+}
+
+extend type Mutation {
+  createProduct(input: NewProduct!): Product! @auth(role: ADMIN)
+  updateProduct(input: UpdateProduct!): Product! @auth(role: ADMIN)
+}

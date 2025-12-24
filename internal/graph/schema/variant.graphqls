@@ -1,0 +1,39 @@
+input NewVariant {
+  productId: ID!
+  quantityType: String!
+  name: String!
+  price: Float!
+  stock: Int!
+  imageUrl: String
+  description: String
+}
+
+input UpdateVariant {
+  id: ID!
+  productId: ID!
+  quantityType: String
+  name: String
+  price: Float
+  stock: Int
+  imageUrl: String
+  description: String
+}
+
+extend type Variant {
+  id: ID!
+  name: String!
+  productId: ID!
+  quantityType: String!
+  price: Float!
+  stock: Int!
+  imageUrl: String!
+  categoryID: String
+  sellerId: ID!
+  createdAt: String!
+  description: String
+}
+
+extend type Mutation {
+  createVariants(input: [NewVariant]!): [Variant]! @auth(role: ADMIN)
+  updateVariants(input: [UpdateVariant]!): [Variant]! @auth(role: ADMIN)
+}

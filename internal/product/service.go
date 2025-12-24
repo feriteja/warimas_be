@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"strings"
 	"warimas-be/internal/graph/model"
-	servicepkg "warimas-be/internal/service"
+	"warimas-be/internal/logger"
 	"warimas-be/internal/utils"
+
+	"go.uber.org/zap"
 )
 
 type Service interface {
-	GetProductsByGroup(ctx context.Context, opts servicepkg.ProductQueryOptions) ([]model.ProductByCategory, error)
-	GetList(ctx context.Context, opts servicepkg.ProductQueryOptions) ([]*model.Product, error)
+	GetProductsByGroup(ctx context.Context, opts ProductQueryOptions) ([]model.ProductByCategory, error)
+	GetList(ctx context.Context, opts ProductQueryOptions) (*ProductListResult, error)
 	Create(ctx context.Context, input model.NewProduct) (model.Product, error)
 	Update(ctx context.Context, input model.UpdateProduct) (model.Product, error)
 	CreateVariants(ctx context.Context, input []*model.NewVariant) ([]*model.Variant, error)
@@ -29,18 +31,45 @@ func NewService(repo Repository) Service {
 	return &service{repo: repo}
 }
 
-func (s *service) GetProductsByGroup(ctx context.Context, opts servicepkg.ProductQueryOptions) ([]model.ProductByCategory, error) {
+func (s *service) GetProductsByGroup(ctx context.Context, opts ProductQueryOptions) ([]model.ProductByCategory, error) {
 	return s.repo.GetProductsByGroup(ctx, opts)
 }
 
-func (s *service) GetList(ctx context.Context, opts servicepkg.ProductQueryOptions) ([]*model.Product, error) {
+func (s *service) GetList(
+	ctx context.Context,
+	opts ProductQueryOptions,
+) (*ProductListResult, error) {
 
-	role := utils.GetUserRoleFromContext(ctx)
-	if role == "ADMIN" {
-		opts.IncludeDisabled = true
+	log := logger.FromCtx(ctx)
+	log.Info("service.GetList called")
+
+	if opts.Page <= 0 {
+		opts.Page = 1
+	}
+	if opts.Limit <= 0 {
+		opts.Limit = 20
+	}
+	if opts.Limit > 100 {
+		opts.Limit = 100
 	}
 
-	return s.repo.GetList(ctx, opts)
+	// 4. Fetch data
+	products, total, err := s.repo.GetList(ctx, opts)
+	if err != nil {
+		log.Error("failed fetching products", zap.Error(err))
+		return nil, err
+	}
+
+	log.Info("products fetched",
+		zap.Int("count", len(products)),
+		zap.Int("total", total),
+	)
+
+	// 5. Return service result
+	return &ProductListResult{
+		Items:      products,
+		TotalCount: &total,
+	}, nil
 }
 
 func (s *service) Create(ctx context.Context, input model.NewProduct) (model.Product, error) {

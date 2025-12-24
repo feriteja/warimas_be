@@ -1,0 +1,34 @@
+type Package {
+  id: ID!
+  name: String!
+  imageUrl: String
+  userId: String
+  items: [PackageItem!]!
+}
+
+type PackageItem {
+  id: ID!
+  packageId: ID!
+  variantId: ID!
+  imageUrl: String!
+  name: String!
+  price: Float!
+  quantity: Int!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type PackageResponse {
+  success: Boolean!
+  message: String
+  data: [Package]
+}
+
+extend type Query {
+  packageRecomamendation(
+    filter: PackageFilterInput
+    sort: PackageSortInput
+    limit: Int = 20
+    page: Int = 0
+  ): PackageResponse!
+}

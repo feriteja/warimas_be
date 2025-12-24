@@ -1,0 +1,25 @@
+type User {
+  id: ID!
+  email: String!
+  role: Role!
+}
+
+input RegisterInput {
+  email: String!
+  password: String!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+extend type AuthResponse {
+  user: User!
+  token: String
+}
+
+extend type Mutation {
+  register(input: RegisterInput!): AuthResponse!
+  login(input: LoginInput!): AuthResponse!
+}

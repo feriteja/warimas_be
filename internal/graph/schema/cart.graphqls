@@ -1,0 +1,61 @@
+input CartFilterInput {
+  search: String
+  inStock: Boolean
+}
+
+enum CartSortField {
+  NAME
+  PRICE
+  CREATED_AT
+}
+
+input CartSortInput {
+  field: CartSortField!
+  direction: SortDirection! = ASC
+}
+
+input AddToCartInput {
+  variantId: ID!
+  quantity: Int!
+}
+
+input UpdateCartInput {
+  variantId: ID!
+  quantity: Int!
+}
+
+type CartItem {
+  id: ID!
+  userId: Int!
+  quantity: Int!
+  product: ProductCart!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type AddToCartResponse {
+  success: Boolean!
+  message: String
+  cartItem: CartItem
+}
+
+type MyCartResponse {
+  success: Boolean!
+  message: String
+  data: [CartItem]
+}
+
+extend type Query {
+  myCart(
+    filter: CartFilterInput
+    sort: CartSortInput
+    limit: Int = 20
+    page: Int = 1
+  ): MyCartResponse! @auth(role: USER)
+}
+
+extend type Mutation {
+  addToCart(input: AddToCartInput!): AddToCartResponse! @auth(role: USER)
+  updateCart(input: UpdateCartInput!): Response! @auth(role: USER)
+  removeFromCart(variantId: ID!): Response! @auth(role: USER)
+}

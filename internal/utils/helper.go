@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -8,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"warimas-be/internal/graph/model"
+
+	"github.com/99designs/gqlgen/graphql"
 )
 
 var (
@@ -91,4 +94,17 @@ func HasAnyVariantUpdateField(v *model.UpdateVariant) bool {
 		v.Stock != nil ||
 		v.ImageURL != nil ||
 		v.Description != nil
+}
+
+func HasAnyField(ctx context.Context, names ...string) bool {
+	fields := graphql.CollectFieldsCtx(ctx, nil)
+
+	for _, f := range fields {
+		for _, name := range names {
+			if f.Name == name {
+				return true
+			}
+		}
+	}
+	return false
 }

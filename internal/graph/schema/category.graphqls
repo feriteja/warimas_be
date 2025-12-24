@@ -1,0 +1,25 @@
+type Category {
+  id: ID!
+  name: String!
+}
+
+type Subcategory {
+  id: ID!
+  categoryID: ID!
+  name: String!
+}
+
+extend type Query {
+  category(filter: String, limit: Int = 20, page: Int = 1): [Category!]!
+  subcategory(
+    filter: String
+    categoryID: ID!
+    limit: Int = 20
+    page: Int = 1
+  ): [Subcategory!]!
+}
+
+extend type Mutation {
+  addCategory(name: String!): Category @auth(role: ADMIN)
+  addSubcategory(categoryID: ID!, name: String!): Subcategory @auth(role: ADMIN)
+}

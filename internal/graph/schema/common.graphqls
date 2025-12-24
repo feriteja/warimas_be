@@ -1,0 +1,18 @@
+directive @auth(role: Role = USER) on FIELD_DEFINITION
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+scalar DateTime
+
+type Response {
+  success: Boolean!
+  message: String
+}

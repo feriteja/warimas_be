@@ -1,0 +1,72 @@
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELED
+}
+
+enum OrderSortField {
+  NAME
+  PRICE
+  CREATED_AT
+}
+
+input UpdateOrderStatusInput {
+  orderId: ID!
+  status: OrderStatus!
+}
+
+input OrderFilterInput {
+  search: String
+  status: String
+  dateFrom: DateTime
+  dateTo: DateTime
+}
+
+input OrderSortInput {
+  field: OrderSortField!
+  direction: SortDirection! = ASC
+}
+
+type OrderItem {
+  id: ID!
+  orderId: ID!
+  product: Product!
+  quantity: Int!
+  price: Float!
+}
+
+type Order {
+  id: ID!
+  userId: ID!
+  total: Float!
+  status: OrderStatus!
+  createdAt: String!
+  updatedAt: String!
+  items: [OrderItem!]!
+}
+
+type CreateOrderResponse {
+  success: Boolean!
+  message: String
+  order: Order
+  paymentURL: String!
+  paymentStat: String!
+}
+
+extend type Query {
+  orderList(
+    filter: OrderFilterInput
+    sort: OrderSortInput
+    limit: Int = 20
+    page: Int = 1
+  ): [Order!]!
+
+  orderDetail(orderId: ID!): Order! @auth(role: USER)
+}
+
+extend type Mutation {
+  createOrder: CreateOrderResponse! @auth(role: USER)
+  updateOrderStatus(input: UpdateOrderStatusInput!): CreateOrderResponse!
+    @auth(role: ADMIN)
+}
