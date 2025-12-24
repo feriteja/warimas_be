@@ -11,7 +11,7 @@ import (
 )
 
 type AddToCartInput struct {
-	ProductID string `json:"productId"`
+	VariantID string `json:"variantId"`
 	Quantity  int32  `json:"quantity"`
 }
 
@@ -33,7 +33,8 @@ type CartFilterInput struct {
 
 type CartItem struct {
 	ID        string       `json:"id"`
-	UserID    string       `json:"userId"`
+	UserID    int32        `json:"userId"`
+	Quantity  int32        `json:"quantity"`
 	Product   *ProductCart `json:"product"`
 	CreatedAt string       `json:"createdAt"`
 	UpdatedAt string       `json:"updatedAt"`
@@ -91,6 +92,7 @@ type NewVariant struct {
 
 type Order struct {
 	ID        string       `json:"id"`
+	UserID    string       `json:"userId"`
 	Total     float64      `json:"total"`
 	Status    OrderStatus  `json:"status"`
 	CreatedAt string       `json:"createdAt"`
@@ -107,6 +109,7 @@ type OrderFilterInput struct {
 
 type OrderItem struct {
 	ID       string   `json:"id"`
+	OrderID  string   `json:"orderId"`
 	Product  *Product `json:"product"`
 	Quantity int32    `json:"quantity"`
 	Price    float64  `json:"price"`
@@ -178,13 +181,21 @@ type ProductByCategory struct {
 }
 
 type ProductCart struct {
-	ID         string         `json:"id"`
-	Name       string         `json:"name"`
-	SellerID   string         `json:"sellerId"`
-	CategoryID *string        `json:"categoryID,omitempty"`
-	Slug       string         `json:"slug"`
-	Variants   []*VariantCart `json:"variants,omitempty"`
-	ImageURL   string         `json:"imageUrl"`
+	ID              string   `json:"id"`
+	Name            string   `json:"name"`
+	SellerID        string   `json:"sellerId"`
+	SellerName      string   `json:"sellerName"`
+	CategoryID      string   `json:"categoryID"`
+	CategoryName    string   `json:"categoryName"`
+	SubcategoryID   string   `json:"subcategoryID"`
+	SubcategoryName string   `json:"subcategoryName"`
+	Slug            string   `json:"slug"`
+	Variant         *Variant `json:"variant,omitempty"`
+	ImageURL        *string  `json:"imageUrl,omitempty"`
+	Description     *string  `json:"description,omitempty"`
+	Status          *string  `json:"status,omitempty"`
+	CreatedAt       string   `json:"createdAt"`
+	UpdatedAt       *string  `json:"updatedAt,omitempty"`
 }
 
 type ProductFilterInput struct {
@@ -222,7 +233,7 @@ type Subcategory struct {
 }
 
 type UpdateCartInput struct {
-	ProductID string `json:"productId"`
+	VariantID string `json:"variantId"`
 	Quantity  int32  `json:"quantity"`
 }
 
@@ -270,18 +281,6 @@ type Variant struct {
 	SellerID     string  `json:"sellerId"`
 	CreatedAt    string  `json:"createdAt"`
 	Description  *string `json:"description,omitempty"`
-}
-
-type VariantCart struct {
-	ID           string  `json:"id"`
-	CartID       string  `json:"cartId"`
-	Name         string  `json:"name"`
-	ProductID    string  `json:"productId"`
-	QuantityType string  `json:"quantityType"`
-	Price        float64 `json:"price"`
-	Quantity     int32   `json:"quantity"`
-	Stock        int32   `json:"stock"`
-	ImageURL     string  `json:"imageUrl"`
 }
 
 type CartSortField string

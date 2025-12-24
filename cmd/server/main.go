@@ -49,7 +49,7 @@ func main() {
 	// Init services
 	productSvc := product.NewService(productRepo)
 	userSvc := user.NewService(userRepo)
-	cartSvc := cart.NewService(cartRepo)
+	cartSvc := cart.NewService(cartRepo, productRepo)
 	categorySvc := category.NewService(categoryRepo)
 
 	paymentGateway := payment.NewXenditGateway(cfg.XenditSecretKey)

@@ -1,31 +1,38 @@
 package product
 
 type Variant struct {
-	ID            string  `json:"id"`
-	ProductID     string  `json:"product_id"`
-	Name          string  `json:"name"`
-	QuantityType  string  `json:"quantity_type"`
-	Price         float64 `json:"price"`
-	Stock         int     `json:"stock"`
-	ImageUrl      *string `json:"imageurl,omitempty"`
-	SubcategoryId *string `json:"subcategory_id,omitempty"`
+	ID           string  `json:"id"`
+	ProductID    string  `json:"product_id"`
+	Name         string  `json:"name"`
+	QuantityType string  `json:"quantity_type"`
+	Price        float64 `json:"price"`
+	Stock        int     `json:"stock"`
+	ImageUrl     *string `json:"imageurl,omitempty"`
+	Description  *string `json:"description,omitempty"`
 }
 
 type Product struct {
-	ID          string     `json:"id"`
-	Name        string     `json:"name"`
-	SellerID    string     `json:"seller_id"`
-	CategoryID  string     `json:"category_id"`
-	Slug        string     `json:"slug"`
-	Price       float64    `json:"price"`
-	Variants    []*Variant `json:"variants"`
-	Stock       int        `json:"stock"`
-	Description *string    `json:"description,omitempty"`
-	Status      string     `json:"status"`
-	ImageUrl    *string    `json:"imageurl,omitempty"`
+	ID              string     `json:"id"`
+	Name            string     `json:"name"`
+	SellerID        string     `json:"seller_id"`
+	SellerName      string     `json:"seller_name"`
+	CategoryID      string     `json:"category_id"`
+	CategoryName    string     `json:"category_name"`
+	SubcategoryID   string     `json:"subcategory_id"`
+	SubcategoryName string     `json:"subcategory_name"`
+	Slug            string     `json:"slug"`
+	Variants        []*Variant `json:"variants"`
+	Description     *string    `json:"description,omitempty"`
+	Status          string     `json:"status"`
+	ImageUrl        *string    `json:"imageurl,omitempty"`
 }
 
-// type CategoryProduct struct {
-// 	CategoryName string    `json:"categoryName"`
-// 	Products     []Product `json:"product"`
-// }
+type GetProductOptions struct {
+	ProductID  string
+	OnlyActive bool
+}
+
+type GetVariantOptions struct {
+	VariantID  string
+	OnlyActive bool
+}

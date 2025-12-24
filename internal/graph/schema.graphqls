@@ -68,6 +68,24 @@ type Product {
   updatedAt: String
 }
 
+type ProductCart {
+  id: ID!
+  name: String!
+  sellerId: ID!
+  sellerName: String!
+  categoryID: String!
+  categoryName: String!
+  subcategoryID: String!
+  subcategoryName: String!
+  slug: String!
+  variant: Variant
+  imageUrl: String
+  description: String
+  status: String
+  createdAt: String!
+  updatedAt: String
+}
+
 type ProductByCategory {
   CategoryName: String
   TotalProducts: Int!
@@ -178,31 +196,10 @@ type Subcategory {
   name: String!
 }
 
-type ProductCart {
-  id: ID!
-  name: String!
-  sellerId: ID!
-  categoryID: String
-  slug: String!
-  variants: [VariantCart]
-  imageUrl: String!
-}
-
-type VariantCart {
-  id: ID!
-  cartId: ID!
-  name: String!
-  productId: ID!
-  quantityType: String!
-  price: Float!
-  quantity: Int!
-  stock: Int!
-  imageUrl: String!
-}
-
 type CartItem {
   id: ID!
-  userId: ID!
+  userId: Int!
+  quantity: Int!
   product: ProductCart!
   createdAt: String!
   updatedAt: String!
@@ -229,7 +226,7 @@ type PackageItem {
 }
 
 input AddToCartInput {
-  productId: ID!
+  variantId: ID!
   quantity: Int!
 }
 
@@ -257,7 +254,7 @@ type Response {
 }
 
 input UpdateCartInput {
-  productId: ID!
+  variantId: ID!
   quantity: Int!
 }
 
@@ -289,6 +286,7 @@ input OrderSortInput {
 
 type OrderItem {
   id: ID!
+  orderId: ID!
   product: Product!
   quantity: Int!
   price: Float!
@@ -296,6 +294,7 @@ type OrderItem {
 
 type Order {
   id: ID!
+  userId: ID!
   total: Float!
   status: OrderStatus!
   createdAt: String!
@@ -332,14 +331,14 @@ type Query {
     filter: ProductFilterInput
     sort: ProductSortInput
     limit: Int = 20
-    offset: Int = 0
+    page: Int = 0
   ): [Product!]!
 
   productsHome(
     filter: ProductFilterInput
     sort: ProductSortInput
     limit: Int = 20
-    offset: Int = 0
+    page: Int = 0
   ): [ProductByCategory!]!
 
   productDetail(productId: ID!): Product
@@ -348,30 +347,24 @@ type Query {
     filter: CartFilterInput
     sort: CartSortInput
     limit: Int = 20
-    page: Int = 0
+    page: Int = 1
   ): MyCartResponse! @auth(role: USER)
 
-  myOrders(
+  orderList(
     filter: OrderFilterInput
     sort: OrderSortInput
     limit: Int = 20
-    offset: Int = 0
-  ): [Order!]! @auth(role: USER)
+    page: Int = 1
+  ): [Order!]!
+
   orderDetail(orderId: ID!): Order! @auth(role: USER)
 
-  adminOrders(
-    filter: OrderFilterInput
-    sort: OrderSortInput
-    limit: Int = 20
-    offset: Int = 0
-  ): [Order!]! @auth(role: ADMIN)
-
-  category(filter: String, limit: Int = 20, offset: Int = 0): [Category!]!
+  category(filter: String, limit: Int = 20, page: Int = 1): [Category!]!
   subcategory(
     filter: String
     categoryID: ID!
     limit: Int = 20
-    offset: Int = 0
+    page: Int = 1
   ): [Subcategory!]!
 }
 
@@ -386,7 +379,7 @@ type Mutation {
 
   addToCart(input: AddToCartInput!): AddToCartResponse! @auth(role: USER)
   updateCart(input: UpdateCartInput!): Response! @auth(role: USER)
-  removeFromCart(productId: ID!): Response! @auth(role: USER)
+  removeFromCart(variantId: ID!): Response! @auth(role: USER)
 
   createOrder: CreateOrderResponse! @auth(role: USER)
   updateOrderStatus(input: UpdateOrderStatusInput!): CreateOrderResponse!

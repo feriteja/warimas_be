@@ -1,15 +1,17 @@
 package order
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
+	"warimas-be/internal/graph/model"
 	"warimas-be/internal/payment"
 )
 
 type Service interface {
 	CreateOrder(userID uint, userEmail string) (*Order, *payment.PaymentResponse, error)
-	GetOrders(userID uint, isAdmin bool) ([]Order, error)
+	GetOrders(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit, page *int32) ([]*model.Order, error)
 	GetOrderDetail(userID, orderID uint, isAdmin bool) (*Order, error)
 	UpdateOrderStatus(orderID uint, status OrderStatus) error
 	MarkAsPaid(referenceID string) error
@@ -73,12 +75,9 @@ func (s *service) CreateOrder(userID uint, userEmail string) (*Order, *payment.P
 }
 
 // ✅ Get list of orders (user or admin)
-func (s *service) GetOrders(userID uint, isAdmin bool) ([]Order, error) {
-	if !isAdmin && userID == 0 {
-		return nil, errors.New("unauthorized")
-	}
+func (s *service) GetOrders(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit, page *int32) ([]*model.Order, error) {
 
-	orders, err := s.repo.GetOrders(userID, isAdmin)
+	orders, err := s.repo.GetOrders(ctx, filter, sort, limit, page)
 	if err != nil {
 		return nil, err
 	}

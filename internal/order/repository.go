@@ -1,14 +1,21 @@
 package order
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
+	"warimas-be/internal/graph/model"
+	"warimas-be/internal/logger"
+	"warimas-be/internal/utils"
+
+	"go.uber.org/zap"
 )
 
 type Repository interface {
 	CreateOrder(userID uint) (*Order, error)
-	GetOrders(userID uint, isAdmin bool) ([]Order, error)
+	GetOrders(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit, page *int32) ([]*model.Order, error)
 	GetOrderDetail(orderID uint) (*Order, error)
 	UpdateOrderStatus(orderID uint, status OrderStatus) error
 	UpdateStatusByReferenceID(referenceID string, status string) error
@@ -104,28 +111,163 @@ func (r *repository) CreateOrder(userID uint) (*Order, error) {
 }
 
 // ✅ Get all orders for a user or admin
-func (r *repository) GetOrders(userID uint, isAdmin bool) ([]Order, error) {
-	var rows *sql.Rows
-	var err error
+func (r *repository) GetOrders(
+	ctx context.Context,
+	filter *model.OrderFilterInput,
+	sort *model.OrderSortInput,
+	limit, page *int32,
+) ([]*model.Order, error) {
 
-	if isAdmin {
-		rows, err = r.db.Query(`SELECT id, user_id, total, status, created_at, updated_at FROM orders ORDER BY created_at DESC`)
-	} else {
-		rows, err = r.db.Query(`SELECT id, user_id, total, status, created_at, updated_at FROM orders WHERE user_id = $1 ORDER BY created_at DESC`, userID)
+	// ---------- AUTH ----------
+	userID, _ := utils.GetUserIDFromContext(ctx)
+	role := utils.GetUserRoleFromContext(ctx)
+	isAdmin := role == "ADMIN"
+
+	// ---------- PAGINATION ----------
+	finalLimit := int32(20)
+	finalPage := int32(1)
+
+	if limit != nil && *limit > 0 {
+		finalLimit = *limit
 	}
+	if page != nil && *page > 0 {
+		finalPage = *page
+	}
+	if finalLimit > 100 {
+		finalLimit = 100
+	}
+
+	offset := (finalPage - 1) * finalLimit
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("method", "GetOrders"),
+		zap.String("role", role),
+		zap.Int32("limit", finalLimit),
+		zap.Int32("page", finalPage),
+		zap.Int32("offset", offset),
+	)
+
+	log.Debug("start get orders")
+
+	// ---------- BASE QUERY ----------
+	query := `
+		SELECT
+			o.id,
+			o.user_id,
+			o.total,
+			o.status,
+			o.created_at,
+			o.updated_at
+		FROM orders o
+		WHERE 1=1
+	`
+
+	args := []any{}
+	argIndex := 1
+
+	// ---------- ACCESS CONTROL ----------
+	if !isAdmin {
+		query += fmt.Sprintf(" AND o.user_id = $%d", argIndex)
+		args = append(args, userID)
+		argIndex++
+	}
+
+	// ---------- FILTERING ----------
+	if filter != nil {
+
+		if filter.Search != nil && *filter.Search != "" {
+			query += fmt.Sprintf(
+				" AND (o.id::text ILIKE $%d OR o.status ILIKE $%d)",
+				argIndex, argIndex,
+			)
+			args = append(args, "%"+*filter.Search+"%")
+			argIndex++
+		}
+
+		if filter.Status != nil && *filter.Status != "" {
+			query += fmt.Sprintf(" AND o.status = $%d", argIndex)
+			args = append(args, *filter.Status)
+			argIndex++
+		}
+
+		if filter.DateFrom != nil {
+			query += fmt.Sprintf(" AND o.created_at >= $%d", argIndex)
+			args = append(args, *filter.DateFrom)
+			argIndex++
+		}
+
+		if filter.DateTo != nil {
+			query += fmt.Sprintf(" AND o.created_at <= $%d", argIndex)
+			args = append(args, *filter.DateTo)
+			argIndex++
+		}
+	}
+
+	// ---------- SORTING ----------
+	orderBy := "o.created_at DESC"
+
+	if sort != nil {
+		dir := strings.ToUpper(string(sort.Direction))
+		if dir != "ASC" && dir != "DESC" {
+			dir = "DESC"
+		}
+
+		switch sort.Field {
+		case model.OrderSortFieldName:
+			orderBy = "o.id " + dir
+		case model.OrderSortFieldPrice:
+			orderBy = "o.total " + dir
+		case model.OrderSortFieldCreatedAt:
+			orderBy = "o.created_at " + dir
+		}
+	}
+
+	query += " ORDER BY " + orderBy
+
+	// ---------- PAGINATION ----------
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+	args = append(args, finalLimit, offset)
+
+	log.Debug("executing get orders query",
+		zap.String("query", query),
+		zap.Any("args", args),
+	)
+
+	// ---------- EXECUTE ----------
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
+		log.Error("failed to query orders", zap.Error(err))
 		return nil, err
 	}
 	defer rows.Close()
 
-	var orders []Order
+	var orders []*model.Order
+
 	for rows.Next() {
-		var o Order
-		if err := rows.Scan(&o.ID, &o.UserID, &o.Total, &o.Status, &o.CreatedAt, &o.UpdatedAt); err != nil {
+		var o model.Order
+		if err := rows.Scan(
+			&o.ID,
+			&o.UserID,
+			&o.Total,
+			&o.Status,
+			&o.CreatedAt,
+			&o.UpdatedAt,
+		); err != nil {
+			log.Error("failed to scan order row", zap.Error(err))
 			return nil, err
 		}
-		orders = append(orders, o)
+		orders = append(orders, &o)
 	}
+
+	if err := rows.Err(); err != nil {
+		log.Error("rows iteration error", zap.Error(err))
+		return nil, err
+	}
+
+	log.Info("get orders success",
+		zap.Int("count", len(orders)),
+	)
+
 	return orders, nil
 }
 

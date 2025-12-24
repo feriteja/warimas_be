@@ -11,7 +11,7 @@ import (
 
 // --- MAPPER HELPERS ---
 
-func toGraphQLOrderItem(item order.OrderItem) *model.OrderItem {
+func toGraphQLOrderItem(item *order.OrderItem) *model.OrderItem {
 	return &model.OrderItem{
 		ID:       fmt.Sprint(item.ID),
 		Product:  &model.Product{ID: fmt.Sprint(item.Product.ID), Name: item.Product.Name},
@@ -27,7 +27,7 @@ func toGraphQLOrder(o *order.Order) *model.Order {
 
 	var items []*model.OrderItem
 	for _, i := range o.Items {
-		items = append(items, toGraphQLOrderItem(i))
+		items = append(items, toGraphQLOrderItem(&i))
 	}
 
 	return &model.Order{
@@ -40,13 +40,17 @@ func toGraphQLOrder(o *order.Order) *model.Order {
 	}
 }
 
-func toGraphQLOrders(os []order.Order) []*model.Order {
-	var list []*model.Order
-	for _, o := range os {
-		list = append(list, toGraphQLOrder(&o))
-	}
-	return list
-}
+// func toGraphQLOrders(os []*order.Order) []*model.Order {
+// 	var list []*model.Order
+// 	if os == nil {
+
+// 	}
+
+// 	for _, o := range os {
+// 		list = append(list, toGraphQLOrder(o))
+// 	}
+// 	return list
+// }
 
 // --- MUTATIONS ---
 
@@ -106,21 +110,17 @@ func (r *mutationResolver) UpdateOrderStatus(ctx context.Context, input model.Up
 
 // --- QUERIES ---
 
-func (r *queryResolver) MyOrders(ctx context.Context,
+func (r *queryResolver) OrderList(ctx context.Context,
 	filter *model.OrderFilterInput,
 	sort *model.OrderSortInput,
-	limit, offset *int32) ([]*model.Order, error) {
-	userID, ok := utils.GetUserIDFromContext(ctx)
-	if !ok {
-		return nil, fmt.Errorf("unauthorized")
-	}
+	limit, page *int32) ([]*model.Order, error) {
 
-	orders, err := r.OrderSvc.GetOrders(uint(userID), false)
+	orders, err := r.OrderSvc.GetOrders(ctx, filter, sort, limit, page)
 	if err != nil {
 		return nil, err
 	}
 
-	return toGraphQLOrders(orders), nil
+	return (orders), nil
 }
 
 func (r *queryResolver) OrderDetail(ctx context.Context, orderID string) (*model.Order, error) {
@@ -140,16 +140,4 @@ func (r *queryResolver) OrderDetail(ctx context.Context, orderID string) (*model
 	}
 
 	return toGraphQLOrder(order), nil
-}
-
-func (r *queryResolver) AdminOrders(ctx context.Context,
-	filter *model.OrderFilterInput,
-	sort *model.OrderSortInput,
-	limit, offset *int32) ([]*model.Order, error) {
-	orders, err := r.OrderSvc.GetOrders(0, true)
-	if err != nil {
-		return nil, err
-	}
-
-	return toGraphQLOrders(orders), nil
 }

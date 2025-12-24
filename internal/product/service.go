@@ -155,15 +155,32 @@ func (s *service) GetPackages(
 	limit, page int32,
 ) ([]*model.Package, error) {
 
-	offset := page * limit
-
-	role := utils.GetUserRoleFromContext(ctx)
-	IncludeDisabled := false
-	if role == "ADMIN" {
-		IncludeDisabled = true
+	// ---------- PAGINATION ----------
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
 	}
 
-	return s.repo.GetPackages(ctx, filter, sort, limit, offset, IncludeDisabled)
+	if page <= 0 {
+		page = 1
+	}
+
+	offset := (page - 1) * limit
+
+	// ---------- AUTH ----------
+	role := utils.GetUserRoleFromContext(ctx)
+	includeDisabled := role == "ADMIN"
+
+	return s.repo.GetPackages(
+		ctx,
+		filter,
+		sort,
+		limit,
+		offset,
+		includeDisabled,
+	)
 }
 
 func (s *service) GetProductByID(ctx context.Context, productID string) (*model.Product, error) {
@@ -174,5 +191,8 @@ func (s *service) GetProductByID(ctx context.Context, productID string) (*model.
 		IncludeDisabled = true
 	}
 
-	return s.repo.GetProductByID(ctx, productID, IncludeDisabled)
+	return s.repo.GetProductByID(ctx, GetProductOptions{
+		ProductID:  productID,
+		OnlyActive: !IncludeDisabled,
+	})
 }

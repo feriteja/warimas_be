@@ -14,9 +14,9 @@ import (
 )
 
 type Repository interface {
-	GetCategories(ctx context.Context, filter *string, limit, offset *int32) ([]*model.Category, error)
+	GetCategories(ctx context.Context, filter *string, limit, page *int32) ([]*model.Category, error)
 	AddCategory(ctx context.Context, name string) (*model.Category, error)
-	GetSubcategories(ctx context.Context, categoryID string, filter *string, limit, offset *int32) ([]*model.Subcategory, error)
+	GetSubcategories(ctx context.Context, categoryID string, filter *string, limit, page *int32) ([]*model.Subcategory, error)
 	AddSubcategory(ctx context.Context, categoryID string, name string) (*model.Subcategory, error)
 }
 
@@ -32,13 +32,27 @@ func (r *repository) GetCategories(
 	ctx context.Context,
 	filter *string,
 	limit *int32,
-	offset *int32,
+	page *int32,
 ) ([]*model.Category, error) {
+
+	// ---------- DEFAULTS ----------
+	finalLimit := int32(20)
+	finalPage := int32(1)
+
+	if limit != nil && *limit > 0 {
+		finalLimit = *limit
+	}
+	if page != nil && *page > 0 {
+		finalPage = *page
+	}
+
+	finalOffset := (finalPage - 1) * finalLimit
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("filter", utils.PtrString(filter)),
-		zap.Int32("limit", utils.PtrInt32(limit)),
-		zap.Int32("offset", utils.PtrInt32(offset)),
+		zap.Int32("limit", finalLimit),
+		zap.Int32("page", finalPage),
+		zap.Int32("offset", finalOffset),
 	)
 	log.Info("GetCategories started")
 
@@ -52,13 +66,11 @@ func (r *repository) GetCategories(
 
 	where := []string{}
 	args := []interface{}{}
-	argIndex := 1
 
 	// ---------- FILTER ----------
 	if filter != nil && *filter != "" {
-		where = append(where, fmt.Sprintf("c.name ILIKE $%d", argIndex))
+		where = append(where, fmt.Sprintf("c.name ILIKE $%d", len(args)+1))
 		args = append(args, "%"+*filter+"%")
-		argIndex++
 	}
 
 	if len(where) > 0 {
@@ -69,17 +81,7 @@ func (r *repository) GetCategories(
 	query += " ORDER BY c.name ASC"
 
 	// ---------- PAGINATION ----------
-	finalLimit := int32(20)
-	if limit != nil && *limit > 0 {
-		finalLimit = *limit
-	}
-
-	finalOffset := int32(0)
-	if offset != nil && *offset >= 0 {
-		finalOffset = *offset
-	}
-
-	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)+1, len(args)+2)
 	args = append(args, finalLimit, finalOffset)
 
 	log.Debug("Executing GetCategories query",
@@ -100,12 +102,14 @@ func (r *repository) GetCategories(
 	for rows.Next() {
 		var c model.Category
 		if err := rows.Scan(&c.ID, &c.Name); err != nil {
+			log.Error("Row scan failed", zap.Error(err))
 			return nil, err
 		}
 		categories = append(categories, &c)
 	}
 
 	if err := rows.Err(); err != nil {
+		log.Error("Rows iteration failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -117,96 +121,58 @@ func (r *repository) GetSubcategories(
 	categoryID string,
 	filter *string,
 	limit *int32,
-	offset *int32,
+	page *int32,
 ) ([]*model.Subcategory, error) {
 
-	log := logger.FromCtx(ctx).With(
-		zap.String("category_id", categoryID),
-		zap.String("filter", utils.PtrString(filter)),
-		zap.Int32("limit", utils.PtrInt32(limit)),
-		zap.Int32("offset", utils.PtrInt32(offset)),
-	)
-	log.Info("GetSubcategories started")
-
 	if categoryID == "" {
-		log.Warn("GetSubcategories validation failed: empty categoryID")
 		return nil, errors.New("categoryID is required")
 	}
 
-	// ---------- BASE QUERY ----------
-	query := `
-		SELECT
-			s.id,
-			s.category_id,
-			s.name
-		FROM subcategories s
-	`
-
-	where := []string{}
-	args := []interface{}{}
-	argIndex := 1
-
-	// ---------- REQUIRED FILTER ----------
-	where = append(where, fmt.Sprintf("s.category_id = $%d", argIndex))
-	args = append(args, categoryID)
-	argIndex++
-
-	// ---------- OPTIONAL FILTER ----------
-	if filter != nil && *filter != "" {
-		where = append(where, fmt.Sprintf("s.name ILIKE $%d", argIndex))
-		args = append(args, "%"+*filter+"%")
-		argIndex++
-	}
-
-	query += " WHERE " + strings.Join(where, " AND ")
-
-	// ---------- ORDER ----------
-	query += " ORDER BY s.name ASC"
-
-	// ---------- PAGINATION ----------
+	// Pagination Defaults
 	finalLimit := int32(20)
 	if limit != nil && *limit > 0 {
 		finalLimit = *limit
 	}
 
-	finalOffset := int32(0)
-	if offset != nil && *offset >= 0 {
-		finalOffset = *offset
+	finalPage := int32(1)
+	if page != nil && *page > 0 {
+		finalPage = *page
+	}
+	finalOffset := (finalPage - 1) * finalLimit
+
+	// Base Query & Args
+	query := `SELECT s.id, s.category_id, s.name FROM subcategories s`
+	args := []interface{}{categoryID}
+	where := []string{"s.category_id = $1"}
+
+	// Optional Filter
+	if filter != nil && *filter != "" {
+		where = append(where, fmt.Sprintf("s.name ILIKE $%d", len(args)+1))
+		args = append(args, "%"+*filter+"%")
 	}
 
-	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+	// Construct Final Query
+	query += " WHERE " + strings.Join(where, " AND ")
+	query += " ORDER BY s.name ASC"
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)+1, len(args)+2)
 	args = append(args, finalLimit, finalOffset)
 
-	log.Debug("Executing GetSubcategories query",
-		zap.String("query", query),
-		zap.Any("args", args),
-	)
-
-	// ---------- EXECUTE ----------
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		log.Error("DB query failed GetSubcategories", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("query failed: %w", err)
 	}
 	defer rows.Close()
 
-	var subcategories []*model.Subcategory
+	// Pre-allocate slice
+	subcategories := make([]*model.Subcategory, 0, finalLimit)
 
 	for rows.Next() {
 		var s model.Subcategory
 		if err := rows.Scan(&s.ID, &s.CategoryID, &s.Name); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scan failed: %w", err)
 		}
 		subcategories = append(subcategories, &s)
 	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	log.Info("GetSubcategories success",
-		zap.Int("count", len(subcategories)),
-	)
 
 	return subcategories, nil
 }

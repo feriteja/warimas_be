@@ -82,7 +82,7 @@ func (r *queryResolver) ProductsHome(
 	ctx context.Context,
 	filter *model.ProductFilterInput,
 	sort *model.ProductSortInput,
-	limit, offset *int32,
+	limit, page *int32,
 ) ([]*model.ProductByCategory, error) {
 
 	// 1. Prepare service options
@@ -90,7 +90,7 @@ func (r *queryResolver) ProductsHome(
 		Filter: filter,
 		Sort:   sort,
 		Limit:  limit,
-		Offset: offset,
+		Page:   page,
 	}
 
 	// 2. Fetch grouped products
@@ -121,7 +121,7 @@ func (r *queryResolver) ProductList(
 	ctx context.Context,
 	filter *model.ProductFilterInput,
 	sort *model.ProductSortInput,
-	limit, offset *int32,
+	limit, page *int32,
 ) ([]*model.Product, error) {
 
 	// 1. Prepare service options
@@ -129,7 +129,7 @@ func (r *queryResolver) ProductList(
 		Filter: filter,
 		Sort:   sort,
 		Limit:  limit,
-		Offset: offset,
+		Page:   page,
 	}
 
 	// 2. Fetch grouped products

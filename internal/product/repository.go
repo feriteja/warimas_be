@@ -31,8 +31,9 @@ type Repository interface {
 		input []*model.UpdateVariant,
 		sellerID string,
 	) ([]*model.Variant, error)
-	GetPackages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit, offset int32, includeDisabled bool) ([]*model.Package, error)
-	GetProductByID(ctx context.Context, productID string, includeDisabled bool) (*model.Product, error)
+	GetPackages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit, page int32, includeDisabled bool) ([]*model.Package, error)
+	GetProductByID(ctx context.Context, productParams GetProductOptions) (*model.Product, error)
+	GetProductVariantByID(ctx context.Context, productParams GetVariantOptions) (*model.Variant, error)
 }
 
 type repository struct {
@@ -399,17 +400,29 @@ LEFT JOIN variants v ON v.product_id = p.id
 
 	/* ---------------- PAGINATION ---------------- */
 
-	if opts.Limit != nil {
-		args = append(args, *opts.Limit)
-		query += fmt.Sprintf(" LIMIT $%d", len(args))
-		log = log.With(zap.Int("limit", int(*opts.Limit)))
+	// Apply pagination only when limit & page are valid
+	// Defaults
+	limit := int32(20)
+	page := int32(1)
+
+	// Override if provided
+	if opts.Limit != nil && *opts.Limit > 0 {
+		limit = *opts.Limit
+	}
+	if opts.Page != nil && *opts.Page > 0 {
+		page = *opts.Page
 	}
 
-	if opts.Offset != nil {
-		args = append(args, *opts.Offset)
-		query += fmt.Sprintf(" OFFSET $%d", len(args))
-		log = log.With(zap.Int("offset", int(*opts.Offset)))
-	}
+	offset := (page - 1) * limit
+
+	args = append(args, limit, offset)
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)-1, len(args))
+
+	log = log.With(
+		zap.Int("limit", int(limit)),
+		zap.Int("page", int(page)),
+		zap.Int("offset", int(offset)),
+	)
 
 	/* ---------------- EXECUTION ---------------- */
 
@@ -917,14 +930,28 @@ func (r *repository) GetPackages(
 	ctx context.Context,
 	filter *model.PackageFilterInput,
 	sort *model.PackageSortInput,
-	limit, offset int32,
+	limit, page int32,
 	includeDisabled bool,
 ) ([]*model.Package, error) {
+
+	// ---------- PAGINATION ----------
+	if limit <= 0 {
+		limit = 20
+	}
+	if page <= 0 {
+		page = 1
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	offset := (page - 1) * limit
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
 		zap.String("method", "GetPackages"),
 		zap.Int32("limit", limit),
+		zap.Int32("page", page),
 		zap.Int32("offset", offset),
 		zap.Bool("include_disabled", includeDisabled),
 	)
@@ -954,45 +981,56 @@ func (r *repository) GetPackages(
 	args := []any{}
 	argIndex := 1
 
-	// Filtering
+	// ---------- ENABLE / DISABLE ----------
+	if !includeDisabled {
+		query += fmt.Sprintf(" AND p.status = $%d", argIndex)
+		args = append(args, "active")
+		argIndex++
+	}
+
+	// ---------- FILTERING ----------
 	if filter != nil {
 		if filter.ID != nil {
 			query += fmt.Sprintf(" AND p.id = $%d", argIndex)
 			args = append(args, *filter.ID)
 			argIndex++
-
-			log.Debug("apply filter", zap.String("filter", "id"))
 		}
 
 		if filter.Name != nil && *filter.Name != "" {
 			query += fmt.Sprintf(" AND p.name ILIKE $%d", argIndex)
 			args = append(args, "%"+*filter.Name+"%")
 			argIndex++
-
-			log.Debug("apply filter", zap.String("filter", "name"))
 		}
 	}
 
-	// Sorting
+	// ---------- SORTING ----------
+	orderBy := "p.created_at DESC"
 	if sort != nil {
 		dir := strings.ToUpper(string(sort.Direction))
+		if dir != "ASC" && dir != "DESC" {
+			dir = "DESC"
+		}
 
 		switch sort.Field {
 		case model.PackageSortFieldName:
-			query += " ORDER BY p.name " + dir
+			orderBy = "p.name " + dir
 		case model.PackageSortFieldCreatedAt:
-			query += " ORDER BY p.created_at " + dir
-		default:
-			query += " ORDER BY p.created_at DESC"
+			orderBy = "p.created_at " + dir
 		}
-	} else {
-		query += " ORDER BY p.created_at DESC"
 	}
 
-	// Pagination
+	query += " ORDER BY " + orderBy
+
+	// ---------- PAGINATION ----------
 	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
 	args = append(args, limit, offset)
 
+	log.Debug("executing query",
+		zap.String("query", query),
+		zap.Any("args", args),
+	)
+
+	// ---------- EXECUTE ----------
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		log.Error("failed to query packages", zap.Error(err))
@@ -1036,7 +1074,6 @@ func (r *repository) GetPackages(
 			p.UserID = &userID.String
 		}
 
-		// create package if not exists
 		pkg, exists := packagesMap[p.ID]
 		if !exists {
 			p.Items = []*model.PackageItem{}
@@ -1044,7 +1081,6 @@ func (r *repository) GetPackages(
 			pkg = &p
 		}
 
-		// append item if exists
 		if pi.ID != "" {
 			if variantPrice.Valid {
 				pi.Price = variantPrice.Float64
@@ -1058,7 +1094,6 @@ func (r *repository) GetPackages(
 		return nil, err
 	}
 
-	// Convert map → slice
 	result := make([]*model.Package, 0, len(packagesMap))
 	for _, pkg := range packagesMap {
 		result = append(result, pkg)
@@ -1073,15 +1108,14 @@ func (r *repository) GetPackages(
 
 func (r *repository) GetProductByID(
 	ctx context.Context,
-	productID string,
-	includeDisabled bool,
+	productParams GetProductOptions,
 ) (*model.Product, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
 		zap.String("method", "GetProductByID"),
-		zap.String("product_id", productID),
-		zap.Bool("include_disabled", includeDisabled),
+		zap.String("product_id", productParams.ProductID),
+		zap.Bool("include_disabled", productParams.OnlyActive),
 	)
 
 	log.Debug("start get product by id")
@@ -1126,9 +1160,9 @@ func (r *repository) GetProductByID(
 		variantsJSON []byte
 	)
 
-	args := []any{productID}
+	args := []any{productParams.ProductID}
 
-	if !includeDisabled {
+	if productParams.OnlyActive {
 		query += " AND p.status = $2"
 		args = append(args, utils.ProductStatusActive)
 	}
@@ -1187,4 +1221,74 @@ func (r *repository) GetProductByID(
 	)
 
 	return &product, nil
+}
+
+func (r *repository) GetProductVariantByID(
+	ctx context.Context,
+	opts GetVariantOptions,
+) (*model.Variant, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "GetProductVariantByID"),
+		zap.String("variant_id", opts.VariantID),
+		zap.Bool("only_active", opts.OnlyActive),
+	)
+
+	log.Debug("start get variant by id")
+
+	query := `
+	SELECT
+		v.id,
+		v.name,
+		v.product_id,
+		v.quantity_type,
+		v.price,
+		v.stock,
+		v.imageurl,
+		p.category_id,
+		p.seller_id,
+		v.created_at,
+		v.description
+	FROM variants v
+	JOIN products p ON v.product_id = p.id
+	WHERE v.id = $1
+	`
+
+	args := []any{opts.VariantID}
+
+	if opts.OnlyActive {
+		query += " AND p.status = $2"
+		args = append(args, utils.ProductStatusActive)
+	}
+
+	var variant model.Variant
+
+	row := r.db.QueryRowContext(ctx, query, args...)
+	err := row.Scan(
+		&variant.ID,
+		&variant.Name,
+		&variant.ProductID,
+		&variant.QuantityType,
+		&variant.Price,
+		&variant.Stock,
+		&variant.ImageURL,
+		&variant.CategoryID,
+		&variant.SellerID,
+		&variant.CreatedAt,
+		&variant.Description,
+	)
+
+	if err == sql.ErrNoRows {
+		log.Warn("variant not found")
+		return nil, nil
+	}
+	if err != nil {
+		log.Error("failed to query variant", zap.Error(err))
+		return nil, err
+	}
+
+	log.Info("success get variant by id")
+
+	return &variant, nil
 }

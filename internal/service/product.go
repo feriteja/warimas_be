@@ -6,6 +6,6 @@ type ProductQueryOptions struct {
 	Filter          *model.ProductFilterInput
 	Sort            *model.ProductSortInput
 	Limit           *int32
-	Offset          *int32
+	Page            *int32
 	IncludeDisabled bool
 }
