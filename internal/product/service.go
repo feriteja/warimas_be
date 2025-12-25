@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
 	"warimas-be/internal/utils"
@@ -40,32 +41,72 @@ func (s *service) GetList(
 	opts ProductQueryOptions,
 ) (*ProductListResult, error) {
 
-	log := logger.FromCtx(ctx)
-	log.Info("service.GetList called")
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "GetProductList"),
+	)
+
+	start := time.Now()
+
+	/* ---------- INPUT NORMALIZATION ---------- */
 
 	if opts.Page <= 0 {
 		opts.Page = 1
 	}
+
 	if opts.Limit <= 0 {
 		opts.Limit = 20
-	}
-	if opts.Limit > 100 {
+	} else if opts.Limit > 100 {
 		opts.Limit = 100
 	}
 
-	// 4. Fetch data
+	/* ---------- DEBUG INPUT LOG ---------- */
+
+	log.Debug("get product list requested",
+		zap.Int32("page", opts.Page),
+		zap.Int32("limit", opts.Limit),
+		zap.Bool("include_count", opts.IncludeCount),
+		zap.Bool("include_disabled", opts.IncludeDisabled),
+		zap.Any("filters", map[string]any{
+			"category_id": opts.CategoryID,
+			"seller_id":   opts.SellerID,
+			"seller_name": opts.SellerName,
+			"status":      opts.Status,
+			"search":      opts.Search,
+			"min_price":   opts.MinPrice,
+			"max_price":   opts.MaxPrice,
+			"in_stock":    opts.InStock,
+		}),
+	)
+
+	/* ---------- FETCH DATA ---------- */
+
 	products, total, err := s.repo.GetList(ctx, opts)
 	if err != nil {
-		log.Error("failed fetching products", zap.Error(err))
+		log.Error("failed to fetch product list",
+			zap.Error(err),
+			zap.Duration("duration", time.Since(start)),
+		)
 		return nil, err
 	}
 
-	log.Info("products fetched",
-		zap.Int("count", len(products)),
-		zap.Int("total", *total),
-	)
+	/* ---------- SUCCESS LOG ---------- */
 
-	// 5. Return service result
+	fields := []zap.Field{
+		zap.Int("count", len(products)),
+		zap.Int32("page", opts.Page),
+		zap.Int32("limit", opts.Limit),
+		zap.Duration("duration", time.Since(start)),
+	}
+
+	if total != nil {
+		fields = append(fields, zap.Int("total", *total))
+	}
+
+	log.Info("get product list success", fields...)
+
+	/* ---------- RESPONSE ---------- */
+
 	return &ProductListResult{
 		Items:      products,
 		TotalCount: total,

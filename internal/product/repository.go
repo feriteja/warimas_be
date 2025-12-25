@@ -256,24 +256,19 @@ func (r *repository) GetList(
 	`
 
 	var (
-		args  []any
-		where []string
+		args   []any
+		where  []string
+		having []string
 	)
 
 	var totalProduct *int
 
-	/* ---------- VISIBILITY ---------- */
-
-	if !opts.IncludeDisabled {
-		where = append(where, "p.status = 'active'")
-	}
+	/* ---------- FILTERS ---------- */
 
 	if opts.SellerID != nil {
 		args = append(args, *opts.SellerID)
 		where = append(where, fmt.Sprintf("p.seller_id = $%d", len(args)))
 	}
-
-	/* ---------- FILTERS ---------- */
 
 	if opts.CategoryID != nil {
 		args = append(args, *opts.CategoryID)
@@ -292,30 +287,91 @@ func (r *repository) GetList(
 
 	if opts.InStock != nil && *opts.InStock {
 		where = append(where, `
-		EXISTS (
-			SELECT 1 FROM variants v2
-			WHERE v2.product_id = p.id
-			AND v2.stock > 0
+			EXISTS (
+				SELECT 1 FROM variants v2
+				WHERE v2.product_id = p.id
+				AND v2.stock > 0
+			)
+		`)
+	}
+
+	// ---- STATUS & VISIBILITY (single source of truth) ----
+	if opts.Status != nil {
+		args = append(args, *opts.Status)
+		where = append(where, fmt.Sprintf("p.status = $%d", len(args)))
+	} else if !opts.IncludeDisabled {
+		where = append(where, "p.status = 'active'")
+	}
+
+	/* ---------- PRICE FILTERS (HAVING) ---------- */
+
+	if opts.MinPrice != nil {
+		args = append(args, *opts.MinPrice)
+		having = append(
+			having,
+			fmt.Sprintf("MIN(v.price) IS NOT NULL AND MIN(v.price) >= $%d", len(args)),
 		)
-	`)
+	}
+
+	if opts.MaxPrice != nil {
+		args = append(args, *opts.MaxPrice)
+		having = append(
+			having,
+			fmt.Sprintf("MIN(v.price) IS NOT NULL AND MIN(v.price) <= $%d", len(args)),
+		)
 	}
 
 	if len(where) > 0 {
 		baseQuery += " WHERE " + strings.Join(where, " AND ")
 	}
 
-	/* ---------- COUNT QUERY ---------- */
+	/* ---------- PAGINATION NORMALIZATION ---------- */
 
-	countQuery := "SELECT COUNT(DISTINCT p.id) " + baseQuery
-
-	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalProduct); err != nil {
-		log.Error("count query failed", zap.Error(err))
-		return nil, totalProduct, err
+	limit := opts.Limit
+	if limit <= 0 {
+		limit = 20
 	}
 
-	log.Debug("totalProduct",
-		zap.Int("totalProduct", *totalProduct),
+	page := opts.Page
+	if page <= 0 {
+		page = 1
+	}
+
+	offset := (page - 1) * limit
+
+	/* ---------- DEBUG INPUT LOG ---------- */
+
+	log.Debug("get product list started",
+		zap.Int32("page", page),
+		zap.Int32("limit", limit),
+		zap.Int("where_conditions", len(where)),
+		zap.Int("having_conditions", len(having)),
+		zap.Bool("include_count", opts.IncludeCount),
 	)
+
+	/* ---------- COUNT QUERY ---------- */
+
+	if opts.IncludeCount {
+		countQuery := `
+			SELECT COUNT(*) FROM (
+				SELECT p.id
+		` + baseQuery + `
+				GROUP BY p.id
+		`
+
+		if len(having) > 0 {
+			countQuery += " HAVING " + strings.Join(having, " AND ")
+		}
+
+		countQuery += ") AS sub"
+
+		var total int
+		if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+			log.Error("count query failed", zap.Error(err))
+			return nil, nil, err
+		}
+		totalProduct = &total
+	}
 
 	/* ---------- DATA QUERY ---------- */
 
@@ -353,10 +409,13 @@ GROUP BY
 	p.id, sellers.name, c.name, s.name
 `
 
+	if len(having) > 0 {
+		selectQuery += " HAVING " + strings.Join(having, " AND ")
+	}
+
 	/* ---------- SORT ---------- */
 
 	orderBy := "p.created_at"
-
 	switch opts.SortField {
 	case ProductSortFieldPrice:
 		orderBy = "MIN(v.price)"
@@ -371,17 +430,16 @@ GROUP BY
 
 	selectQuery += " ORDER BY " + orderBy + " " + dir
 
-	/* ---------- PAGINATION ---------- */
+	/* ---------- LIMIT / OFFSET ---------- */
 
-	offset := (opts.Page - 1) * opts.Limit
-	args = append(args, opts.Limit, offset)
+	args = append(args, limit, offset)
 	selectQuery += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)-1, len(args))
 
 	/* ---------- EXEC ---------- */
 
 	rows, err := r.db.QueryContext(ctx, selectQuery, args...)
 	if err != nil {
-		log.Error("query failed", zap.Error(err))
+		log.Error("data query failed", zap.Error(err))
 		return nil, totalProduct, err
 	}
 	defer rows.Close()
@@ -411,24 +469,39 @@ GROUP BY
 			&p.SubcategoryName,
 			&variantsJSON,
 		); err != nil {
+			log.Error("row scan failed", zap.Error(err))
 			return nil, totalProduct, err
 		}
 
-		_ = json.Unmarshal(variantsJSON, &p.Variants)
+		if err := json.Unmarshal(variantsJSON, &p.Variants); err != nil {
+			log.Warn("failed to unmarshal variants",
+				zap.String("product_id", p.ID),
+				zap.Error(err),
+			)
+		}
+
 		products = append(products, &p)
 	}
 
-	// ✅ THIS IS THE CORRECT PLACE
 	if err := rows.Err(); err != nil {
 		log.Error("rows iteration failed", zap.Error(err))
 		return nil, totalProduct, err
 	}
 
-	log.Info("get product list success",
+	/* ---------- SUCCESS LOG ---------- */
+
+	fields := []zap.Field{
 		zap.Int("count", len(products)),
-		zap.Int("total", *totalProduct),
+		zap.Int32("page", page),
+		zap.Int32("limit", limit),
 		zap.Duration("duration", time.Since(start)),
-	)
+	}
+
+	if totalProduct != nil {
+		fields = append(fields, zap.Int("total", *totalProduct))
+	}
+
+	log.Info("get product list success", fields...)
 
 	return products, totalProduct, nil
 }
