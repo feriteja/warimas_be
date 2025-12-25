@@ -140,6 +140,10 @@ func (r *queryResolver) ProductList(
 		sortDirection = &sort.Direction
 	}
 
+	if filter == nil {
+		filter = &model.ProductFilterInput{}
+	}
+
 	opts := product.ProductQueryOptions{
 		CategoryID: filter.CategoryID,
 		SellerName: filter.SellerName,
@@ -171,17 +175,25 @@ func (r *queryResolver) ProductList(
 		items = append(items, mapProductToGraphQL(p))
 	}
 
-	totalPages := int32((*result.TotalCount + int(l) - 1) / int(l))
-	hasNext := p < totalPages
+	var totalCount int32 = 0
+	var totalPages int32 = 0
+	var hasNext bool = false
+
+	if includeCount && result.TotalCount != nil {
+		totalCount = int32(*result.TotalCount)
+		totalPages = (totalCount + l - 1) / l
+		hasNext = p < totalPages
+	}
 
 	return &model.ProductPage{
 		Items:      items,
 		Page:       p,
 		Limit:      l,
-		TotalCount: int32(*result.TotalCount),
+		TotalCount: totalCount,
 		TotalPages: totalPages,
 		HasNext:    hasNext,
 	}, nil
+
 }
 
 // Products is the resolver for the products field.
