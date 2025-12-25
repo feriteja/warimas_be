@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"warimas-be/internal/graph/model"
@@ -100,10 +101,8 @@ func HasAnyField(ctx context.Context, names ...string) bool {
 	fields := graphql.CollectFieldsCtx(ctx, nil)
 
 	for _, f := range fields {
-		for _, name := range names {
-			if f.Name == name {
-				return true
-			}
+		if slices.Contains(names, f.Name) {
+			return true
 		}
 	}
 	return false

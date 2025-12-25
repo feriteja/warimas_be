@@ -17,7 +17,7 @@ import (
 
 type Repository interface {
 	GetProductsByGroup(ctx context.Context, opts ProductQueryOptions) ([]model.ProductByCategory, error)
-	GetList(ctx context.Context, opts ProductQueryOptions) ([]*Product, int, error)
+	GetList(ctx context.Context, opts ProductQueryOptions) ([]*Product, *int, error)
 	Create(ctx context.Context, input model.NewProduct, sellerID string) (model.Product, error)
 	Update(ctx context.Context, input model.UpdateProduct, sellerID string) (model.Product, error)
 	BulkCreateVariants(
@@ -238,7 +238,7 @@ func (r *repository) GetProductsByGroup(
 func (r *repository) GetList(
 	ctx context.Context,
 	opts ProductQueryOptions,
-) ([]*Product, int, error) {
+) ([]*Product, *int, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
@@ -259,6 +259,8 @@ func (r *repository) GetList(
 		args  []any
 		where []string
 	)
+
+	var totalProduct *int
 
 	/* ---------- VISIBILITY ---------- */
 
@@ -306,11 +308,14 @@ func (r *repository) GetList(
 
 	countQuery := "SELECT COUNT(DISTINCT p.id) " + baseQuery
 
-	var total int
-	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalProduct); err != nil {
 		log.Error("count query failed", zap.Error(err))
-		return nil, 0, err
+		return nil, totalProduct, err
 	}
+
+	log.Debug("totalProduct",
+		zap.Int("totalProduct", *totalProduct),
+	)
 
 	/* ---------- DATA QUERY ---------- */
 
@@ -377,7 +382,7 @@ GROUP BY
 	rows, err := r.db.QueryContext(ctx, selectQuery, args...)
 	if err != nil {
 		log.Error("query failed", zap.Error(err))
-		return nil, 0, err
+		return nil, totalProduct, err
 	}
 	defer rows.Close()
 
@@ -406,7 +411,7 @@ GROUP BY
 			&p.SubcategoryName,
 			&variantsJSON,
 		); err != nil {
-			return nil, 0, err
+			return nil, totalProduct, err
 		}
 
 		_ = json.Unmarshal(variantsJSON, &p.Variants)
@@ -416,16 +421,16 @@ GROUP BY
 	// ✅ THIS IS THE CORRECT PLACE
 	if err := rows.Err(); err != nil {
 		log.Error("rows iteration failed", zap.Error(err))
-		return nil, 0, err
+		return nil, totalProduct, err
 	}
 
 	log.Info("get product list success",
 		zap.Int("count", len(products)),
-		zap.Int("total", total),
+		zap.Int("total", *totalProduct),
 		zap.Duration("duration", time.Since(start)),
 	)
 
-	return products, total, nil
+	return products, totalProduct, nil
 }
 
 func (r *repository) Create(

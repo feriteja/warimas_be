@@ -44,6 +44,12 @@ func mapSortDirection(d *model.SortDirection) product.SortDirection {
 func mapProductToGraphQL(p *product.Product) *model.Product {
 	status := p.Status
 
+	variants := make([]*model.Variant, 0, len(p.Variants))
+	for _, v := range p.Variants {
+		variants = append(variants, mapToVariantToGraphql(v))
+
+	}
+
 	return &model.Product{
 		ID:              p.ID,
 		Name:            p.Name,
@@ -59,6 +65,35 @@ func mapProductToGraphQL(p *product.Product) *model.Product {
 		Status:          &status,
 		CreatedAt:       p.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:       formatTimePtr(p.UpdatedAt),
+		Variants:        variants,
+	}
+}
+
+func mapToVariantToGraphql(v *product.Variant) *model.Variant {
+	if v == nil {
+		return nil
+	}
+
+	imageURL := ""
+	if v.ImageUrl != nil {
+		imageURL = *v.ImageUrl
+	}
+
+	return &model.Variant{
+		ID:           v.ID,
+		Name:         v.Name,
+		ProductID:    v.ProductID,
+		QuantityType: v.QuantityType,
+		Price:        v.Price,
+		Stock:        int32(v.Stock),
+		ImageURL:     imageURL,
+		Description:  v.Description,
+
+		// fields not present in product.Variant
+		// set them later if needed
+		CategoryID: nil,
+		SellerID:   "",
+		CreatedAt:  "",
 	}
 }
 

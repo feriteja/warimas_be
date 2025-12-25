@@ -62,13 +62,13 @@ func (s *service) GetList(
 
 	log.Info("products fetched",
 		zap.Int("count", len(products)),
-		zap.Int("total", total),
+		zap.Int("total", *total),
 	)
 
 	// 5. Return service result
 	return &ProductListResult{
 		Items:      products,
-		TotalCount: &total,
+		TotalCount: total,
 	}, nil
 }
 
