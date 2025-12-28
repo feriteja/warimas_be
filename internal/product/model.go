@@ -18,14 +18,17 @@ const (
 )
 
 type Variant struct {
-	ID           string  `json:"id"`
-	ProductID    string  `json:"product_id"`
-	Name         string  `json:"name"`
-	QuantityType string  `json:"quantity_type"`
-	Price        float64 `json:"price"`
-	Stock        int     `json:"stock"`
-	ImageUrl     *string `json:"imageurl,omitempty"`
-	Description  *string `json:"description,omitempty"`
+	ID           string
+	Name         string
+	ProductID    string
+	QuantityType string
+	Price        float64
+	Stock        int32
+	ImageURL     string
+	CategoryID   *string
+	SellerID     string
+	CreatedAt    string
+	Description  *string
 }
 
 type Product struct {
@@ -44,6 +47,11 @@ type Product struct {
 	ImageURL        *string
 	CreatedAt       time.Time
 	UpdatedAt       *time.Time
+}
+type ProductByCategory struct {
+	CategoryName  string
+	TotalProducts int
+	Products      []*Product
 }
 
 type GetProductOptions struct {

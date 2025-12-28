@@ -114,8 +114,8 @@ extend type Query {
   productsHome(
     filter: ProductFilterInput
     sort: ProductSortInput
-    limit: Int = 20
     page: Int = 1
+    limit: Int = 20
   ): [ProductByCategory!]!
 
   productDetail(productId: ID!): Product

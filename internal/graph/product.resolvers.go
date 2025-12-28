@@ -11,8 +11,11 @@ import (
 	"fmt"
 	"time"
 	"warimas-be/internal/graph/model"
+	"warimas-be/internal/logger"
 	"warimas-be/internal/product"
 	"warimas-be/internal/utils"
+
+	"go.uber.org/zap"
 )
 
 func mapSortField(f *model.ProductSortField) product.ProductSortField {
@@ -27,6 +30,22 @@ func mapSortField(f *model.ProductSortField) product.ProductSortField {
 		return product.ProductSortFieldName
 	default:
 		return product.ProductSortFieldCreatedAt
+	}
+}
+
+func mapProductByCategoryToGraphQL(
+	e product.ProductByCategory,
+) *model.ProductByCategory {
+
+	products := make([]*model.Product, 0, len(e.Products))
+	for _, p := range e.Products {
+		products = append(products, mapProductToGraphQL(p))
+	}
+
+	return &model.ProductByCategory{
+		CategoryName:  &e.CategoryName,
+		TotalProducts: int32(e.TotalProducts),
+		Products:      products,
 	}
 }
 
@@ -75,8 +94,8 @@ func mapToVariantToGraphql(v *product.Variant) *model.Variant {
 	}
 
 	imageURL := ""
-	if v.ImageUrl != nil {
-		imageURL = *v.ImageUrl
+	if v.ImageURL != "" {
+		imageURL = *&v.ImageURL
 	}
 
 	return &model.Variant{
@@ -231,11 +250,32 @@ func (r *queryResolver) ProductList(
 
 }
 
-// Products is the resolver for the products field.
-func (r *queryResolver) ProductsHome(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, limit *int32, page *int32) ([]*model.ProductByCategory, error) {
+func (r *queryResolver) ProductsHome(
+	ctx context.Context,
+	filter *model.ProductFilterInput,
+	sort *model.ProductSortInput,
+	limit, page *int32,
+) ([]*model.ProductByCategory, error) {
 
-	p := int32(1)
-	l := int32(20)
+	log := logger.FromCtx(ctx)
+	log.Info("ProductsHome resolver called")
+
+	// -------------------------------
+	// 1. Normalize inputs
+	// -------------------------------
+	if filter == nil {
+		filter = &model.ProductFilterInput{}
+	}
+
+	// Pagination defaults
+	var (
+		defaultPage  int32 = 1
+		defaultLimit int32 = 20
+		maxLimit     int32 = 50
+	)
+
+	p := defaultPage
+	l := defaultLimit
 
 	if page != nil && *page > 0 {
 		p = *page
@@ -243,7 +283,13 @@ func (r *queryResolver) ProductsHome(ctx context.Context, filter *model.ProductF
 	if limit != nil && *limit > 0 {
 		l = *limit
 	}
+	if l > maxLimit {
+		l = maxLimit
+	}
 
+	// -------------------------------
+	// 2. Sorting normalization
+	// -------------------------------
 	var sortField *model.ProductSortField
 	var sortDirection *model.SortDirection
 
@@ -252,6 +298,9 @@ func (r *queryResolver) ProductsHome(ctx context.Context, filter *model.ProductF
 		sortDirection = &sort.Direction
 	}
 
+	// -------------------------------
+	// 3. Build service query options
+	// -------------------------------
 	opts := product.ProductQueryOptions{
 		CategoryID: filter.CategoryID,
 		SellerName: filter.SellerName,
@@ -268,26 +317,42 @@ func (r *queryResolver) ProductsHome(ctx context.Context, filter *model.ProductF
 		Limit: l,
 	}
 
-	// 2. Fetch grouped products
+	log.Info("Fetching products by group",
+		zap.Int32("page", p),
+		zap.Int32("limit", l),
+		zap.Any("filter", filter),
+	)
+
+	// -------------------------------
+	// 4. Fetch data from service
+	// -------------------------------
 	grouped, err := r.ProductSvc.GetProductsByGroup(ctx, opts)
 	if err != nil {
+		log.Error("GetProductsByGroup failed", zap.Error(err))
 		return nil, err
 	}
 
-	// 3. Convert service output -> GraphQL response
+	log.Info("Products fetched successfully",
+		zap.Int("group_count", len(grouped)),
+	)
+
+	// -------------------------------
+	// 5. Convert to GraphQL response
+	// -------------------------------
 	result := make([]*model.ProductByCategory, 0, len(grouped))
 
 	for _, g := range grouped {
-		if len(g.Products) == 0 {
-			continue // skip empty categories
+		// Skip empty categories (optional, business decision)
+		if g.TotalProducts == 0 {
+			continue
 		}
 
-		result = append(result, &model.ProductByCategory{
-			CategoryName:  g.CategoryName,
-			TotalProducts: g.TotalProducts,
-			Products:      g.Products,
-		})
+		result = append(result, mapProductByCategoryToGraphQL(g))
 	}
+
+	log.Info("ProductsHome resolver completed",
+		zap.Int("returned_groups", len(result)),
+	)
 
 	return result, nil
 }

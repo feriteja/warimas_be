@@ -14,7 +14,7 @@ import (
 )
 
 type Service interface {
-	GetProductsByGroup(ctx context.Context, opts ProductQueryOptions) ([]model.ProductByCategory, error)
+	GetProductsByGroup(ctx context.Context, opts ProductQueryOptions) ([]ProductByCategory, error)
 	GetList(ctx context.Context, opts ProductQueryOptions) (*ProductListResult, error)
 	Create(ctx context.Context, input model.NewProduct) (model.Product, error)
 	Update(ctx context.Context, input model.UpdateProduct) (model.Product, error)
@@ -32,8 +32,21 @@ func NewService(repo Repository) Service {
 	return &service{repo: repo}
 }
 
-func (s *service) GetProductsByGroup(ctx context.Context, opts ProductQueryOptions) ([]model.ProductByCategory, error) {
-	return s.repo.GetProductsByGroup(ctx, opts)
+func (s *service) GetProductsByGroup(
+	ctx context.Context,
+	opts ProductQueryOptions,
+) ([]ProductByCategory, error) {
+
+	log := logger.FromCtx(ctx)
+	log.Debug("Service: GetProductsByGroup called")
+
+	products, err := s.repo.GetProductsByGroup(ctx, opts)
+	if err != nil {
+		log.Error("Service: GetProductsByGroup failed", zap.Error(err))
+		return nil, err
+	}
+
+	return products, nil
 }
 
 func (s *service) GetList(

@@ -16,7 +16,7 @@ import (
 )
 
 type Repository interface {
-	GetProductsByGroup(ctx context.Context, opts ProductQueryOptions) ([]model.ProductByCategory, error)
+	GetProductsByGroup(ctx context.Context, opts ProductQueryOptions) ([]ProductByCategory, error)
 	GetList(ctx context.Context, opts ProductQueryOptions) ([]*Product, *int, error)
 	Create(ctx context.Context, input model.NewProduct, sellerID string) (model.Product, error)
 	Update(ctx context.Context, input model.UpdateProduct, sellerID string) (model.Product, error)
@@ -46,7 +46,7 @@ func NewRepository(db *sql.DB) Repository {
 func (r *repository) GetProductsByGroup(
 	ctx context.Context,
 	opts ProductQueryOptions,
-) ([]model.ProductByCategory, error) {
+) ([]ProductByCategory, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
@@ -55,6 +55,7 @@ func (r *repository) GetProductsByGroup(
 
 	start := time.Now()
 	log.Info("start get products by group")
+	log.Debug("query options", zap.Any("opts", opts))
 
 	query := `
 	SELECT
@@ -108,10 +109,9 @@ func (r *repository) GetProductsByGroup(
 	}
 	defer rows.Close()
 
-	categoryMap := make(map[string]*model.ProductByCategory, 16)
-	productMap := make(map[string]*model.Product, 64)
-	categoryOrder := make([]string, 0, 16)
-	productCount := make(map[string]int)
+	categoryMap := make(map[string]*ProductByCategory)
+	productMap := make(map[string]*Product)
+	categoryOrder := make([]string, 0)
 	const limitPerCategory = 10
 
 	for rows.Next() {
@@ -159,27 +159,23 @@ func (r *repository) GetProductsByGroup(
 		//--------------------------------------
 		// CATEGORY
 		//--------------------------------------
-		if _, exists := categoryMap[catID]; !exists {
-			categoryMap[catID] = &model.ProductByCategory{
-				CategoryName:  &categoryName.String,
-				TotalProducts: totalProducts.Int32,
-				Products:      make([]*model.Product, 0, limitPerCategory),
+		if _, ok := categoryMap[catID]; !ok {
+			categoryMap[catID] = &ProductByCategory{
+				CategoryName:  categoryName.String,
+				TotalProducts: int(totalProducts.Int32),
+				Products:      make([]*Product, 0, limitPerCategory),
 			}
 			categoryOrder = append(categoryOrder, catID)
-			productCount[catID] = 0
 		}
 
 		//--------------------------------------
 		// PRODUCT (limit to 10 per category)
 		//--------------------------------------
 		if pID.Valid {
+			productKey := catID + ":" + pID.String
 
-			if productCount[catID] >= limitPerCategory {
-				continue
-			}
-
-			if _, exists := productMap[pID.String]; !exists {
-				product := &model.Product{
+			if _, ok := productMap[productKey]; !ok {
+				product := &Product{
 					ID:              pID.String,
 					Name:            pName.String,
 					SellerID:        pSellerID.String,
@@ -188,28 +184,28 @@ func (r *repository) GetProductsByGroup(
 					SubcategoryID:   subcategoryID.String,
 					SubcategoryName: subcategoryName.String,
 					Slug:            pSlug.String,
-					Variants:        make([]*model.Variant, 0, 4),
+					Variants:        make([]*Variant, 0, 4),
 				}
 
-				productMap[pID.String] = product
+				productMap[productKey] = product
 				categoryMap[catID].Products = append(categoryMap[catID].Products, product)
-				productCount[catID]++
 			}
-		}
 
-		//--------------------------------------
-		// VARIANT
-		//--------------------------------------
-		if vID.Valid && pID.Valid {
-			if prod, ok := productMap[pID.String]; ok {
-				prod.Variants = append(prod.Variants, &model.Variant{
-					ID:        vID.String,
-					ProductID: vProdID.String,
-					Name:      vName.String,
-					Price:     vPrice.Float64,
-					Stock:     vStock.Int32,
-					ImageURL:  vImageURL.String,
-				})
+			//--------------------------------------
+			// VARIANT
+			//--------------------------------------
+			if vID.Valid {
+				productMap[productKey].Variants = append(
+					productMap[productKey].Variants,
+					&Variant{
+						ID:        vID.String,
+						ProductID: vProdID.String,
+						Name:      vName.String,
+						Price:     vPrice.Float64,
+						Stock:     vStock.Int32,
+						ImageURL:  vImageURL.String,
+					},
+				)
 			}
 		}
 	}
@@ -222,9 +218,9 @@ func (r *repository) GetProductsByGroup(
 	//--------------------------------------
 	// Convert to ordered slice
 	//--------------------------------------
-	result := make([]model.ProductByCategory, 0, len(categoryOrder))
-	for _, catID := range categoryOrder {
-		result = append(result, *categoryMap[catID])
+	result := make([]ProductByCategory, 0, len(categoryOrder))
+	for _, id := range categoryOrder {
+		result = append(result, *categoryMap[id])
 	}
 
 	log.Info("success get products by group",
