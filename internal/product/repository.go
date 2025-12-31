@@ -297,7 +297,7 @@ func (r *repository) GetList(
 	if opts.Status != nil {
 		args = append(args, *opts.Status)
 		where = append(where, fmt.Sprintf("p.status = $%d", len(args)))
-	} else if !opts.IncludeDisabled {
+	} else if opts.OnlyActive {
 		where = append(where, "p.status = 'active'")
 	}
 

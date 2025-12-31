@@ -57,6 +57,10 @@ func (s *service) GetList(
 	ctx context.Context,
 	opts ProductQueryOptions,
 ) (*ProductListResult, error) {
+	role := utils.GetUserRoleFromContext(ctx)
+
+	OnlyActive := role != string(user.RoleAdmin)
+	opts.OnlyActive = OnlyActive
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "service"),
@@ -83,7 +87,7 @@ func (s *service) GetList(
 		zap.Int32("page", opts.Page),
 		zap.Int32("limit", opts.Limit),
 		zap.Bool("include_count", opts.IncludeCount),
-		zap.Bool("include_disabled", opts.IncludeDisabled),
+		zap.Bool("OnlyActive", OnlyActive),
 		zap.Any("filters", map[string]any{
 			"category_id": opts.CategoryID,
 			"seller_id":   opts.SellerID,

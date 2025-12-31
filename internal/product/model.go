@@ -87,7 +87,7 @@ type ProductQueryOptions struct {
 	Page  int32
 
 	// visibility
-	IncludeDisabled bool
-	IncludeCount    bool
-	SellerID        *string
+	OnlyActive   bool
+	IncludeCount bool
+	SellerID     *string
 }
