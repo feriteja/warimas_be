@@ -2,12 +2,14 @@ package product
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
+	"warimas-be/internal/user"
 	"warimas-be/internal/utils"
 
 	"go.uber.org/zap"
@@ -21,7 +23,7 @@ type Service interface {
 	CreateVariants(ctx context.Context, input []*model.NewVariant) ([]*model.Variant, error)
 	UpdateVariants(ctx context.Context, input []*model.UpdateVariant) ([]*model.Variant, error)
 	GetPackages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit, page int32) ([]*model.Package, error)
-	GetProductByID(ctx context.Context, productID string) (*model.Product, error)
+	GetProductByID(ctx context.Context, productID string) (*Product, error)
 }
 
 type service struct {
@@ -31,6 +33,8 @@ type service struct {
 func NewService(repo Repository) Service {
 	return &service{repo: repo}
 }
+
+var ErrProductNotFound = errors.New("product not found")
 
 func (s *service) GetProductsByGroup(
 	ctx context.Context,
@@ -266,16 +270,22 @@ func (s *service) GetPackages(
 	)
 }
 
-func (s *service) GetProductByID(ctx context.Context, productID string) (*model.Product, error) {
-
+func (s *service) GetProductByID(ctx context.Context, productID string) (*Product, error) {
 	role := utils.GetUserRoleFromContext(ctx)
-	IncludeDisabled := false
-	if role == "ADMIN" {
-		IncludeDisabled = true
+
+	includeDisabled := role == string(user.RoleAdmin)
+
+	product, err := s.repo.GetProductByID(ctx, GetProductOptions{
+		ProductID:  productID,
+		OnlyActive: !includeDisabled,
+	})
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrProductNotFound
+		}
+		return nil, err
 	}
 
-	return s.repo.GetProductByID(ctx, GetProductOptions{
-		ProductID:  productID,
-		OnlyActive: !IncludeDisabled,
-	})
+	return product, nil
 }

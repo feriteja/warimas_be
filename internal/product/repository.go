@@ -31,8 +31,8 @@ type Repository interface {
 		sellerID string,
 	) ([]*model.Variant, error)
 	GetPackages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit, page int32, includeDisabled bool) ([]*model.Package, error)
-	GetProductByID(ctx context.Context, productParams GetProductOptions) (*model.Product, error)
-	GetProductVariantByID(ctx context.Context, productParams GetVariantOptions) (*model.Variant, error)
+	GetProductByID(ctx context.Context, productParams GetProductOptions) (*Product, error)
+	GetProductVariantByID(ctx context.Context, productParams GetVariantOptions) (*Variant, error)
 }
 
 type repository struct {
@@ -42,6 +42,8 @@ type repository struct {
 func NewRepository(db *sql.DB) Repository {
 	return &repository{db: db}
 }
+
+var ErrRepositoryFailure = errors.New("internal data access error")
 
 func (r *repository) GetProductsByGroup(
 	ctx context.Context,
@@ -481,7 +483,7 @@ GROUP BY
 
 	if err := rows.Err(); err != nil {
 		log.Error("rows iteration failed", zap.Error(err))
-		return nil, totalProduct, err
+		return nil, totalProduct, ErrRepositoryFailure
 	}
 
 	/* ---------- SUCCESS LOG ---------- */
@@ -1125,13 +1127,13 @@ func (r *repository) GetPackages(
 func (r *repository) GetProductByID(
 	ctx context.Context,
 	productParams GetProductOptions,
-) (*model.Product, error) {
+) (*Product, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
 		zap.String("method", "GetProductByID"),
 		zap.String("product_id", productParams.ProductID),
-		zap.Bool("include_disabled", productParams.OnlyActive),
+		zap.Bool("only_active", productParams.OnlyActive),
 	)
 
 	log.Debug("start get product by id")
@@ -1149,7 +1151,8 @@ func (r *repository) GetProductByID(
 
 		c.name AS category_name,
 		s.name AS subcategory_name,
-
+		sel.name as seller_name,
+ 
 		COALESCE(
 			json_agg(
 				json_build_object(
@@ -1161,6 +1164,7 @@ func (r *repository) GetProductByID(
 					'imageUrl', v.imageurl,
 					'description', v.description
 				)
+				ORDER BY v.created_at NULLS LAST
 			) FILTER (WHERE v.id IS NOT NULL),
 			'[]'::json
 		) AS variants
@@ -1168,11 +1172,12 @@ func (r *repository) GetProductByID(
 	LEFT JOIN category c ON c.id = p.category_id
 	LEFT JOIN subcategories s ON s.id = p.subcategory_id
 	LEFT JOIN variants v ON v.product_id = p.id
+	LEFT JOIN sellers sel on sel.id = p.seller_id
 	WHERE p.id = $1
 	`
 
 	var (
-		product      model.Product
+		product      Product
 		variantsJSON []byte
 	)
 
@@ -1184,7 +1189,7 @@ func (r *repository) GetProductByID(
 	}
 
 	query += `
-	GROUP BY
+		GROUP BY
 		p.id,
 		p.name,
 		p.seller_id,
@@ -1195,8 +1200,9 @@ func (r *repository) GetProductByID(
 		p.description,
 		p.created_at,
 		c.name,
-		s.name;
-	`
+		s.name,
+		sel.name
+ 	`
 
 	err := r.db.QueryRowContext(ctx, query, args...).Scan(
 		&product.ID,
@@ -1210,29 +1216,30 @@ func (r *repository) GetProductByID(
 		&product.CreatedAt,
 		&product.CategoryName,
 		&product.SubcategoryName,
+		&product.SellerName,
 		&variantsJSON,
 	)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Warn("product not found")
-			return nil, nil // GraphQL-friendly
+			return nil, ErrProductNotFound // GraphQL-friendly
 		}
 
 		log.Error("failed to query product",
 			zap.Error(err),
 		)
-		return nil, err
+		return nil, ErrRepositoryFailure
 	}
 
 	if err := json.Unmarshal(variantsJSON, &product.Variants); err != nil {
 		log.Error("failed to unmarshal variants",
 			zap.Error(err),
 		)
-		return nil, err
+		return nil, ErrRepositoryFailure
 	}
 
-	log.Info("success get product by id",
+	log.Debug("success get product by id",
 		zap.Int("variant_count", len(product.Variants)),
 	)
 
@@ -1242,7 +1249,7 @@ func (r *repository) GetProductByID(
 func (r *repository) GetProductVariantByID(
 	ctx context.Context,
 	opts GetVariantOptions,
-) (*model.Variant, error) {
+) (*Variant, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
@@ -1278,7 +1285,7 @@ func (r *repository) GetProductVariantByID(
 		args = append(args, utils.ProductStatusActive)
 	}
 
-	var variant model.Variant
+	var variant Variant
 
 	row := r.db.QueryRowContext(ctx, query, args...)
 	err := row.Scan(

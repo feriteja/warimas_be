@@ -6,19 +6,19 @@ package graph
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"time"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
 	"warimas-be/internal/product"
+	prodInternal "warimas-be/internal/product"
 	"warimas-be/internal/utils"
 
 	"go.uber.org/zap"
 )
 
-func mapSortField(f *model.ProductSortField) product.ProductSortField {
+func mapSortField(f *model.ProductSortField) prodInternal.ProductSortField {
 	if f == nil {
 		return product.ProductSortFieldCreatedAt
 	}
@@ -65,7 +65,7 @@ func mapProductToGraphQL(p *product.Product) *model.Product {
 
 	variants := make([]*model.Variant, 0, len(p.Variants))
 	for _, v := range p.Variants {
-		variants = append(variants, mapToVariantToGraphql(v))
+		variants = append(variants, mapVariantToGraphQL(v))
 
 	}
 
@@ -88,14 +88,14 @@ func mapProductToGraphQL(p *product.Product) *model.Product {
 	}
 }
 
-func mapToVariantToGraphql(v *product.Variant) *model.Variant {
+func mapVariantToGraphQL(v *product.Variant) *model.Variant {
 	if v == nil {
 		return nil
 	}
 
 	imageURL := ""
 	if v.ImageURL != "" {
-		imageURL = *&v.ImageURL
+		imageURL = v.ImageURL
 	}
 
 	return &model.Variant{
@@ -107,12 +107,8 @@ func mapToVariantToGraphql(v *product.Variant) *model.Variant {
 		Stock:        int32(v.Stock),
 		ImageURL:     imageURL,
 		Description:  v.Description,
-
-		// fields not present in product.Variant
-		// set them later if needed
-		CategoryID: nil,
-		SellerID:   "",
-		CreatedAt:  "",
+		CategoryID:   nil,
+		CreatedAt:    v.CreatedAt,
 	}
 }
 
@@ -357,15 +353,23 @@ func (r *queryResolver) ProductsHome(
 	return result, nil
 }
 
-// ProductDetail is the resolver for the productDetail field.
 func (r *queryResolver) ProductDetail(ctx context.Context, productID string) (*model.Product, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("resolver", "ProductDetail"),
+		zap.String("product_id", productID),
+	)
+
+	log.Debug("resolver called")
 	product, err := r.ProductSvc.GetProductByID(ctx, productID)
-	if err == sql.ErrNoRows {
-		return nil, nil // ✅ allowed
+
+	if errors.Is(err, prodInternal.ErrProductNotFound) {
+		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
+	productGraph := mapProductToGraphQL(product)
 
-	return product, nil
+	log.Debug("product found")
+	return productGraph, nil
 }
