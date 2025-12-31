@@ -32,7 +32,7 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   true, // HTTPS only
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 		MaxAge:   60 * 60 * 24, // 24 hours
 	})
 
@@ -75,7 +75,7 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   true, // HTTPS only
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 		MaxAge:   60 * 60 * 24, // 24 hours
 	})
 

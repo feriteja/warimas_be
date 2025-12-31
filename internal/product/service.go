@@ -273,11 +273,21 @@ func (s *service) GetPackages(
 func (s *service) GetProductByID(ctx context.Context, productID string) (*Product, error) {
 	role := utils.GetUserRoleFromContext(ctx)
 
-	includeDisabled := role == string(user.RoleAdmin)
+	OnlyActive := role != string(user.RoleAdmin)
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "GetProductList"),
+	)
+
+	log.Debug("get product detail requested",
+		zap.String("productID", productID),
+		zap.Bool("OnlyActive", OnlyActive),
+	)
 
 	product, err := s.repo.GetProductByID(ctx, GetProductOptions{
 		ProductID:  productID,
-		OnlyActive: !includeDisabled,
+		OnlyActive: OnlyActive,
 	})
 
 	if err != nil {
