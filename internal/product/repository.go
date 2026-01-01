@@ -1151,7 +1151,7 @@ func (r *repository) GetProductByID(
 
 		c.name AS category_name,
 		s.name AS subcategory_name,
-		sel.name as seller_name,
+		COALESCE(sel.name, 'UNKNOWN') as seller_name,
  
 		COALESCE(
 			json_agg(

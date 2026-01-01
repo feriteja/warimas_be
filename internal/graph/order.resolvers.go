@@ -129,39 +129,3 @@ func (r *queryResolver) OrderDetail(ctx context.Context, orderID string) (*model
 
 	return toGraphQLOrder(order), nil
 }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
-/*
-	func toGraphQLOrderItem(item *order.OrderItem) *model.OrderItem {
-	return &model.OrderItem{
-		ID:       fmt.Sprint(item.ID),
-		Product:  &model.Product{ID: fmt.Sprint(item.Product.ID), Name: item.Product.Name},
-		Quantity: int32(item.Quantity),
-		Price:    item.Price,
-	}
-}
-func toGraphQLOrder(o *order.Order) *model.Order {
-	if o == nil {
-		return nil
-	}
-
-	var items []*model.OrderItem
-	for _, i := range o.Items {
-		items = append(items, toGraphQLOrderItem(&i))
-	}
-
-	return &model.Order{
-		ID:        fmt.Sprint(o.ID),
-		Total:     o.Total,
-		Status:    model.OrderStatus(o.Status),
-		CreatedAt: o.CreatedAt.Format(time.RFC3339),
-		UpdatedAt: o.UpdatedAt.Format(time.RFC3339),
-		Items:     items,
-	}
-}
-*/

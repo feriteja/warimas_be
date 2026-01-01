@@ -66,12 +66,6 @@ type LoginInput struct {
 type Mutation struct {
 }
 
-type MyCartResponse struct {
-	Success bool        `json:"success"`
-	Message *string     `json:"message,omitempty"`
-	Data    []*CartItem `json:"data,omitempty"`
-}
-
 type NewProduct struct {
 	Name          string  `json:"name"`
 	ImageURL      *string `json:"imageUrl,omitempty"`

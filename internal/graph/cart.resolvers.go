@@ -6,7 +6,7 @@ package graph
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"math"
 	"time"
 	"warimas-be/internal/cart"
@@ -136,31 +136,67 @@ func (r *mutationResolver) RemoveFromCart(ctx context.Context, variantID string)
 }
 
 // Get all items in my cart
-func (r *queryResolver) MyCart(ctx context.Context, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) (*model.MyCartResponse, error) {
+func (r *queryResolver) MyCart(
+	ctx context.Context,
+	filter *model.CartFilterInput,
+	sort *model.CartSortInput,
+	limit *int32,
+	page *int32,
+) ([]*model.CartItem, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "MyCart"),
+	)
+
+	log.Info("start MyCart resolver")
+
 	userID, ok := utils.GetUserIDFromContext(ctx)
 	if !ok {
-		return &model.MyCartResponse{
-			Success: false,
-			Message: utils.StrPtr("Unauthorized"),
-		}, nil
+		log.Warn("unauthorized access: user id not found in context")
+		return nil, errors.New("unauthorized")
 	}
 
-	var l uint16 = 20 // default limit
-	var p uint16 = 1  // default page
+	const (
+		defaultLimit uint16 = 20
+		defaultPage  uint16 = 1
+		maxLimit     uint16 = math.MaxUint16
+	)
+
+	l := defaultLimit
+	p := defaultPage
 
 	if limit != nil {
-		if *limit < 0 || *limit > math.MaxUint16 {
-			return nil, fmt.Errorf("invalid limit")
+		if *limit <= 0 {
+			log.Warn("invalid limit value", zap.Int32("limit", *limit))
+			return nil, errors.New("limit must be greater than 0")
+		}
+		if *limit > int32(maxLimit) {
+			log.Warn("limit exceeds max value", zap.Int32("limit", *limit))
+			return nil, errors.New("limit too large")
 		}
 		l = uint16(*limit)
 	}
 
 	if page != nil {
-		if *page < 1 || *page > math.MaxUint16 {
-			return nil, fmt.Errorf("invalid page")
+		if *page <= 0 {
+			log.Warn("invalid page value", zap.Int32("page", *page))
+			return nil, errors.New("page must be greater than 0")
+		}
+		if *page > int32(math.MaxUint16) {
+			log.Warn("page exceeds max value", zap.Int32("page", *page))
+			return nil, errors.New("page too large")
 		}
 		p = uint16(*page)
 	}
+
+	log.Debug("resolved cart query params",
+		zap.Uint("user_id", userID),
+		zap.Uint16("limit", l),
+		zap.Uint16("page", p),
+		zap.Any("filter", filter),
+		zap.Any("sort", sort),
+	)
 
 	cartResult, err := r.CartSvc.GetCart(
 		ctx,
@@ -171,14 +207,17 @@ func (r *queryResolver) MyCart(ctx context.Context, filter *model.CartFilterInpu
 		&p,
 	)
 	if err != nil {
-		return &model.MyCartResponse{
-			Success: false,
-			Message: utils.StrPtr(err.Error()),
-		}, nil
+		log.Error("failed to get cart",
+			zap.Error(err),
+			zap.Uint("user_id", userID),
+		)
+		return nil, err
 	}
 
-	return &model.MyCartResponse{
-		Success: true,
-		Data:    cartResult,
-	}, nil
+	log.Info("success get cart",
+		zap.Uint("user_id", userID),
+		zap.Int("item_count", len(cartResult)),
+	)
+
+	return cartResult, nil
 }

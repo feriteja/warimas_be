@@ -336,107 +336,6 @@ func (ec *executionContext) fieldContext_CartItem_updatedAt(_ context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _MyCartResponse_success(ctx context.Context, field graphql.CollectedField, obj *model.MyCartResponse) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_MyCartResponse_success,
-		func(ctx context.Context) (any, error) {
-			return obj.Success, nil
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_MyCartResponse_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "MyCartResponse",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _MyCartResponse_message(ctx context.Context, field graphql.CollectedField, obj *model.MyCartResponse) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_MyCartResponse_message,
-		func(ctx context.Context) (any, error) {
-			return obj.Message, nil
-		},
-		nil,
-		ec.marshalOString2ᚖstring,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_MyCartResponse_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "MyCartResponse",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _MyCartResponse_data(ctx context.Context, field graphql.CollectedField, obj *model.MyCartResponse) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_MyCartResponse_data,
-		func(ctx context.Context) (any, error) {
-			return obj.Data, nil
-		},
-		nil,
-		ec.marshalOCartItem2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartItem,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_MyCartResponse_data(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "MyCartResponse",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_CartItem_id(ctx, field)
-			case "userId":
-				return ec.fieldContext_CartItem_userId(ctx, field)
-			case "quantity":
-				return ec.fieldContext_CartItem_quantity(ctx, field)
-			case "product":
-				return ec.fieldContext_CartItem_product(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_CartItem_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_CartItem_updatedAt(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type CartItem", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 // endregion **************************** field.gotpl *****************************
 
 // region    **************************** input.gotpl *****************************
@@ -696,49 +595,6 @@ func (ec *executionContext) _CartItem(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
-var myCartResponseImplementors = []string{"MyCartResponse"}
-
-func (ec *executionContext) _MyCartResponse(ctx context.Context, sel ast.SelectionSet, obj *model.MyCartResponse) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, myCartResponseImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("MyCartResponse")
-		case "success":
-			out.Values[i] = ec._MyCartResponse_success(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "message":
-			out.Values[i] = ec._MyCartResponse_message(ctx, field, obj)
-		case "data":
-			out.Values[i] = ec._MyCartResponse_data(ctx, field, obj)
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
 // endregion **************************** object.gotpl ****************************
 
 // region    ***************************** type.gotpl *****************************
@@ -770,20 +626,6 @@ func (ec *executionContext) unmarshalNCartSortField2warimasᚑbeᚋinternalᚋgr
 
 func (ec *executionContext) marshalNCartSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartSortField(ctx context.Context, sel ast.SelectionSet, v model.CartSortField) graphql.Marshaler {
 	return v
-}
-
-func (ec *executionContext) marshalNMyCartResponse2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐMyCartResponse(ctx context.Context, sel ast.SelectionSet, v model.MyCartResponse) graphql.Marshaler {
-	return ec._MyCartResponse(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNMyCartResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐMyCartResponse(ctx context.Context, sel ast.SelectionSet, v *model.MyCartResponse) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._MyCartResponse(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNUpdateCartInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐUpdateCartInput(ctx context.Context, v any) (model.UpdateCartInput, error) {

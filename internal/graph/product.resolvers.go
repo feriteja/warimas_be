@@ -157,12 +157,7 @@ func (r *mutationResolver) UpdateProduct(ctx context.Context, input model.Update
 }
 
 // ProductList is the resolver for the productList field.
-func (r *queryResolver) ProductList(
-	ctx context.Context,
-	filter *model.ProductFilterInput,
-	sort *model.ProductSortInput,
-	page *int32, limit *int32) (*model.ProductPage, error) {
-
+func (r *queryResolver) ProductList(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) (*model.ProductPage, error) {
 	p := int32(1)
 	l := int32(20)
 
@@ -243,16 +238,10 @@ func (r *queryResolver) ProductList(
 		TotalPages: totalPages,
 		HasNext:    hasNext,
 	}, nil
-
 }
 
-func (r *queryResolver) ProductsHome(
-	ctx context.Context,
-	filter *model.ProductFilterInput,
-	sort *model.ProductSortInput,
-	limit, page *int32,
-) ([]*model.ProductByCategory, error) {
-
+// ProductsHome is the resolver for the productsHome field.
+func (r *queryResolver) ProductsHome(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) ([]*model.ProductByCategory, error) {
 	log := logger.FromCtx(ctx)
 	log.Info("ProductsHome resolver called")
 
@@ -353,6 +342,7 @@ func (r *queryResolver) ProductsHome(
 	return result, nil
 }
 
+// ProductDetail is the resolver for the productDetail field.
 func (r *queryResolver) ProductDetail(ctx context.Context, productID string) (*model.Product, error) {
 	log := logger.FromCtx(ctx).With(
 		zap.String("resolver", "ProductDetail"),
@@ -373,3 +363,108 @@ func (r *queryResolver) ProductDetail(ctx context.Context, productID string) (*m
 	log.Debug("product found")
 	return productGraph, nil
 }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+/*
+	func mapSortField(f *model.ProductSortField) prodInternal.ProductSortField {
+	if f == nil {
+		return product.ProductSortFieldCreatedAt
+	}
+
+	switch *f {
+	case model.ProductSortFieldPrice:
+		return product.ProductSortFieldPrice
+	case model.ProductSortFieldName:
+		return product.ProductSortFieldName
+	default:
+		return product.ProductSortFieldCreatedAt
+	}
+}
+func mapProductByCategoryToGraphQL(
+	e product.ProductByCategory,
+) *model.ProductByCategory {
+
+	products := make([]*model.Product, 0, len(e.Products))
+	for _, p := range e.Products {
+		products = append(products, mapProductToGraphQL(p))
+	}
+
+	return &model.ProductByCategory{
+		CategoryName:  &e.CategoryName,
+		TotalProducts: int32(e.TotalProducts),
+		Products:      products,
+	}
+}
+func mapSortDirection(d *model.SortDirection) product.SortDirection {
+	if d == nil {
+		return product.SortDirectionDesc
+	}
+
+	if *d == model.SortDirectionAsc {
+		return product.SortDirectionAsc
+	}
+	return product.SortDirectionDesc
+}
+func mapProductToGraphQL(p *product.Product) *model.Product {
+	status := p.Status
+
+	variants := make([]*model.Variant, 0, len(p.Variants))
+	for _, v := range p.Variants {
+		variants = append(variants, mapVariantToGraphQL(v))
+
+	}
+
+	return &model.Product{
+		ID:              p.ID,
+		Name:            p.Name,
+		SellerID:        p.SellerID,
+		SellerName:      p.SellerName,
+		CategoryID:      p.CategoryID,
+		CategoryName:    p.CategoryName,
+		SubcategoryID:   p.SubcategoryID,
+		SubcategoryName: p.SubcategoryName,
+		Slug:            p.Slug,
+		ImageURL:        p.ImageURL,
+		Description:     p.Description,
+		Status:          &status,
+		CreatedAt:       p.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:       formatTimePtr(p.UpdatedAt),
+		Variants:        variants,
+	}
+}
+func mapVariantToGraphQL(v *product.Variant) *model.Variant {
+	if v == nil {
+		return nil
+	}
+
+	imageURL := ""
+	if v.ImageURL != "" {
+		imageURL = v.ImageURL
+	}
+
+	return &model.Variant{
+		ID:           v.ID,
+		Name:         v.Name,
+		ProductID:    v.ProductID,
+		QuantityType: v.QuantityType,
+		Price:        v.Price,
+		Stock:        int32(v.Stock),
+		ImageURL:     imageURL,
+		Description:  v.Description,
+		CategoryID:   nil,
+		CreatedAt:    v.CreatedAt,
+	}
+}
+func formatTimePtr(t *time.Time) *string {
+	if t == nil {
+		return nil
+	}
+	s := t.Format(time.RFC3339)
+	return &s
+}
+*/

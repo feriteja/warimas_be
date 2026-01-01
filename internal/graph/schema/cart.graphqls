@@ -39,19 +39,13 @@ type AddToCartResponse {
   cartItem: CartItem
 }
 
-type MyCartResponse {
-  success: Boolean!
-  message: String
-  data: [CartItem]
-}
-
 extend type Query {
   myCart(
     filter: CartFilterInput
     sort: CartSortInput
     limit: Int = 20
     page: Int = 1
-  ): MyCartResponse! @auth(role: USER)
+  ): [CartItem] @auth(role: USER)
 }
 
 extend type Mutation {

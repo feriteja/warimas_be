@@ -93,12 +93,6 @@ type ComplexityRoot struct {
 		UpdateVariants    func(childComplexity int, input []*model.UpdateVariant) int
 	}
 
-	MyCartResponse struct {
-		Data    func(childComplexity int) int
-		Message func(childComplexity int) int
-		Success func(childComplexity int) int
-	}
-
 	Order struct {
 		CreatedAt func(childComplexity int) int
 		ID        func(childComplexity int) int
@@ -220,7 +214,7 @@ type ComplexityRoot struct {
 		PackageRecomamendation func(childComplexity int, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) int
 		ProductDetail          func(childComplexity int, productID string) int
 		ProductList            func(childComplexity int, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) int
-		ProductsHome           func(childComplexity int, filter *model.ProductFilterInput, sort *model.ProductSortInput, limit *int32, page *int32) int
+		ProductsHome           func(childComplexity int, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) int
 		Subcategory            func(childComplexity int, filter *string, categoryID string, limit *int32, page *int32) int
 	}
 
@@ -551,27 +545,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.UpdateVariants(childComplexity, args["input"].([]*model.UpdateVariant)), true
-
-	case "MyCartResponse.data":
-		if e.complexity.MyCartResponse.Data == nil {
-			break
-		}
-
-		return e.complexity.MyCartResponse.Data(childComplexity), true
-
-	case "MyCartResponse.message":
-		if e.complexity.MyCartResponse.Message == nil {
-			break
-		}
-
-		return e.complexity.MyCartResponse.Message(childComplexity), true
-
-	case "MyCartResponse.success":
-		if e.complexity.MyCartResponse.Success == nil {
-			break
-		}
-
-		return e.complexity.MyCartResponse.Success(childComplexity), true
 
 	case "Order.createdAt":
 		if e.complexity.Order.CreatedAt == nil {
@@ -1206,7 +1179,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.ProductsHome(childComplexity, args["filter"].(*model.ProductFilterInput), args["sort"].(*model.ProductSortInput), args["limit"].(*int32), args["page"].(*int32)), true
+		return e.complexity.Query.ProductsHome(childComplexity, args["filter"].(*model.ProductFilterInput), args["sort"].(*model.ProductSortInput), args["page"].(*int32), args["limit"].(*int32)), true
 
 	case "Query.subcategory":
 		if e.complexity.Query.Subcategory == nil {

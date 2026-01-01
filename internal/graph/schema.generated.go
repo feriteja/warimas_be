@@ -32,14 +32,14 @@ type MutationResolver interface {
 	UpdateVariants(ctx context.Context, input []*model.UpdateVariant) ([]*model.Variant, error)
 }
 type QueryResolver interface {
-	MyCart(ctx context.Context, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) (*model.MyCartResponse, error)
+	MyCart(ctx context.Context, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) ([]*model.CartItem, error)
 	Category(ctx context.Context, filter *string, limit *int32, page *int32) ([]*model.Category, error)
 	Subcategory(ctx context.Context, filter *string, categoryID string, limit *int32, page *int32) ([]*model.Subcategory, error)
 	OrderList(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, page *int32) ([]*model.Order, error)
 	OrderDetail(ctx context.Context, orderID string) (*model.Order, error)
 	PackageRecomamendation(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) (*model.PackageResponse, error)
 	ProductList(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) (*model.ProductPage, error)
-	ProductsHome(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, limit *int32, page *int32) ([]*model.ProductByCategory, error)
+	ProductsHome(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) ([]*model.ProductByCategory, error)
 	ProductDetail(ctx context.Context, productID string) (*model.Product, error)
 }
 
@@ -355,16 +355,16 @@ func (ec *executionContext) field_Query_productsHome_args(ctx context.Context, r
 		return nil, err
 	}
 	args["sort"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint32)
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "page", ec.unmarshalOInt2ᚖint32)
 	if err != nil {
 		return nil, err
 	}
-	args["limit"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "page", ec.unmarshalOInt2ᚖint32)
+	args["page"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint32)
 	if err != nil {
 		return nil, err
 	}
-	args["page"] = arg3
+	args["limit"] = arg3
 	return args, nil
 }
 
@@ -1319,11 +1319,11 @@ func (ec *executionContext) _Query_myCart(ctx context.Context, field graphql.Col
 			directive1 := func(ctx context.Context) (any, error) {
 				role, err := ec.unmarshalORole2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐRole(ctx, "USER")
 				if err != nil {
-					var zeroVal *model.MyCartResponse
+					var zeroVal []*model.CartItem
 					return zeroVal, err
 				}
 				if ec.directives.Auth == nil {
-					var zeroVal *model.MyCartResponse
+					var zeroVal []*model.CartItem
 					return zeroVal, errors.New("directive auth is not implemented")
 				}
 				return ec.directives.Auth(ctx, nil, directive0, role)
@@ -1332,9 +1332,9 @@ func (ec *executionContext) _Query_myCart(ctx context.Context, field graphql.Col
 			next = directive1
 			return next
 		},
-		ec.marshalNMyCartResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐMyCartResponse,
+		ec.marshalOCartItem2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartItem,
 		true,
-		true,
+		false,
 	)
 }
 
@@ -1346,14 +1346,20 @@ func (ec *executionContext) fieldContext_Query_myCart(ctx context.Context, field
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "success":
-				return ec.fieldContext_MyCartResponse_success(ctx, field)
-			case "message":
-				return ec.fieldContext_MyCartResponse_message(ctx, field)
-			case "data":
-				return ec.fieldContext_MyCartResponse_data(ctx, field)
+			case "id":
+				return ec.fieldContext_CartItem_id(ctx, field)
+			case "userId":
+				return ec.fieldContext_CartItem_userId(ctx, field)
+			case "quantity":
+				return ec.fieldContext_CartItem_quantity(ctx, field)
+			case "product":
+				return ec.fieldContext_CartItem_product(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_CartItem_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_CartItem_updatedAt(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type MyCartResponse", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type CartItem", field.Name)
 		},
 	}
 	defer func() {
@@ -1710,7 +1716,7 @@ func (ec *executionContext) _Query_productsHome(ctx context.Context, field graph
 		ec.fieldContext_Query_productsHome,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().ProductsHome(ctx, fc.Args["filter"].(*model.ProductFilterInput), fc.Args["sort"].(*model.ProductSortInput), fc.Args["limit"].(*int32), fc.Args["page"].(*int32))
+			return ec.resolvers.Query().ProductsHome(ctx, fc.Args["filter"].(*model.ProductFilterInput), fc.Args["sort"].(*model.ProductSortInput), fc.Args["page"].(*int32), fc.Args["limit"].(*int32))
 		},
 		nil,
 		ec.marshalNProductByCategory2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐProductByCategoryᚄ,
@@ -2093,16 +2099,13 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		case "myCart":
 			field := field
 
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
 				defer func() {
 					if r := recover(); r != nil {
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
 				res = ec._Query_myCart(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
 				return res
 			}
 
