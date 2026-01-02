@@ -129,6 +129,7 @@ func (s *service) GetCart(
 				CategoryID:    r.CategoryID,
 				SubcategoryID: r.SubcategoryID,
 				Slug:          r.Slug,
+				Status:        &r.Status,
 				ImageURL:      r.ProductImageURL,
 				Variant: &model.Variant{
 					ID:           r.VariantID,

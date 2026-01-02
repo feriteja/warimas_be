@@ -371,10 +371,11 @@ func (r *repository) GetCartRows(
 		p.id,
 		p.name,
 		p.seller_id,
-		s.name,
+		COALESCE(s.name, 'UNKNOWN'),
 		p.category_id,
 		p.subcategory_id,
 		p.slug,
+		p.status,
 		p.imageurl,
 
 		v.id,
@@ -427,6 +428,7 @@ func (r *repository) GetCartRows(
 			&row.CategoryID,
 			&row.SubcategoryID,
 			&row.Slug,
+			&row.Status,
 			&row.ProductImageURL,
 
 			&row.VariantID,

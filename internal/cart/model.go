@@ -76,6 +76,7 @@ type cartRow struct {
 	CategoryID      string
 	SubcategoryID   string
 	Slug            string
+	Status          string
 	ProductImageURL *string
 
 	VariantID        string
