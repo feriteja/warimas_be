@@ -106,6 +106,10 @@ type ComplexityRoot struct {
 		VariantName  func(childComplexity int) int
 	}
 
+	CreateAddressResponse struct {
+		Address func(childComplexity int) int
+	}
+
 	CreateOrderResponse struct {
 		Message     func(childComplexity int) int
 		Order       func(childComplexity int) int
@@ -114,17 +118,24 @@ type ComplexityRoot struct {
 		Success     func(childComplexity int) int
 	}
 
+	DeleteAddressResponse struct {
+		Success func(childComplexity int) int
+	}
+
 	Mutation struct {
 		AddCategory          func(childComplexity int, name string) int
 		AddSubcategory       func(childComplexity int, categoryID string, name string) int
 		AddToCart            func(childComplexity int, input model.AddToCartInput) int
+		CreateAddress        func(childComplexity int, input model.CreateAddressInput) int
 		CreateOrder          func(childComplexity int) int
 		CreateProduct        func(childComplexity int, input model.NewProduct) int
 		CreateSessionOrder   func(childComplexity int, input model.CreateSessionOrderInput) int
 		CreateVariants       func(childComplexity int, input []*model.NewVariant) int
+		DeleteAddress        func(childComplexity int, input model.DeleteAddressInput) int
 		Login                func(childComplexity int, input model.LoginInput) int
 		Register             func(childComplexity int, input model.RegisterInput) int
 		RemoveFromCart       func(childComplexity int, variantID string) int
+		UpdateAddress        func(childComplexity int, input model.UpdateAddressInput) int
 		UpdateCart           func(childComplexity int, input model.UpdateCartInput) int
 		UpdateOrderStatus    func(childComplexity int, input model.UpdateOrderStatusInput) int
 		UpdateProduct        func(childComplexity int, input model.UpdateProduct) int
@@ -246,6 +257,8 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
+		Address                func(childComplexity int, id string) int
+		Addresses              func(childComplexity int) int
 		Category               func(childComplexity int, filter *string, limit *int32, page *int32) int
 		CheckoutSession        func(childComplexity int, id string) int
 		MyCart                 func(childComplexity int, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) int
@@ -273,6 +286,10 @@ type ComplexityRoot struct {
 		CategoryID func(childComplexity int) int
 		ID         func(childComplexity int) int
 		Name       func(childComplexity int) int
+	}
+
+	UpdateAddressResponse struct {
+		Address func(childComplexity int) int
 	}
 
 	UpdateSessionAddressResponse struct {
@@ -607,6 +624,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.CheckoutSessionItem.VariantName(childComplexity), true
 
+	case "CreateAddressResponse.address":
+		if e.complexity.CreateAddressResponse.Address == nil {
+			break
+		}
+
+		return e.complexity.CreateAddressResponse.Address(childComplexity), true
+
 	case "CreateOrderResponse.message":
 		if e.complexity.CreateOrderResponse.Message == nil {
 			break
@@ -641,6 +665,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.CreateOrderResponse.Success(childComplexity), true
+
+	case "DeleteAddressResponse.success":
+		if e.complexity.DeleteAddressResponse.Success == nil {
+			break
+		}
+
+		return e.complexity.DeleteAddressResponse.Success(childComplexity), true
 
 	case "Mutation.addCategory":
 		if e.complexity.Mutation.AddCategory == nil {
@@ -677,6 +708,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.AddToCart(childComplexity, args["input"].(model.AddToCartInput)), true
+
+	case "Mutation.createAddress":
+		if e.complexity.Mutation.CreateAddress == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createAddress_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateAddress(childComplexity, args["input"].(model.CreateAddressInput)), true
 
 	case "Mutation.createOrder":
 		if e.complexity.Mutation.CreateOrder == nil {
@@ -721,6 +764,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.CreateVariants(childComplexity, args["input"].([]*model.NewVariant)), true
 
+	case "Mutation.deleteAddress":
+		if e.complexity.Mutation.DeleteAddress == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteAddress_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteAddress(childComplexity, args["input"].(model.DeleteAddressInput)), true
+
 	case "Mutation.login":
 		if e.complexity.Mutation.Login == nil {
 			break
@@ -756,6 +811,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.RemoveFromCart(childComplexity, args["variantId"].(string)), true
+
+	case "Mutation.updateAddress":
+		if e.complexity.Mutation.UpdateAddress == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateAddress_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateAddress(childComplexity, args["input"].(model.UpdateAddressInput)), true
 
 	case "Mutation.updateCart":
 		if e.complexity.Mutation.UpdateCart == nil {
@@ -1356,6 +1423,25 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ProductPage.TotalPages(childComplexity), true
 
+	case "Query.address":
+		if e.complexity.Query.Address == nil {
+			break
+		}
+
+		args, err := ec.field_Query_address_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Address(childComplexity, args["id"].(string)), true
+
+	case "Query.addresses":
+		if e.complexity.Query.Addresses == nil {
+			break
+		}
+
+		return e.complexity.Query.Addresses(childComplexity), true
+
 	case "Query.category":
 		if e.complexity.Query.Category == nil {
 			break
@@ -1532,6 +1618,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Subcategory.Name(childComplexity), true
 
+	case "UpdateAddressResponse.address":
+		if e.complexity.UpdateAddressResponse.Address == nil {
+			break
+		}
+
+		return e.complexity.UpdateAddressResponse.Address(childComplexity), true
+
 	case "UpdateSessionAddressResponse.addressId":
 		if e.complexity.UpdateSessionAddressResponse.AddressID == nil {
 			break
@@ -1653,9 +1746,12 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	ec := executionContext{opCtx, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputAddToCartInput,
+		ec.unmarshalInputAddressInput,
 		ec.unmarshalInputCartFilterInput,
 		ec.unmarshalInputCartSortInput,
+		ec.unmarshalInputCreateAddressInput,
 		ec.unmarshalInputCreateSessionOrderInput,
+		ec.unmarshalInputDeleteAddressInput,
 		ec.unmarshalInputLoginInput,
 		ec.unmarshalInputNewProduct,
 		ec.unmarshalInputNewVariant,
@@ -1667,6 +1763,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputProductSortInput,
 		ec.unmarshalInputRegisterInput,
 		ec.unmarshalInputSessionOrderItemInput,
+		ec.unmarshalInputUpdateAddressInput,
 		ec.unmarshalInputUpdateCartInput,
 		ec.unmarshalInputUpdateOrderStatusInput,
 		ec.unmarshalInputUpdateProduct,

@@ -1,3 +1,31 @@
+input UpdateAddressInput {
+  addressId: ID!
+  address: AddressInput!
+  setAsDefault: Boolean = false
+}
+
+input AddressInput {
+  name: String!
+  phone: String!
+
+  addressLine1: String!
+  addressLine2: String
+
+  city: String!
+  province: String!
+  postalCode: String!
+  country: String!
+}
+
+input CreateAddressInput {
+  address: AddressInput!
+  setAsDefault: Boolean = false
+}
+
+input DeleteAddressInput {
+  addressId: ID!
+}
+
 type Address {
   id: ID!
 
@@ -13,4 +41,28 @@ type Address {
   country: String!
 
   isDefault: Boolean!
+}
+
+type CreateAddressResponse {
+  address: Address!
+}
+
+type UpdateAddressResponse {
+  address: Address!
+}
+
+type DeleteAddressResponse {
+  success: Boolean!
+}
+
+extend type Query {
+  addresses: [Address!]!
+
+  address(id: ID!): Address
+}
+
+extend type Mutation {
+  createAddress(input: CreateAddressInput!): CreateAddressResponse!
+  updateAddress(input: UpdateAddressInput!): UpdateAddressResponse!
+  deleteAddress(input: DeleteAddressInput!): DeleteAddressResponse!
 }

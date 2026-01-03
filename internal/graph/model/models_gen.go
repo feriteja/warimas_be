@@ -34,6 +34,17 @@ type Address struct {
 	IsDefault    bool    `json:"isDefault"`
 }
 
+type AddressInput struct {
+	Name         string  `json:"name"`
+	Phone        string  `json:"phone"`
+	AddressLine1 string  `json:"addressLine1"`
+	AddressLine2 *string `json:"addressLine2,omitempty"`
+	City         string  `json:"city"`
+	Province     string  `json:"province"`
+	PostalCode   string  `json:"postalCode"`
+	Country      string  `json:"country"`
+}
+
 type AuthResponse struct {
 	User  *User   `json:"user"`
 	Token *string `json:"token,omitempty"`
@@ -87,6 +98,15 @@ type CheckoutSessionItem struct {
 	Subtotal     int32   `json:"subtotal"`
 }
 
+type CreateAddressInput struct {
+	Address      *AddressInput `json:"address"`
+	SetAsDefault *bool         `json:"setAsDefault,omitempty"`
+}
+
+type CreateAddressResponse struct {
+	Address *Address `json:"address"`
+}
+
 type CreateOrderResponse struct {
 	Success     bool    `json:"success"`
 	Message     *string `json:"message,omitempty"`
@@ -97,6 +117,14 @@ type CreateOrderResponse struct {
 
 type CreateSessionOrderInput struct {
 	Items []*SessionOrderItemInput `json:"items"`
+}
+
+type DeleteAddressInput struct {
+	AddressID string `json:"addressId"`
+}
+
+type DeleteAddressResponse struct {
+	Success bool `json:"success"`
 }
 
 type LoginInput struct {
@@ -303,6 +331,16 @@ type Subcategory struct {
 	ID         string `json:"id"`
 	CategoryID string `json:"categoryID"`
 	Name       string `json:"name"`
+}
+
+type UpdateAddressInput struct {
+	AddressID    string        `json:"addressId"`
+	Address      *AddressInput `json:"address"`
+	SetAsDefault *bool         `json:"setAsDefault,omitempty"`
+}
+
+type UpdateAddressResponse struct {
+	Address *Address `json:"address"`
 }
 
 type UpdateCartInput struct {
