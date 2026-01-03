@@ -100,6 +100,16 @@ func (r *mutationResolver) UpdateOrderStatus(ctx context.Context, input model.Up
 	}, nil
 }
 
+// CreateSessionOrder is the resolver for the createSessionOrder field.
+func (r *mutationResolver) CreateSessionOrder(ctx context.Context, input model.CreateSessionOrderInput) (*model.SessionOrderResponse, error) {
+	panic(fmt.Errorf("not implemented: CreateSessionOrder - createSessionOrder"))
+}
+
+// UpdateSessionAddress is the resolver for the updateSessionAddress field.
+func (r *mutationResolver) UpdateSessionAddress(ctx context.Context, input model.UpdateSessionAddressInput) (*model.UpdateSessionAddressResponse, error) {
+	panic(fmt.Errorf("not implemented: UpdateSessionAddress - updateSessionAddress"))
+}
+
 // OrderList is the resolver for the orderList field.
 func (r *queryResolver) OrderList(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, page *int32) ([]*model.Order, error) {
 	orders, err := r.OrderSvc.GetOrders(ctx, filter, sort, limit, page)
@@ -128,4 +138,9 @@ func (r *queryResolver) OrderDetail(ctx context.Context, orderID string) (*model
 	}
 
 	return toGraphQLOrder(order), nil
+}
+
+// CheckoutSession is the resolver for the checkoutSession field.
+func (r *queryResolver) CheckoutSession(ctx context.Context, id string) (*model.CheckoutSession, error) {
+	panic(fmt.Errorf("not implemented: CheckoutSession - checkoutSession"))
 }

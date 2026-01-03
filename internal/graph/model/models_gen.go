@@ -21,6 +21,19 @@ type AddToCartResponse struct {
 	CartItem *CartItem `json:"cartItem,omitempty"`
 }
 
+type Address struct {
+	ID           string  `json:"id"`
+	Name         string  `json:"name"`
+	Phone        string  `json:"phone"`
+	AddressLine1 string  `json:"addressLine1"`
+	AddressLine2 *string `json:"addressLine2,omitempty"`
+	City         string  `json:"city"`
+	Province     string  `json:"province"`
+	PostalCode   string  `json:"postalCode"`
+	Country      string  `json:"country"`
+	IsDefault    bool    `json:"isDefault"`
+}
+
 type AuthResponse struct {
 	User  *User   `json:"user"`
 	Token *string `json:"token,omitempty"`
@@ -50,12 +63,40 @@ type Category struct {
 	Name string `json:"name"`
 }
 
+type CheckoutSession struct {
+	ID          string                 `json:"id"`
+	Status      string                 `json:"status"`
+	ExpiresAt   time.Time              `json:"expiresAt"`
+	Address     *Address               `json:"address,omitempty"`
+	Items       []*CheckoutSessionItem `json:"items"`
+	Subtotal    int32                  `json:"subtotal"`
+	Tax         int32                  `json:"tax"`
+	ShippingFee int32                  `json:"shippingFee"`
+	Discount    int32                  `json:"discount"`
+	TotalPrice  int32                  `json:"totalPrice"`
+}
+
+type CheckoutSessionItem struct {
+	ID           string  `json:"id"`
+	VariantID    string  `json:"variantId"`
+	VariantName  string  `json:"variantName"`
+	ImageURL     *string `json:"imageUrl,omitempty"`
+	Quantity     int32   `json:"quantity"`
+	QuantityType string  `json:"quantityType"`
+	UnitPrice    int32   `json:"unitPrice"`
+	Subtotal     int32   `json:"subtotal"`
+}
+
 type CreateOrderResponse struct {
 	Success     bool    `json:"success"`
 	Message     *string `json:"message,omitempty"`
 	Order       *Order  `json:"order,omitempty"`
 	PaymentURL  string  `json:"paymentURL"`
 	PaymentStat string  `json:"paymentStat"`
+}
+
+type CreateSessionOrderInput struct {
+	Items []*SessionOrderItemInput `json:"items"`
 }
 
 type LoginInput struct {
@@ -247,6 +288,17 @@ type Response struct {
 	Message *string `json:"message,omitempty"`
 }
 
+type SessionOrderItemInput struct {
+	VariantID string `json:"variantId"`
+	Quantity  int32  `json:"quantity"`
+}
+
+type SessionOrderResponse struct {
+	SessionID string    `json:"sessionId"`
+	Status    string    `json:"status"`
+	ExpiresAt time.Time `json:"expiresAt"`
+}
+
 type Subcategory struct {
 	ID         string `json:"id"`
 	CategoryID string `json:"categoryID"`
@@ -271,6 +323,16 @@ type UpdateProduct struct {
 	CategoryID    *string `json:"categoryId,omitempty"`
 	SubcategoryID *string `json:"subcategoryID,omitempty"`
 	Status        *string `json:"status,omitempty"`
+}
+
+type UpdateSessionAddressInput struct {
+	SessionID string `json:"sessionId"`
+	AddressID string `json:"addressId"`
+}
+
+type UpdateSessionAddressResponse struct {
+	SessionID string `json:"sessionId"`
+	AddressID string `json:"addressId"`
 }
 
 type UpdateVariant struct {

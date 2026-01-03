@@ -136,14 +136,7 @@ func (r *mutationResolver) RemoveFromCart(ctx context.Context, variantID string)
 }
 
 // Get all items in my cart
-func (r *queryResolver) MyCart(
-	ctx context.Context,
-	filter *model.CartFilterInput,
-	sort *model.CartSortInput,
-	limit *int32,
-	page *int32,
-) ([]*model.CartItem, error) {
-
+func (r *queryResolver) MyCart(ctx context.Context, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) ([]*model.CartItem, error) {
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "resolver"),
 		zap.String("method", "MyCart"),

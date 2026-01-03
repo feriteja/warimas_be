@@ -50,6 +50,19 @@ type ComplexityRoot struct {
 		Success  func(childComplexity int) int
 	}
 
+	Address struct {
+		AddressLine1 func(childComplexity int) int
+		AddressLine2 func(childComplexity int) int
+		City         func(childComplexity int) int
+		Country      func(childComplexity int) int
+		ID           func(childComplexity int) int
+		IsDefault    func(childComplexity int) int
+		Name         func(childComplexity int) int
+		Phone        func(childComplexity int) int
+		PostalCode   func(childComplexity int) int
+		Province     func(childComplexity int) int
+	}
+
 	AuthResponse struct {
 		Token func(childComplexity int) int
 		User  func(childComplexity int) int
@@ -69,6 +82,30 @@ type ComplexityRoot struct {
 		Name func(childComplexity int) int
 	}
 
+	CheckoutSession struct {
+		Address     func(childComplexity int) int
+		Discount    func(childComplexity int) int
+		ExpiresAt   func(childComplexity int) int
+		ID          func(childComplexity int) int
+		Items       func(childComplexity int) int
+		ShippingFee func(childComplexity int) int
+		Status      func(childComplexity int) int
+		Subtotal    func(childComplexity int) int
+		Tax         func(childComplexity int) int
+		TotalPrice  func(childComplexity int) int
+	}
+
+	CheckoutSessionItem struct {
+		ID           func(childComplexity int) int
+		ImageURL     func(childComplexity int) int
+		Quantity     func(childComplexity int) int
+		QuantityType func(childComplexity int) int
+		Subtotal     func(childComplexity int) int
+		UnitPrice    func(childComplexity int) int
+		VariantID    func(childComplexity int) int
+		VariantName  func(childComplexity int) int
+	}
+
 	CreateOrderResponse struct {
 		Message     func(childComplexity int) int
 		Order       func(childComplexity int) int
@@ -78,19 +115,21 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddCategory       func(childComplexity int, name string) int
-		AddSubcategory    func(childComplexity int, categoryID string, name string) int
-		AddToCart         func(childComplexity int, input model.AddToCartInput) int
-		CreateOrder       func(childComplexity int) int
-		CreateProduct     func(childComplexity int, input model.NewProduct) int
-		CreateVariants    func(childComplexity int, input []*model.NewVariant) int
-		Login             func(childComplexity int, input model.LoginInput) int
-		Register          func(childComplexity int, input model.RegisterInput) int
-		RemoveFromCart    func(childComplexity int, variantID string) int
-		UpdateCart        func(childComplexity int, input model.UpdateCartInput) int
-		UpdateOrderStatus func(childComplexity int, input model.UpdateOrderStatusInput) int
-		UpdateProduct     func(childComplexity int, input model.UpdateProduct) int
-		UpdateVariants    func(childComplexity int, input []*model.UpdateVariant) int
+		AddCategory          func(childComplexity int, name string) int
+		AddSubcategory       func(childComplexity int, categoryID string, name string) int
+		AddToCart            func(childComplexity int, input model.AddToCartInput) int
+		CreateOrder          func(childComplexity int) int
+		CreateProduct        func(childComplexity int, input model.NewProduct) int
+		CreateSessionOrder   func(childComplexity int, input model.CreateSessionOrderInput) int
+		CreateVariants       func(childComplexity int, input []*model.NewVariant) int
+		Login                func(childComplexity int, input model.LoginInput) int
+		Register             func(childComplexity int, input model.RegisterInput) int
+		RemoveFromCart       func(childComplexity int, variantID string) int
+		UpdateCart           func(childComplexity int, input model.UpdateCartInput) int
+		UpdateOrderStatus    func(childComplexity int, input model.UpdateOrderStatusInput) int
+		UpdateProduct        func(childComplexity int, input model.UpdateProduct) int
+		UpdateSessionAddress func(childComplexity int, input model.UpdateSessionAddressInput) int
+		UpdateVariants       func(childComplexity int, input []*model.UpdateVariant) int
 	}
 
 	Order struct {
@@ -208,6 +247,7 @@ type ComplexityRoot struct {
 
 	Query struct {
 		Category               func(childComplexity int, filter *string, limit *int32, page *int32) int
+		CheckoutSession        func(childComplexity int, id string) int
 		MyCart                 func(childComplexity int, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) int
 		OrderDetail            func(childComplexity int, orderID string) int
 		OrderList              func(childComplexity int, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, page *int32) int
@@ -223,10 +263,21 @@ type ComplexityRoot struct {
 		Success func(childComplexity int) int
 	}
 
+	SessionOrderResponse struct {
+		ExpiresAt func(childComplexity int) int
+		SessionID func(childComplexity int) int
+		Status    func(childComplexity int) int
+	}
+
 	Subcategory struct {
 		CategoryID func(childComplexity int) int
 		ID         func(childComplexity int) int
 		Name       func(childComplexity int) int
+	}
+
+	UpdateSessionAddressResponse struct {
+		AddressID func(childComplexity int) int
+		SessionID func(childComplexity int) int
 	}
 
 	User struct {
@@ -289,6 +340,76 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.AddToCartResponse.Success(childComplexity), true
+
+	case "Address.addressLine1":
+		if e.complexity.Address.AddressLine1 == nil {
+			break
+		}
+
+		return e.complexity.Address.AddressLine1(childComplexity), true
+
+	case "Address.addressLine2":
+		if e.complexity.Address.AddressLine2 == nil {
+			break
+		}
+
+		return e.complexity.Address.AddressLine2(childComplexity), true
+
+	case "Address.city":
+		if e.complexity.Address.City == nil {
+			break
+		}
+
+		return e.complexity.Address.City(childComplexity), true
+
+	case "Address.country":
+		if e.complexity.Address.Country == nil {
+			break
+		}
+
+		return e.complexity.Address.Country(childComplexity), true
+
+	case "Address.id":
+		if e.complexity.Address.ID == nil {
+			break
+		}
+
+		return e.complexity.Address.ID(childComplexity), true
+
+	case "Address.isDefault":
+		if e.complexity.Address.IsDefault == nil {
+			break
+		}
+
+		return e.complexity.Address.IsDefault(childComplexity), true
+
+	case "Address.name":
+		if e.complexity.Address.Name == nil {
+			break
+		}
+
+		return e.complexity.Address.Name(childComplexity), true
+
+	case "Address.phone":
+		if e.complexity.Address.Phone == nil {
+			break
+		}
+
+		return e.complexity.Address.Phone(childComplexity), true
+
+	case "Address.postalCode":
+		if e.complexity.Address.PostalCode == nil {
+			break
+		}
+
+		return e.complexity.Address.PostalCode(childComplexity), true
+
+	case "Address.province":
+		if e.complexity.Address.Province == nil {
+			break
+		}
+
+		return e.complexity.Address.Province(childComplexity), true
 
 	case "AuthResponse.token":
 		if e.complexity.AuthResponse.Token == nil {
@@ -359,6 +480,132 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Category.Name(childComplexity), true
+
+	case "CheckoutSession.address":
+		if e.complexity.CheckoutSession.Address == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSession.Address(childComplexity), true
+
+	case "CheckoutSession.discount":
+		if e.complexity.CheckoutSession.Discount == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSession.Discount(childComplexity), true
+
+	case "CheckoutSession.expiresAt":
+		if e.complexity.CheckoutSession.ExpiresAt == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSession.ExpiresAt(childComplexity), true
+
+	case "CheckoutSession.id":
+		if e.complexity.CheckoutSession.ID == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSession.ID(childComplexity), true
+
+	case "CheckoutSession.items":
+		if e.complexity.CheckoutSession.Items == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSession.Items(childComplexity), true
+
+	case "CheckoutSession.shippingFee":
+		if e.complexity.CheckoutSession.ShippingFee == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSession.ShippingFee(childComplexity), true
+
+	case "CheckoutSession.status":
+		if e.complexity.CheckoutSession.Status == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSession.Status(childComplexity), true
+
+	case "CheckoutSession.subtotal":
+		if e.complexity.CheckoutSession.Subtotal == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSession.Subtotal(childComplexity), true
+
+	case "CheckoutSession.tax":
+		if e.complexity.CheckoutSession.Tax == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSession.Tax(childComplexity), true
+
+	case "CheckoutSession.totalPrice":
+		if e.complexity.CheckoutSession.TotalPrice == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSession.TotalPrice(childComplexity), true
+
+	case "CheckoutSessionItem.id":
+		if e.complexity.CheckoutSessionItem.ID == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSessionItem.ID(childComplexity), true
+
+	case "CheckoutSessionItem.imageUrl":
+		if e.complexity.CheckoutSessionItem.ImageURL == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSessionItem.ImageURL(childComplexity), true
+
+	case "CheckoutSessionItem.quantity":
+		if e.complexity.CheckoutSessionItem.Quantity == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSessionItem.Quantity(childComplexity), true
+
+	case "CheckoutSessionItem.quantityType":
+		if e.complexity.CheckoutSessionItem.QuantityType == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSessionItem.QuantityType(childComplexity), true
+
+	case "CheckoutSessionItem.subtotal":
+		if e.complexity.CheckoutSessionItem.Subtotal == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSessionItem.Subtotal(childComplexity), true
+
+	case "CheckoutSessionItem.unitPrice":
+		if e.complexity.CheckoutSessionItem.UnitPrice == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSessionItem.UnitPrice(childComplexity), true
+
+	case "CheckoutSessionItem.variantId":
+		if e.complexity.CheckoutSessionItem.VariantID == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSessionItem.VariantID(childComplexity), true
+
+	case "CheckoutSessionItem.variantName":
+		if e.complexity.CheckoutSessionItem.VariantName == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSessionItem.VariantName(childComplexity), true
 
 	case "CreateOrderResponse.message":
 		if e.complexity.CreateOrderResponse.Message == nil {
@@ -450,6 +697,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.CreateProduct(childComplexity, args["input"].(model.NewProduct)), true
 
+	case "Mutation.createSessionOrder":
+		if e.complexity.Mutation.CreateSessionOrder == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createSessionOrder_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateSessionOrder(childComplexity, args["input"].(model.CreateSessionOrderInput)), true
+
 	case "Mutation.createVariants":
 		if e.complexity.Mutation.CreateVariants == nil {
 			break
@@ -533,6 +792,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.UpdateProduct(childComplexity, args["input"].(model.UpdateProduct)), true
+
+	case "Mutation.updateSessionAddress":
+		if e.complexity.Mutation.UpdateSessionAddress == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateSessionAddress_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateSessionAddress(childComplexity, args["input"].(model.UpdateSessionAddressInput)), true
 
 	case "Mutation.updateVariants":
 		if e.complexity.Mutation.UpdateVariants == nil {
@@ -1097,6 +1368,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.Category(childComplexity, args["filter"].(*string), args["limit"].(*int32), args["page"].(*int32)), true
 
+	case "Query.checkoutSession":
+		if e.complexity.Query.CheckoutSession == nil {
+			break
+		}
+
+		args, err := ec.field_Query_checkoutSession_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.CheckoutSession(childComplexity, args["id"].(string)), true
+
 	case "Query.myCart":
 		if e.complexity.Query.MyCart == nil {
 			break
@@ -1207,6 +1490,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Response.Success(childComplexity), true
 
+	case "SessionOrderResponse.expiresAt":
+		if e.complexity.SessionOrderResponse.ExpiresAt == nil {
+			break
+		}
+
+		return e.complexity.SessionOrderResponse.ExpiresAt(childComplexity), true
+
+	case "SessionOrderResponse.sessionId":
+		if e.complexity.SessionOrderResponse.SessionID == nil {
+			break
+		}
+
+		return e.complexity.SessionOrderResponse.SessionID(childComplexity), true
+
+	case "SessionOrderResponse.status":
+		if e.complexity.SessionOrderResponse.Status == nil {
+			break
+		}
+
+		return e.complexity.SessionOrderResponse.Status(childComplexity), true
+
 	case "Subcategory.categoryID":
 		if e.complexity.Subcategory.CategoryID == nil {
 			break
@@ -1227,6 +1531,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Subcategory.Name(childComplexity), true
+
+	case "UpdateSessionAddressResponse.addressId":
+		if e.complexity.UpdateSessionAddressResponse.AddressID == nil {
+			break
+		}
+
+		return e.complexity.UpdateSessionAddressResponse.AddressID(childComplexity), true
+
+	case "UpdateSessionAddressResponse.sessionId":
+		if e.complexity.UpdateSessionAddressResponse.SessionID == nil {
+			break
+		}
+
+		return e.complexity.UpdateSessionAddressResponse.SessionID(childComplexity), true
 
 	case "User.email":
 		if e.complexity.User.Email == nil {
@@ -1337,6 +1655,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputAddToCartInput,
 		ec.unmarshalInputCartFilterInput,
 		ec.unmarshalInputCartSortInput,
+		ec.unmarshalInputCreateSessionOrderInput,
 		ec.unmarshalInputLoginInput,
 		ec.unmarshalInputNewProduct,
 		ec.unmarshalInputNewVariant,
@@ -1347,9 +1666,11 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputProductFilterInput,
 		ec.unmarshalInputProductSortInput,
 		ec.unmarshalInputRegisterInput,
+		ec.unmarshalInputSessionOrderItemInput,
 		ec.unmarshalInputUpdateCartInput,
 		ec.unmarshalInputUpdateOrderStatusInput,
 		ec.unmarshalInputUpdateProduct,
+		ec.unmarshalInputUpdateSessionAddressInput,
 		ec.unmarshalInputUpdateVariant,
 	)
 	first := true
@@ -1447,7 +1768,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 	return introspection.WrapTypeFromDef(ec.Schema(), ec.Schema().Types[name]), nil
 }
 
-//go:embed "schema/cart.graphqls" "schema/category.graphqls" "schema/common.graphqls" "schema/order.graphqls" "schema/package.graphqls" "schema/pagination.graphqls" "schema/product.graphqls" "schema/schema.graphqls" "schema/user.graphqls" "schema/variant.graphqls"
+//go:embed "schema/address.graphqls" "schema/cart.graphqls" "schema/category.graphqls" "schema/common.graphqls" "schema/order.graphqls" "schema/package.graphqls" "schema/pagination.graphqls" "schema/product.graphqls" "schema/schema.graphqls" "schema/user.graphqls" "schema/variant.graphqls"
 var sourcesFS embed.FS
 
 func sourceData(filename string) string {
@@ -1459,6 +1780,7 @@ func sourceData(filename string) string {
 }
 
 var sources = []*ast.Source{
+	{Name: "schema/address.graphqls", Input: sourceData("schema/address.graphqls"), BuiltIn: false},
 	{Name: "schema/cart.graphqls", Input: sourceData("schema/cart.graphqls"), BuiltIn: false},
 	{Name: "schema/category.graphqls", Input: sourceData("schema/category.graphqls"), BuiltIn: false},
 	{Name: "schema/common.graphqls", Input: sourceData("schema/common.graphqls"), BuiltIn: false},

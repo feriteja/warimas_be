@@ -1,4 +1,5 @@
 directive @auth(role: Role = USER) on FIELD_DEFINITION
+scalar Time
 
 enum Role {
   USER

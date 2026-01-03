@@ -28,6 +28,20 @@ input OrderSortInput {
   direction: SortDirection! = ASC
 }
 
+input CreateSessionOrderInput {
+  items: [SessionOrderItemInput!]!
+}
+
+input SessionOrderItemInput {
+  variantId: ID!
+  quantity: Int!
+}
+
+input UpdateSessionAddressInput {
+  sessionId: ID!
+  addressId: ID!
+}
+
 type OrderItem {
   id: ID!
   orderId: ID!
@@ -54,6 +68,46 @@ type CreateOrderResponse {
   paymentStat: String!
 }
 
+type SessionOrderResponse {
+  sessionId: ID!
+  status: String!
+  expiresAt: Time!
+}
+
+type UpdateSessionAddressResponse {
+  sessionId: ID!
+  addressId: ID!
+}
+
+type CheckoutSession {
+  id: ID!
+  status: String!
+  expiresAt: Time!
+
+  address: Address
+  items: [CheckoutSessionItem!]!
+
+  subtotal: Int!
+  tax: Int!
+  shippingFee: Int!
+  discount: Int!
+  totalPrice: Int!
+}
+
+type CheckoutSessionItem {
+  id: ID!
+
+  variantId: ID!
+  variantName: String!
+  imageUrl: String
+
+  quantity: Int!
+  quantityType: String!
+
+  unitPrice: Int!
+  subtotal: Int!
+}
+
 extend type Query {
   orderList(
     filter: OrderFilterInput
@@ -63,10 +117,16 @@ extend type Query {
   ): [Order!]!
 
   orderDetail(orderId: ID!): Order! @auth(role: USER)
+
+  checkoutSession(id: ID!): CheckoutSession
 }
 
 extend type Mutation {
   createOrder: CreateOrderResponse! @auth(role: USER)
   updateOrderStatus(input: UpdateOrderStatusInput!): CreateOrderResponse!
     @auth(role: ADMIN)
+  createSessionOrder(input: CreateSessionOrderInput!): SessionOrderResponse!
+  updateSessionAddress(
+    input: UpdateSessionAddressInput!
+  ): UpdateSessionAddressResponse!
 }
