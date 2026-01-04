@@ -135,6 +135,7 @@ type ComplexityRoot struct {
 		Login                func(childComplexity int, input model.LoginInput) int
 		Register             func(childComplexity int, input model.RegisterInput) int
 		RemoveFromCart       func(childComplexity int, variantID string) int
+		SetDefaultAddress    func(childComplexity int, addressID string) int
 		UpdateAddress        func(childComplexity int, input model.UpdateAddressInput) int
 		UpdateCart           func(childComplexity int, input model.UpdateCartInput) int
 		UpdateOrderStatus    func(childComplexity int, input model.UpdateOrderStatusInput) int
@@ -811,6 +812,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.RemoveFromCart(childComplexity, args["variantId"].(string)), true
+
+	case "Mutation.SetDefaultAddress":
+		if e.complexity.Mutation.SetDefaultAddress == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_SetDefaultAddress_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetDefaultAddress(childComplexity, args["addressId"].(string)), true
 
 	case "Mutation.updateAddress":
 		if e.complexity.Mutation.UpdateAddress == nil {

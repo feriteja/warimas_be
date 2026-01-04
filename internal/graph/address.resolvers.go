@@ -6,13 +6,54 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"warimas-be/internal/address"
 	"warimas-be/internal/graph/model"
+	"warimas-be/internal/logger"
+	"warimas-be/internal/utils"
+
+	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 // CreateAddress is the resolver for the createAddress field.
 func (r *mutationResolver) CreateAddress(ctx context.Context, input model.CreateAddressInput) (*model.CreateAddressResponse, error) {
-	panic(fmt.Errorf("not implemented: CreateAddress - createAddress"))
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		return nil, errors.New("unauthorized")
+	}
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "CreateAddress"),
+		zap.Uint("user_id", userID),
+	)
+
+	log.Info("create address")
+
+	inputAddress := address.CreateAddressInput{
+
+		Name:         input.Address.Name,
+		Phone:        input.Address.Phone,
+		AddressLine1: input.Address.AddressLine1,
+		AddressLine2: input.Address.AddressLine2,
+		City:         input.Address.City,
+		Province:     input.Address.Province,
+		PostalCode:   input.Address.PostalCode,
+		Country:      input.Address.Country,
+		SetAsDefault: *input.SetAsDefault,
+	}
+
+	addressEntities, err := r.AddressSvc.Create(ctx, inputAddress)
+	if err != nil {
+		log.Error("failed to create address", zap.Error(err))
+		return nil, err
+	}
+
+	// return address.MapAddressToGraphQL(addressEntities), nil
+	return &model.CreateAddressResponse{
+		Address: address.MapAddressToGraphQL(addressEntities),
+	}, nil
 }
 
 // UpdateAddress is the resolver for the updateAddress field.
@@ -22,15 +63,123 @@ func (r *mutationResolver) UpdateAddress(ctx context.Context, input model.Update
 
 // DeleteAddress is the resolver for the deleteAddress field.
 func (r *mutationResolver) DeleteAddress(ctx context.Context, input model.DeleteAddressInput) (*model.DeleteAddressResponse, error) {
-	panic(fmt.Errorf("not implemented: DeleteAddress - deleteAddress"))
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		return nil, errors.New("unauthorized")
+	}
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "DeleteAddress"),
+		zap.Uint("user_id", userID),
+		zap.String("address_id", input.AddressID),
+	)
+
+	log.Info("delete address")
+
+	addressID, err := uuid.Parse(input.AddressID)
+	if err != nil {
+		log.Error("failed to parse address ID", zap.Error(err))
+		return nil, err
+	}
+
+	if err := r.AddressSvc.Delete(ctx, addressID); err != nil {
+		log.Error("failed to delete address", zap.Error(err))
+		return nil, err
+	}
+
+	return &model.DeleteAddressResponse{
+		Success: true,
+	}, nil
+}
+
+// SetDefaultAddress is the resolver for the SetDefaultAddress field.
+func (r *mutationResolver) SetDefaultAddress(ctx context.Context, addressID string) (bool, error) {
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		return false, errors.New("unauthorized")
+	}
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "SetDefaultAddress"),
+		zap.Uint("user_id", userID),
+		zap.String("address_id", addressID),
+	)
+
+	log.Info("set default address")
+
+	addressUUID, err := uuid.Parse(addressID)
+	if err != nil {
+		log.Error("failed to parse address ID", zap.Error(err))
+		return false, err
+	}
+	if err := r.AddressSvc.SetDefaultAddress(ctx, addressUUID); err != nil {
+		log.Error("failed to set default address", zap.Error(err))
+		return false, err
+	}
+
+	return true, nil
 }
 
 // Addresses is the resolver for the addresses field.
 func (r *queryResolver) Addresses(ctx context.Context) ([]*model.Address, error) {
-	panic(fmt.Errorf("not implemented: Addresses - addresses"))
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		return nil, errors.New("unauthorized")
+	}
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "Addresses"),
+		zap.Uint("user_id", userID),
+	)
+
+	log.Info("fetch addresses")
+
+	// service layer result
+	addressEntities, err := r.AddressSvc.List(ctx)
+	if err != nil {
+		log.Error("failed to fetch addresses", zap.Error(err))
+		return nil, err
+	}
+
+	// graphql output
+	addresses := make([]*model.Address, 0, len(addressEntities))
+
+	for _, addr := range addressEntities {
+		addresses = append(addresses, address.MapAddressToGraphQL(addr))
+	}
+
+	return addresses, nil
 }
 
 // Address is the resolver for the address field.
-func (r *queryResolver) Address(ctx context.Context, id string) (*model.Address, error) {
-	panic(fmt.Errorf("not implemented: Address - address"))
+func (r *queryResolver) Address(ctx context.Context, addressID string) (*model.Address, error) {
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		return nil, errors.New("unauthorized")
+	}
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "Address"),
+		zap.Uint("user_id", userID),
+		zap.String("address_id", addressID),
+	)
+
+	log.Info("fetch address")
+
+	addressUUID, err := uuid.Parse(addressID)
+	if err != nil {
+		log.Error("failed to parse address ID", zap.Error(err))
+		return nil, err
+	}
+
+	addressEntity, err := r.AddressSvc.Get(ctx, addressUUID)
+	if err != nil {
+		log.Error("failed to fetch address", zap.Error(err))
+		return nil, err
+	}
+
+	return address.MapAddressToGraphQL(addressEntity), nil
 }
