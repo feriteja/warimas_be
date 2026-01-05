@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 	"warimas-be/internal/graph/model"
 
 	"github.com/99designs/gqlgen/graphql"
@@ -77,6 +78,14 @@ func PtrInt32(i *int32) int32 {
 		return 0
 	}
 	return *i
+}
+
+func FormatTimePtr(t *time.Time) *string {
+	if t == nil {
+		return nil
+	}
+	s := t.Format(time.RFC3339)
+	return &s
 }
 
 func HasAnyUpdateProductField(input model.UpdateProduct) bool {

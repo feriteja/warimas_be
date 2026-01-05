@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
 	"warimas-be/internal/product"
@@ -17,108 +16,6 @@ import (
 
 	"go.uber.org/zap"
 )
-
-func mapSortField(f *model.ProductSortField) prodInternal.ProductSortField {
-	if f == nil {
-		return product.ProductSortFieldCreatedAt
-	}
-
-	switch *f {
-	case model.ProductSortFieldPrice:
-		return product.ProductSortFieldPrice
-	case model.ProductSortFieldName:
-		return product.ProductSortFieldName
-	default:
-		return product.ProductSortFieldCreatedAt
-	}
-}
-
-func mapProductByCategoryToGraphQL(
-	e product.ProductByCategory,
-) *model.ProductByCategory {
-
-	products := make([]*model.Product, 0, len(e.Products))
-	for _, p := range e.Products {
-		products = append(products, mapProductToGraphQL(p))
-	}
-
-	return &model.ProductByCategory{
-		CategoryName:  &e.CategoryName,
-		TotalProducts: int32(e.TotalProducts),
-		Products:      products,
-	}
-}
-
-func mapSortDirection(d *model.SortDirection) product.SortDirection {
-	if d == nil {
-		return product.SortDirectionDesc
-	}
-
-	if *d == model.SortDirectionAsc {
-		return product.SortDirectionAsc
-	}
-	return product.SortDirectionDesc
-}
-
-func mapProductToGraphQL(p *product.Product) *model.Product {
-	status := p.Status
-
-	variants := make([]*model.Variant, 0, len(p.Variants))
-	for _, v := range p.Variants {
-		variants = append(variants, mapVariantToGraphQL(v))
-
-	}
-
-	return &model.Product{
-		ID:              p.ID,
-		Name:            p.Name,
-		SellerID:        p.SellerID,
-		SellerName:      p.SellerName,
-		CategoryID:      p.CategoryID,
-		CategoryName:    p.CategoryName,
-		SubcategoryID:   p.SubcategoryID,
-		SubcategoryName: p.SubcategoryName,
-		Slug:            p.Slug,
-		ImageURL:        p.ImageURL,
-		Description:     p.Description,
-		Status:          &status,
-		CreatedAt:       p.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:       formatTimePtr(p.UpdatedAt),
-		Variants:        variants,
-	}
-}
-
-func mapVariantToGraphQL(v *product.Variant) *model.Variant {
-	if v == nil {
-		return nil
-	}
-
-	imageURL := ""
-	if v.ImageURL != "" {
-		imageURL = v.ImageURL
-	}
-
-	return &model.Variant{
-		ID:           v.ID,
-		Name:         v.Name,
-		ProductID:    v.ProductID,
-		QuantityType: v.QuantityType,
-		Price:        v.Price,
-		Stock:        int32(v.Stock),
-		ImageURL:     imageURL,
-		Description:  v.Description,
-		CategoryID:   nil,
-		CreatedAt:    v.CreatedAt,
-	}
-}
-
-func formatTimePtr(t *time.Time) *string {
-	if t == nil {
-		return nil
-	}
-	s := t.Format(time.RFC3339)
-	return &s
-}
 
 // CreateProduct is the resolver for the createProduct field.
 func (r *mutationResolver) CreateProduct(ctx context.Context, input model.NewProduct) (*model.Product, error) {
@@ -198,8 +95,8 @@ func (r *queryResolver) ProductList(ctx context.Context, filter *model.ProductFi
 		MaxPrice:   filter.MaxPrice,
 		InStock:    filter.InStock,
 
-		SortField:     mapSortField(sortField),
-		SortDirection: mapSortDirection(sortDirection),
+		SortField:     prodInternal.MapSortField(sortField),
+		SortDirection: prodInternal.MapSortDirection(sortDirection),
 
 		Page:  p,
 		Limit: l,
@@ -217,7 +114,7 @@ func (r *queryResolver) ProductList(ctx context.Context, filter *model.ProductFi
 	// map domain → graphql
 	items := make([]*model.Product, 0, len(result.Items))
 	for _, p := range result.Items {
-		items = append(items, mapProductToGraphQL(p))
+		items = append(items, prodInternal.MapProductToGraphQL(p))
 	}
 
 	var totalCount int32 = 0
@@ -295,8 +192,8 @@ func (r *queryResolver) ProductsHome(ctx context.Context, filter *model.ProductF
 		MaxPrice:   filter.MaxPrice,
 		InStock:    filter.InStock,
 
-		SortField:     mapSortField(sortField),
-		SortDirection: mapSortDirection(sortDirection),
+		SortField:     prodInternal.MapSortField(sortField),
+		SortDirection: prodInternal.MapSortDirection(sortDirection),
 
 		Page:  p,
 		Limit: l,
@@ -332,7 +229,7 @@ func (r *queryResolver) ProductsHome(ctx context.Context, filter *model.ProductF
 			continue
 		}
 
-		result = append(result, mapProductByCategoryToGraphQL(g))
+		result = append(result, prodInternal.MapProductByCategoryToGraphQL(g))
 	}
 
 	log.Info("ProductsHome resolver completed",
@@ -358,7 +255,7 @@ func (r *queryResolver) ProductDetail(ctx context.Context, productID string) (*m
 	if err != nil {
 		return nil, err
 	}
-	productGraph := mapProductToGraphQL(product)
+	productGraph := prodInternal.MapProductToGraphQL(product)
 
 	log.Debug("product found")
 	return productGraph, nil

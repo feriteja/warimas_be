@@ -7,42 +7,10 @@ package graph
 import (
 	"context"
 	"fmt"
-	"time"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/order"
 	"warimas-be/internal/utils"
 )
-
-// --- MAPPER HELPERS ---
-
-func toGraphQLOrderItem(item *order.OrderItem) *model.OrderItem {
-	return &model.OrderItem{
-		ID:       fmt.Sprint(item.ID),
-		Product:  &model.Product{ID: fmt.Sprint(item.Product.ID), Name: item.Product.Name},
-		Quantity: int32(item.Quantity),
-		Price:    item.Price,
-	}
-}
-
-func toGraphQLOrder(o *order.Order) *model.Order {
-	if o == nil {
-		return nil
-	}
-
-	var items []*model.OrderItem
-	for _, i := range o.Items {
-		items = append(items, toGraphQLOrderItem(&i))
-	}
-
-	return &model.Order{
-		ID:        fmt.Sprint(o.ID),
-		Total:     o.Total,
-		Status:    model.OrderStatus(o.Status),
-		CreatedAt: o.CreatedAt.Format(time.RFC3339),
-		UpdatedAt: o.UpdatedAt.Format(time.RFC3339),
-		Items:     items,
-	}
-}
 
 // CreateOrder is the resolver for the createOrder field.
 func (r *mutationResolver) CreateOrder(ctx context.Context) (*model.CreateOrderResponse, error) {
@@ -67,7 +35,7 @@ func (r *mutationResolver) CreateOrder(ctx context.Context) (*model.CreateOrderR
 	return &model.CreateOrderResponse{
 		Success:     true,
 		Message:     utils.StrPtr("Order created successfully"),
-		Order:       toGraphQLOrder(newOrder),
+		Order:       order.ToGraphQLOrder(newOrder),
 		PaymentURL:  payment.InvoiceURL,
 		PaymentStat: payment.Status,
 	}, nil
@@ -132,12 +100,12 @@ func (r *queryResolver) OrderDetail(ctx context.Context, orderID string) (*model
 		return nil, err
 	}
 
-	order, err := r.OrderSvc.GetOrderDetail(uint(userID), oid, false)
+	orderDetail, err := r.OrderSvc.GetOrderDetail(uint(userID), oid, false)
 	if err != nil {
 		return nil, err
 	}
 
-	return toGraphQLOrder(order), nil
+	return order.ToGraphQLOrder(orderDetail), nil
 }
 
 // CheckoutSession is the resolver for the checkoutSession field.
