@@ -7,7 +7,6 @@ package graph
 import (
 	"context"
 	"errors"
-	"fmt"
 	"warimas-be/internal/address"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
@@ -23,16 +22,24 @@ func (r *mutationResolver) CreateAddress(ctx context.Context, input model.Create
 	if !ok {
 		return nil, errors.New("unauthorized")
 	}
+
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "resolver"),
 		zap.String("method", "CreateAddress"),
 		zap.Uint("user_id", userID),
 	)
 
-	log.Info("create address")
+	if input.Address == nil {
+		log.Error("address input is nil")
+		return nil, errors.New("address is required")
+	}
+
+	setAsDefault := false
+	if input.SetAsDefault != nil {
+		setAsDefault = *input.SetAsDefault
+	}
 
 	inputAddress := address.CreateAddressInput{
-
 		Name:         input.Address.Name,
 		Phone:        input.Address.Phone,
 		AddressLine1: input.Address.AddressLine1,
@@ -41,8 +48,10 @@ func (r *mutationResolver) CreateAddress(ctx context.Context, input model.Create
 		Province:     input.Address.Province,
 		PostalCode:   input.Address.PostalCode,
 		Country:      input.Address.Country,
-		SetAsDefault: *input.SetAsDefault,
+		SetAsDefault: setAsDefault,
 	}
+
+	log.Debug("input address", zap.Any("input", inputAddress))
 
 	addressEntities, err := r.AddressSvc.Create(ctx, inputAddress)
 	if err != nil {
@@ -50,7 +59,6 @@ func (r *mutationResolver) CreateAddress(ctx context.Context, input model.Create
 		return nil, err
 	}
 
-	// return address.MapAddressToGraphQL(addressEntities), nil
 	return &model.CreateAddressResponse{
 		Address: address.MapAddressToGraphQL(addressEntities),
 	}, nil
@@ -58,7 +66,51 @@ func (r *mutationResolver) CreateAddress(ctx context.Context, input model.Create
 
 // UpdateAddress is the resolver for the updateAddress field.
 func (r *mutationResolver) UpdateAddress(ctx context.Context, input model.UpdateAddressInput) (*model.UpdateAddressResponse, error) {
-	panic(fmt.Errorf("not implemented: UpdateAddress - updateAddress"))
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		return nil, errors.New("unauthorized")
+	}
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "CreateAddress"),
+		zap.Uint("user_id", userID),
+	)
+
+	if input.Address == nil {
+		log.Error("address input is nil")
+		return nil, errors.New("address is required")
+	}
+
+	setAsDefault := false
+	if input.SetAsDefault != nil {
+		setAsDefault = *input.SetAsDefault
+	}
+
+	inputAddress := address.UpdateAddressInput{
+		AddressID:    input.AddressID,
+		Name:         input.Address.Name,
+		Phone:        input.Address.Phone,
+		AddressLine1: input.Address.AddressLine1,
+		AddressLine2: input.Address.AddressLine2,
+		City:         input.Address.City,
+		Province:     input.Address.Province,
+		PostalCode:   input.Address.PostalCode,
+		Country:      input.Address.Country,
+		SetAsDefault: setAsDefault,
+	}
+
+	log.Debug("input address", zap.Any("input", inputAddress))
+
+	addressEntities, err := r.AddressSvc.Update(ctx, inputAddress)
+	if err != nil {
+		log.Error("failed to create address", zap.Error(err))
+		return nil, err
+	}
+
+	return &model.UpdateAddressResponse{
+		Address: address.MapAddressToGraphQL(addressEntities),
+	}, nil
 }
 
 // DeleteAddress is the resolver for the deleteAddress field.

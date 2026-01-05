@@ -231,6 +231,12 @@ func (s *service) SetDefaultAddress(
 	)
 
 	log.Info("setting default address")
+	checAddr, err := s.repo.GetByID(ctx, addressID)
+	if err != nil || checAddr.UserID != userID {
+		return errors.New("address not found")
+	}
+
+	_ = s.repo.ClearDefault(ctx, userID)
 
 	if err := s.repo.SetDefault(ctx, userID, addressID); err != nil {
 		log.Error("failed to set default address", zap.Error(err))

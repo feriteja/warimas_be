@@ -813,12 +813,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.RemoveFromCart(childComplexity, args["variantId"].(string)), true
 
-	case "Mutation.SetDefaultAddress":
+	case "Mutation.setDefaultAddress":
 		if e.complexity.Mutation.SetDefaultAddress == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_SetDefaultAddress_args(ctx, rawArgs)
+		args, err := ec.field_Mutation_setDefaultAddress_args(ctx, rawArgs)
 		if err != nil {
 			return 0, false
 		}

@@ -65,5 +65,5 @@ extend type Mutation {
   createAddress(input: CreateAddressInput!): CreateAddressResponse!
   updateAddress(input: UpdateAddressInput!): UpdateAddressResponse!
   deleteAddress(input: DeleteAddressInput!): DeleteAddressResponse!
-  SetDefaultAddress(addressId: ID!): Boolean!
+  setDefaultAddress(addressId: ID!): Boolean!
 }

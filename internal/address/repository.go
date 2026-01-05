@@ -99,7 +99,7 @@ func (r *repository) GetByID(
 			city, province, postal_code, country,
 			is_default, is_active
 		FROM addresses
-		WHERE id = $1
+		WHERE id = $1 AND is_active = true
 		LIMIT 1
 	`
 
@@ -207,7 +207,6 @@ func (r *repository) ClearDefault(
 		UPDATE addresses
 		SET is_default = false
 		WHERE user_id = $1
-		  AND is_active = true
 		  AND is_default = true
 	`
 
@@ -233,6 +232,7 @@ func (r *repository) SetDefault(
 		SET is_default = true
 		WHERE user_id = $1
 		  AND id = $2
+		  AND is_active = true
 	`
 
 	log.Debug("Start setting default address")

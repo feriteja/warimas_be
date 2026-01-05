@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"warimas-be/internal/address"
 	"warimas-be/internal/cart"
 	"warimas-be/internal/category"
 	"warimas-be/internal/config"
@@ -45,12 +46,14 @@ func main() {
 	orderRepo := order.NewRepository(database)
 	paymentRepo := payment.NewRepository(database)
 	categoryRepo := category.NewRepository(database)
+	addressRepo := address.NewRepository(database)
 
 	// Init services
 	productSvc := product.NewService(productRepo)
 	userSvc := user.NewService(userRepo)
 	cartSvc := cart.NewService(cartRepo, productRepo)
 	categorySvc := category.NewService(categoryRepo)
+	addressSvc := address.NewService(addressRepo)
 
 	paymentGateway := payment.NewXenditGateway(cfg.XenditSecretKey)
 	orderSvc := order.NewService(orderRepo, paymentRepo, paymentGateway)
@@ -64,6 +67,7 @@ func main() {
 		CartSvc:     cartSvc,
 		OrderSvc:    orderSvc,
 		CategorySvc: categorySvc,
+		AddressSvc:  addressSvc,
 	}
 
 	srv := handler.NewDefaultServer(graph.NewSchema(resolver))
