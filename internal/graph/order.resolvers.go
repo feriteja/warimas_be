@@ -6,15 +6,43 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"warimas-be/internal/graph/model"
+	"warimas-be/internal/logger"
 	"warimas-be/internal/order"
 	"warimas-be/internal/utils"
+
+	"go.uber.org/zap"
 )
 
 // CreateOrderFromSession is the resolver for the createOrderFromSession field.
 func (r *mutationResolver) CreateOrderFromSession(ctx context.Context, input model.CreateOrderFromSessionInput) (*model.CreateOrderResponse, error) {
-	panic(fmt.Errorf("not implemented: CreateOrderFromSession - createOrderFromSession"))
+	// STRONGLY RECOMMENDED:
+	// protect this with ADMIN or INTERNAL auth
+	if !utils.IsInternalRequest(ctx) {
+		return nil, errors.New("forbidden")
+	}
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "CreateOrderFromSession"),
+		zap.String("session_id", input.SessionID),
+	)
+
+	orderCreated, err := r.OrderSvc.CreateFromSession(
+		ctx,
+		input.SessionID,
+	)
+	if err != nil {
+		log.Error("failed to create order from session", zap.Error(err))
+		return nil, err
+	}
+
+	return &model.CreateOrderResponse{
+		Success: true,
+		Order:   order.ToGraphQLOrder(orderCreated),
+	}, nil
 }
 
 // UpdateOrderStatus is the resolver for the updateOrderStatus field.
@@ -45,18 +73,108 @@ func (r *mutationResolver) UpdateOrderStatus(ctx context.Context, input model.Up
 }
 
 // CreateSessionCheckout is the resolver for the createSessionCheckout field.
-func (r *mutationResolver) CreateSessionCheckout(ctx context.Context, input model.CreateSessionCheckoutInput) (*model.SessionCheckoutResponse, error) {
-	panic(fmt.Errorf("not implemented: CreateSessionCheckout - createSessionCheckout"))
+func (r *mutationResolver) CreateSessionCheckout(
+	ctx context.Context,
+	input model.CreateSessionCheckoutInput,
+) (*model.SessionCheckoutResponse, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "CreateSessionCheckout"),
+		zap.Int("item_count", len(input.Items)),
+	)
+
+	log.Info("create session checkout request received")
+
+	if len(input.Items) == 0 {
+		log.Warn("validation failed: items empty")
+		return nil, errors.New("items must not be empty")
+	}
+
+	session, err := r.OrderSvc.CreateSession(ctx, input)
+	if err != nil {
+		log.Error(
+			"failed to create checkout session",
+			zap.Error(err),
+		)
+		return nil, err
+	}
+
+	log.Info(
+		"checkout session created",
+		zap.String("session_id", session.ID.String()),
+		zap.String("status", string(session.Status)),
+		zap.Time("expires_at", session.ExpiresAt),
+	)
+
+	return &model.SessionCheckoutResponse{
+		SessionID: session.ID.String(),
+		Status:    model.CheckoutSessionStatus(session.Status),
+		ExpiresAt: session.ExpiresAt,
+	}, nil
 }
 
 // UpdateSessionAddress is the resolver for the updateSessionAddress field.
 func (r *mutationResolver) UpdateSessionAddress(ctx context.Context, input model.UpdateSessionAddressInput) (*model.UpdateSessionAddressResponse, error) {
-	panic(fmt.Errorf("not implemented: UpdateSessionAddress - updateSessionAddress"))
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		return nil, errors.New("unauthorized")
+	}
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "UpdateSessionAddress"),
+		zap.String("session_id", input.SessionID),
+		zap.Uint("user_id", userID),
+	)
+
+	err := r.OrderSvc.UpdateSessionAddress(
+		ctx,
+		input.SessionID,
+		userID,
+		input.AddressID,
+	)
+	if err != nil {
+		log.Error("failed to update session address", zap.Error(err))
+		return nil, err
+	}
+
+	return &model.UpdateSessionAddressResponse{
+		Success: true,
+	}, nil
 }
 
 // ConfirmCheckoutSession is the resolver for the confirmCheckoutSession field.
 func (r *mutationResolver) ConfirmCheckoutSession(ctx context.Context, input model.ConfirmCheckoutSessionInput) (*model.ConfirmCheckoutSessionResponse, error) {
-	panic(fmt.Errorf("not implemented: ConfirmCheckoutSession - confirmCheckoutSession"))
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		return nil, errors.New("unauthorized")
+	}
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "ConfirmCheckoutSession"),
+		zap.String("session_id", input.SessionID),
+		zap.Uint("user_id", userID),
+	)
+
+	session, err := r.OrderSvc.ConfirmSession(
+		ctx,
+		input.SessionID,
+		userID,
+	)
+	if err != nil {
+		log.Error("failed to confirm checkout session", zap.Error(err))
+		return nil, err
+	}
+
+	msg := "checkout session confirmed"
+
+	return &model.ConfirmCheckoutSessionResponse{
+		Success: true,
+		Message: &msg,
+		Session: order.MapCheckoutSessionToGraphQL(session),
+	}, nil
 }
 
 // OrderList is the resolver for the orderList field.
@@ -94,44 +212,23 @@ func (r *queryResolver) OrderDetail(ctx context.Context, orderID string) (*model
 
 // CheckoutSession is the resolver for the checkoutSession field.
 func (r *queryResolver) CheckoutSession(ctx context.Context, id string) (*model.CheckoutSession, error) {
-	panic(fmt.Errorf("not implemented: CheckoutSession - checkoutSession"))
-}
+	userID, _ := utils.GetUserIDFromContext(ctx) // guest allowed
 
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
-/*
-	func (r *mutationResolver) CreateOrder(ctx context.Context) (*model.CreateOrderResponse, error) {
-	userID, ok := utils.GetUserIDFromContext(ctx)
-	if !ok {
-		return &model.CreateOrderResponse{
-			Success: false,
-			Message: utils.StrPtr("Unauthorized"),
-		}, nil
-	}
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "CheckoutSession"),
+		zap.String("session_id", id),
+	)
 
-	userEmail := utils.GetUserEmailFromContext(ctx)
-
-	newOrder, payment, err := r.OrderSvc.CreateOrder(uint(userID), userEmail)
+	session, err := r.OrderSvc.GetSession(
+		ctx,
+		id,
+		&userID,
+	)
 	if err != nil {
-		return &model.CreateOrderResponse{
-			Success: false,
-			Message: utils.StrPtr(err.Error()),
-		}, nil
+		log.Error("failed to get checkout session", zap.Error(err))
+		return nil, err
 	}
 
-	return &model.CreateOrderResponse{
-		Success:     true,
-		Message:     utils.StrPtr("Order created successfully"),
-		Order:       order.ToGraphQLOrder(newOrder),
-		PaymentURL:  payment.InvoiceURL,
-		PaymentStat: payment.Status,
-	}, nil
+	return order.MapCheckoutSessionToGraphQL(session), nil
 }
-func (r *mutationResolver) CreateSessionOrder(ctx context.Context, input model.CreateSessionOrderInput) (*model.SessionOrderResponse, error) {
-	panic(fmt.Errorf("not implemented: CreateSessionOrder - createSessionOrder"))
-}
-*/

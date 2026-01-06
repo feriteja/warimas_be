@@ -69,7 +69,7 @@ Core Types
 ====================
 """
 type Order {
-  id: ID!
+  id: Int!
   user: User
   totalPrice: Int!
   status: OrderStatus!
@@ -79,8 +79,7 @@ type Order {
 }
 
 type OrderItem {
-  id: ID!
-  orderId: ID!
+  id: Int!
   product: Product!
   quantity: Int!
   price: Int!

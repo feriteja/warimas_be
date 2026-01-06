@@ -16,7 +16,7 @@ const (
 
 type Order struct {
 	ID        uint
-	UserID    uint
+	UserID    *uint
 	Total     uint
 	Status    OrderStatus
 	CreatedAt time.Time

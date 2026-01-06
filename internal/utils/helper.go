@@ -116,3 +116,13 @@ func HasAnyField(ctx context.Context, names ...string) bool {
 	}
 	return false
 }
+
+func IsInternalRequest(ctx context.Context) bool {
+	v := ctx.Value(internalRequestKey)
+	if v == nil {
+		return false
+	}
+
+	isInternal, ok := v.(bool)
+	return ok && isInternal
+}

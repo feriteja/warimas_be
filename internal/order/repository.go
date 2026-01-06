@@ -6,10 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"warimas-be/internal/address"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
+	"warimas-be/internal/product"
 	"warimas-be/internal/utils"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -20,6 +23,59 @@ type Repository interface {
 	UpdateOrderStatus(orderID uint, status OrderStatus) error
 	UpdateStatusByReferenceID(referenceID string, status string) error
 	GetByReferenceID(referenceID string) (*Order, error)
+	GetOrderBySessionID(
+		ctx context.Context,
+		sessionID uuid.UUID,
+	) (*Order, error)
+
+	CreateOrderTx(
+		ctx context.Context,
+		order *Order,
+		session *CheckoutSession,
+	) error
+
+	GetVariantForCheckout(
+		ctx context.Context,
+		variantID string,
+	) (*product.Variant, *product.Product, error)
+
+	CreateCheckoutSession(
+		ctx context.Context,
+		session *CheckoutSession,
+		items []CheckoutSessionItem,
+	) error
+
+	GetCheckoutSession(
+		ctx context.Context,
+		sessionID string,
+	) (*CheckoutSession, error)
+
+	GetUserAddress(
+		ctx context.Context,
+		addressID string,
+		userID uint,
+	) (*address.Address, error)
+
+	UpdateSessionAddressAndPricing(
+		ctx context.Context,
+		session *CheckoutSession,
+	) error
+
+	ConfirmCheckoutSession(
+		ctx context.Context,
+		session *CheckoutSession,
+	) error
+
+	ValidateVariantStock(
+		ctx context.Context,
+		variantID string,
+		qty int,
+	) (bool, error)
+
+	MarkSessionExpired(
+		ctx context.Context,
+		sessionID uuid.UUID,
+	) error
 }
 
 type repository struct {
@@ -28,6 +84,104 @@ type repository struct {
 
 func NewRepository(db *sql.DB) Repository {
 	return &repository{db: db}
+}
+
+func (r *repository) GetOrderBySessionID(
+	ctx context.Context,
+	sessionID uuid.UUID,
+) (*Order, error) {
+
+	query := `
+		SELECT id, status, total_price
+		FROM orders
+		WHERE checkout_session_id = $1
+	`
+
+	var o Order
+	err := r.db.QueryRowContext(ctx, query, sessionID).
+		Scan(&o.ID, &o.Status, &o.Total)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &o, nil
+}
+
+func (r *repository) CreateOrderTx(
+	ctx context.Context,
+	order *Order,
+	session *CheckoutSession,
+) error {
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// 1. Insert order
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO orders (
+			id, user_id, checkout_session_id,
+			status, total_price, created_at
+		) VALUES ($1,$2,$3,$4,$5,$6)
+	`,
+		order.ID,
+		order.UserID,
+		session.ID,
+		order.Status,
+		order.Total,
+		order.CreatedAt,
+	)
+	if err != nil {
+		return err
+	}
+
+	// 2. Insert order items + deduct stock
+	for _, item := range session.Items {
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO order_items (
+				order_id, variant_id, variant_name,
+				quantity, price, subtotal
+			) VALUES ($1,$2,$3,$4,$5,$6)
+		`,
+			order.ID,
+			item.VariantID,
+			item.VariantName,
+			item.Quantity,
+			item.Price,
+			item.Subtotal,
+		)
+		if err != nil {
+			return err
+		}
+
+		// Deduct stock
+		_, err = tx.ExecContext(ctx, `
+			UPDATE variants
+			SET stock = stock - $1
+			WHERE id = $2 AND stock >= $1
+		`, item.Quantity, item.VariantID)
+		if err != nil {
+			return err
+		}
+	}
+
+	// 3. Mark session as completed
+	_, err = tx.ExecContext(ctx, `
+		UPDATE checkout_sessions
+		SET status = 'PAID'
+		WHERE id = $1
+	`, session.ID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 // ✅ Create new order from user’s cart
@@ -103,7 +257,7 @@ func (r *repository) CreateOrder(userID uint) (*Order, error) {
 	// Return order struct
 	return &Order{
 		ID:     orderID,
-		UserID: userID,
+		UserID: &userID,
 		Total:  uint(total),
 		Status: StatusPending,
 		Items:  items,
@@ -357,4 +511,358 @@ func (r *repository) GetByReferenceID(referenceID string) (*Order, error) {
 		return nil, err
 	}
 	return &o, nil
+}
+
+func (r *repository) GetVariantForCheckout(
+	ctx context.Context,
+	variantID string,
+) (*product.Variant, *product.Product, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "GetVariantForCheckout"),
+		zap.String("variant_id", variantID),
+	)
+
+	log.Debug("fetching variant for checkout")
+
+	query := `
+		SELECT
+			v.id,
+			v.name,
+			v.price,
+			v.quantity_type,
+			v.imageurl,
+			p.name
+		FROM variants v
+		LEFT JOIN products p ON p.id = v.product_id
+		WHERE v.id = $1
+	`
+
+	var v product.Variant
+	var p product.Product
+
+	err := r.db.QueryRowContext(ctx, query, variantID).
+		Scan(&v.ID, &v.Name, &v.Price, &v.QuantityType, &v.ImageURL, &p.Name)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Warn("variant not found")
+			return nil, nil, err
+		}
+
+		log.Error(
+			"failed to query variant for checkout",
+			zap.Error(err),
+		)
+		return nil, nil, err
+	}
+
+	log.Debug(
+		"variant fetched successfully",
+		zap.String("variant_name", v.Name),
+		zap.Int("price", int(v.Price)),
+		zap.String("product_name", p.Name),
+	)
+
+	return &v, &p, nil
+}
+func (r *repository) CreateCheckoutSession(
+	ctx context.Context,
+	session *CheckoutSession,
+	items []CheckoutSessionItem,
+) error {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "CreateCheckoutSession"),
+		zap.String("session_id", session.ID.String()),
+		zap.Int("item_count", len(items)),
+	)
+
+	log.Debug("starting checkout session transaction")
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Error(
+			"failed to begin transaction",
+			zap.Error(err),
+		)
+		return err
+	}
+
+	committed := false
+	defer func() {
+		if !committed {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				log.Error(
+					"failed to rollback transaction",
+					zap.Error(rbErr),
+				)
+			} else {
+				log.Debug("transaction rolled back")
+			}
+		}
+	}()
+
+	// Insert checkout session
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO checkout_sessions (
+			id, user_id, status, subtotal, tax, shipping_fee,
+			discount, total_price, expires_at
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+	`,
+		session.ID,
+		session.UserID,
+		session.Status,
+		session.Subtotal,
+		session.Tax,
+		session.ShippingFee,
+		session.Discount,
+		session.TotalPrice,
+		session.ExpiresAt,
+	)
+	if err != nil {
+		log.Error(
+			"failed to insert checkout session",
+			zap.Error(err),
+		)
+		return err
+	}
+
+	log.Debug("checkout session inserted")
+
+	// Insert session items
+	for i, item := range items {
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO checkout_session_items (
+				id, checkout_session_id, variant_id, variant_name, product_name,
+				quantity, quantity_type, imageurl, unit_price, subtotal
+			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		`,
+			item.ID,
+			session.ID,
+			item.VariantID,
+			item.VariantName,
+			item.ProductName,
+			item.Quantity,
+			item.QuantityType,
+			item.ImageURL,
+			item.Price,
+			item.Subtotal,
+		)
+		if err != nil {
+			log.Error(
+				"failed to insert checkout session item",
+				zap.Int("item_index", i),
+				zap.String("variant_id", item.VariantID),
+				zap.Error(err),
+			)
+			return err
+		}
+	}
+
+	log.Debug("all checkout session items inserted")
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		log.Error(
+			"failed to commit checkout session transaction",
+			zap.Error(err),
+		)
+		return err
+	}
+
+	committed = true
+	log.Info("checkout session transaction committed successfully")
+
+	return nil
+}
+
+func (r *repository) GetCheckoutSession(
+	ctx context.Context,
+	sessionID string,
+) (*CheckoutSession, error) {
+
+	var s CheckoutSession
+
+	query := `
+		SELECT
+			id, status, expires_at, created_at,
+			user_id, address_id,
+			subtotal, tax, shipping_fee, discount, total_price,
+			confirmed_at, payment_ref
+		FROM checkout_sessions
+		WHERE id = $1
+	`
+
+	err := r.db.QueryRowContext(ctx, query, sessionID).
+		Scan(
+			&s.ID,
+			&s.Status,
+			&s.ExpiresAt,
+			&s.CreatedAt,
+			&s.UserID,
+			&s.AddressID,
+			&s.Subtotal,
+			&s.Tax,
+			&s.ShippingFee,
+			&s.Discount,
+			&s.TotalPrice,
+			&s.ConfirmedAt,
+			&s.PaymentRef,
+		)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load items
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT
+			id, variant_id, variant_name, image_url,
+			quantity, quantity_type, price, subtotal
+		FROM checkout_session_items
+		WHERE checkout_session_id = $1
+	`, s.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item CheckoutSessionItem
+		err := rows.Scan(
+			&item.ID,
+			&item.VariantID,
+			&item.VariantName,
+			&item.ImageURL,
+			&item.Quantity,
+			&item.QuantityType,
+			&item.Price,
+			&item.Subtotal,
+		)
+		if err != nil {
+			return nil, err
+		}
+		s.Items = append(s.Items, item)
+	}
+
+	return &s, nil
+}
+
+func (r *repository) GetUserAddress(
+	ctx context.Context,
+	addressID string,
+	userID uint,
+) (*address.Address, error) {
+
+	query := `
+		SELECT id, city
+		FROM addresses
+		WHERE id = $1 AND user_id = $2
+	`
+
+	var a address.Address
+	err := r.db.QueryRowContext(ctx, query, addressID, userID).
+		Scan(&a.ID, &a.City)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &a, nil
+}
+
+func (r *repository) UpdateSessionAddressAndPricing(
+	ctx context.Context,
+	session *CheckoutSession,
+) error {
+
+	query := `
+		UPDATE checkout_sessions
+		SET
+			address_id = $1,
+			shipping_fee = $2,
+			tax = $3,
+			total_price = $4
+		WHERE id = $5
+	`
+
+	_, err := r.db.ExecContext(ctx, query,
+		session.AddressID,
+		session.ShippingFee,
+		session.Tax,
+		session.TotalPrice,
+		session.ID,
+	)
+
+	return err
+}
+
+func (r *repository) ValidateVariantStock(
+	ctx context.Context,
+	variantID string,
+	qty int,
+) (bool, error) {
+
+	query := `
+		SELECT stock >= $1
+		FROM variants
+		WHERE id = $2
+	`
+
+	var ok bool
+	err := r.db.QueryRowContext(ctx, query, qty, variantID).
+		Scan(&ok)
+
+	return ok, err
+}
+
+func (r *repository) ConfirmCheckoutSession(
+	ctx context.Context,
+	session *CheckoutSession,
+) error {
+
+	query := `
+		UPDATE checkout_sessions
+		SET
+			status = $1,
+			payment_ref = $2,
+			confirmed_at = NOW()
+		WHERE id = $3
+		  AND status = 'PENDING'
+	`
+
+	res, err := r.db.ExecContext(
+		ctx,
+		query,
+		session.Status,
+		session.PaymentRef,
+		session.ID,
+	)
+	if err != nil {
+		return err
+	}
+
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		return errors.New("checkout session already confirmed")
+	}
+
+	return nil
+}
+
+func (r *repository) MarkSessionExpired(
+	ctx context.Context,
+	sessionID uuid.UUID,
+) error {
+
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE checkout_sessions
+		SET status = 'EXPIRED'
+		WHERE id = $1
+		  AND status = 'PENDING'
+	`, sessionID)
+
+	return err
 }

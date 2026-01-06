@@ -164,7 +164,6 @@ type ComplexityRoot struct {
 
 	OrderItem struct {
 		ID       func(childComplexity int) int
-		OrderID  func(childComplexity int) int
 		Price    func(childComplexity int) int
 		Product  func(childComplexity int) int
 		Quantity func(childComplexity int) int
@@ -1017,13 +1016,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.OrderItem.ID(childComplexity), true
-
-	case "OrderItem.orderId":
-		if e.complexity.OrderItem.OrderID == nil {
-			break
-		}
-
-		return e.complexity.OrderItem.OrderID(childComplexity), true
 
 	case "OrderItem.price":
 		if e.complexity.OrderItem.Price == nil {

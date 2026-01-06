@@ -58,7 +58,7 @@ type DeleteAddressResponse {
 extend type Query {
   addresses: [Address!]!
 
-  address(id: ID!): Address
+  address(addressId: ID!): Address
 }
 
 extend type Mutation {

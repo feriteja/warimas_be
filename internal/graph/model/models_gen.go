@@ -172,7 +172,7 @@ type NewVariant struct {
 // Core Types
 // ====================
 type Order struct {
-	ID         string       `json:"id"`
+	ID         int32        `json:"id"`
 	User       *User        `json:"user,omitempty"`
 	TotalPrice int32        `json:"totalPrice"`
 	Status     OrderStatus  `json:"status"`
@@ -189,8 +189,7 @@ type OrderFilterInput struct {
 }
 
 type OrderItem struct {
-	ID       string   `json:"id"`
-	OrderID  string   `json:"orderId"`
+	ID       int32    `json:"id"`
 	Product  *Product `json:"product"`
 	Quantity int32    `json:"quantity"`
 	Price    int32    `json:"price"`
