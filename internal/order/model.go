@@ -17,7 +17,7 @@ const (
 type Order struct {
 	ID        uint
 	UserID    uint
-	Total     float64
+	Total     uint
 	Status    OrderStatus
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -29,6 +29,6 @@ type OrderItem struct {
 	OrderID   uint
 	ProductID uint
 	Quantity  int
-	Price     float64
+	Price     int
 	Product   model.Product
 }

@@ -84,6 +84,7 @@ type ComplexityRoot struct {
 
 	CheckoutSession struct {
 		Address     func(childComplexity int) int
+		CreatedAt   func(childComplexity int) int
 		Discount    func(childComplexity int) int
 		ExpiresAt   func(childComplexity int) int
 		ID          func(childComplexity int) int
@@ -98,12 +99,18 @@ type ComplexityRoot struct {
 	CheckoutSessionItem struct {
 		ID           func(childComplexity int) int
 		ImageURL     func(childComplexity int) int
+		Price        func(childComplexity int) int
 		Quantity     func(childComplexity int) int
 		QuantityType func(childComplexity int) int
 		Subtotal     func(childComplexity int) int
-		UnitPrice    func(childComplexity int) int
 		VariantID    func(childComplexity int) int
 		VariantName  func(childComplexity int) int
+	}
+
+	ConfirmCheckoutSessionResponse struct {
+		Message func(childComplexity int) int
+		Session func(childComplexity int) int
+		Success func(childComplexity int) int
 	}
 
 	CreateAddressResponse struct {
@@ -111,11 +118,11 @@ type ComplexityRoot struct {
 	}
 
 	CreateOrderResponse struct {
-		Message     func(childComplexity int) int
-		Order       func(childComplexity int) int
-		PaymentStat func(childComplexity int) int
-		PaymentURL  func(childComplexity int) int
-		Success     func(childComplexity int) int
+		Message    func(childComplexity int) int
+		Order      func(childComplexity int) int
+		Payment    func(childComplexity int) int
+		PaymentURL func(childComplexity int) int
+		Success    func(childComplexity int) int
 	}
 
 	DeleteAddressResponse struct {
@@ -123,35 +130,36 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddCategory          func(childComplexity int, name string) int
-		AddSubcategory       func(childComplexity int, categoryID string, name string) int
-		AddToCart            func(childComplexity int, input model.AddToCartInput) int
-		CreateAddress        func(childComplexity int, input model.CreateAddressInput) int
-		CreateOrder          func(childComplexity int) int
-		CreateProduct        func(childComplexity int, input model.NewProduct) int
-		CreateSessionOrder   func(childComplexity int, input model.CreateSessionOrderInput) int
-		CreateVariants       func(childComplexity int, input []*model.NewVariant) int
-		DeleteAddress        func(childComplexity int, input model.DeleteAddressInput) int
-		Login                func(childComplexity int, input model.LoginInput) int
-		Register             func(childComplexity int, input model.RegisterInput) int
-		RemoveFromCart       func(childComplexity int, variantID string) int
-		SetDefaultAddress    func(childComplexity int, addressID string) int
-		UpdateAddress        func(childComplexity int, input model.UpdateAddressInput) int
-		UpdateCart           func(childComplexity int, input model.UpdateCartInput) int
-		UpdateOrderStatus    func(childComplexity int, input model.UpdateOrderStatusInput) int
-		UpdateProduct        func(childComplexity int, input model.UpdateProduct) int
-		UpdateSessionAddress func(childComplexity int, input model.UpdateSessionAddressInput) int
-		UpdateVariants       func(childComplexity int, input []*model.UpdateVariant) int
+		AddCategory            func(childComplexity int, name string) int
+		AddSubcategory         func(childComplexity int, categoryID string, name string) int
+		AddToCart              func(childComplexity int, input model.AddToCartInput) int
+		ConfirmCheckoutSession func(childComplexity int, input model.ConfirmCheckoutSessionInput) int
+		CreateAddress          func(childComplexity int, input model.CreateAddressInput) int
+		CreateOrderFromSession func(childComplexity int, input model.CreateOrderFromSessionInput) int
+		CreateProduct          func(childComplexity int, input model.NewProduct) int
+		CreateSessionCheckout  func(childComplexity int, input model.CreateSessionCheckoutInput) int
+		CreateVariants         func(childComplexity int, input []*model.NewVariant) int
+		DeleteAddress          func(childComplexity int, input model.DeleteAddressInput) int
+		Login                  func(childComplexity int, input model.LoginInput) int
+		Register               func(childComplexity int, input model.RegisterInput) int
+		RemoveFromCart         func(childComplexity int, variantID string) int
+		SetDefaultAddress      func(childComplexity int, addressID string) int
+		UpdateAddress          func(childComplexity int, input model.UpdateAddressInput) int
+		UpdateCart             func(childComplexity int, input model.UpdateCartInput) int
+		UpdateOrderStatus      func(childComplexity int, input model.UpdateOrderStatusInput) int
+		UpdateProduct          func(childComplexity int, input model.UpdateProduct) int
+		UpdateSessionAddress   func(childComplexity int, input model.UpdateSessionAddressInput) int
+		UpdateVariants         func(childComplexity int, input []*model.UpdateVariant) int
 	}
 
 	Order struct {
-		CreatedAt func(childComplexity int) int
-		ID        func(childComplexity int) int
-		Items     func(childComplexity int) int
-		Status    func(childComplexity int) int
-		Total     func(childComplexity int) int
-		UpdatedAt func(childComplexity int) int
-		UserID    func(childComplexity int) int
+		CreatedAt  func(childComplexity int) int
+		ID         func(childComplexity int) int
+		Items      func(childComplexity int) int
+		Status     func(childComplexity int) int
+		TotalPrice func(childComplexity int) int
+		UpdatedAt  func(childComplexity int) int
+		User       func(childComplexity int) int
 	}
 
 	OrderItem struct {
@@ -160,6 +168,13 @@ type ComplexityRoot struct {
 		Price    func(childComplexity int) int
 		Product  func(childComplexity int) int
 		Quantity func(childComplexity int) int
+	}
+
+	OrderListResponse struct {
+		Items func(childComplexity int) int
+		Limit func(childComplexity int) int
+		Page  func(childComplexity int) int
+		Total func(childComplexity int) int
 	}
 
 	Package struct {
@@ -193,6 +208,12 @@ type ComplexityRoot struct {
 		HasNextPage     func(childComplexity int) int
 		HasPreviousPage func(childComplexity int) int
 		StartCursor     func(childComplexity int) int
+	}
+
+	Payment struct {
+		Provider func(childComplexity int) int
+		Status   func(childComplexity int) int
+		URL      func(childComplexity int) int
 	}
 
 	Product struct {
@@ -277,7 +298,7 @@ type ComplexityRoot struct {
 		Success func(childComplexity int) int
 	}
 
-	SessionOrderResponse struct {
+	SessionCheckoutResponse struct {
 		ExpiresAt func(childComplexity int) int
 		SessionID func(childComplexity int) int
 		Status    func(childComplexity int) int
@@ -294,8 +315,7 @@ type ComplexityRoot struct {
 	}
 
 	UpdateSessionAddressResponse struct {
-		AddressID func(childComplexity int) int
-		SessionID func(childComplexity int) int
+		Success func(childComplexity int) int
 	}
 
 	User struct {
@@ -506,6 +526,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.CheckoutSession.Address(childComplexity), true
 
+	case "CheckoutSession.createdAt":
+		if e.complexity.CheckoutSession.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSession.CreatedAt(childComplexity), true
+
 	case "CheckoutSession.discount":
 		if e.complexity.CheckoutSession.Discount == nil {
 			break
@@ -583,6 +610,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.CheckoutSessionItem.ImageURL(childComplexity), true
 
+	case "CheckoutSessionItem.price":
+		if e.complexity.CheckoutSessionItem.Price == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSessionItem.Price(childComplexity), true
+
 	case "CheckoutSessionItem.quantity":
 		if e.complexity.CheckoutSessionItem.Quantity == nil {
 			break
@@ -604,13 +638,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.CheckoutSessionItem.Subtotal(childComplexity), true
 
-	case "CheckoutSessionItem.unitPrice":
-		if e.complexity.CheckoutSessionItem.UnitPrice == nil {
-			break
-		}
-
-		return e.complexity.CheckoutSessionItem.UnitPrice(childComplexity), true
-
 	case "CheckoutSessionItem.variantId":
 		if e.complexity.CheckoutSessionItem.VariantID == nil {
 			break
@@ -624,6 +651,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.CheckoutSessionItem.VariantName(childComplexity), true
+
+	case "ConfirmCheckoutSessionResponse.message":
+		if e.complexity.ConfirmCheckoutSessionResponse.Message == nil {
+			break
+		}
+
+		return e.complexity.ConfirmCheckoutSessionResponse.Message(childComplexity), true
+
+	case "ConfirmCheckoutSessionResponse.session":
+		if e.complexity.ConfirmCheckoutSessionResponse.Session == nil {
+			break
+		}
+
+		return e.complexity.ConfirmCheckoutSessionResponse.Session(childComplexity), true
+
+	case "ConfirmCheckoutSessionResponse.success":
+		if e.complexity.ConfirmCheckoutSessionResponse.Success == nil {
+			break
+		}
+
+		return e.complexity.ConfirmCheckoutSessionResponse.Success(childComplexity), true
 
 	case "CreateAddressResponse.address":
 		if e.complexity.CreateAddressResponse.Address == nil {
@@ -646,12 +694,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.CreateOrderResponse.Order(childComplexity), true
 
-	case "CreateOrderResponse.paymentStat":
-		if e.complexity.CreateOrderResponse.PaymentStat == nil {
+	case "CreateOrderResponse.payment":
+		if e.complexity.CreateOrderResponse.Payment == nil {
 			break
 		}
 
-		return e.complexity.CreateOrderResponse.PaymentStat(childComplexity), true
+		return e.complexity.CreateOrderResponse.Payment(childComplexity), true
 
 	case "CreateOrderResponse.paymentURL":
 		if e.complexity.CreateOrderResponse.PaymentURL == nil {
@@ -710,6 +758,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.AddToCart(childComplexity, args["input"].(model.AddToCartInput)), true
 
+	case "Mutation.confirmCheckoutSession":
+		if e.complexity.Mutation.ConfirmCheckoutSession == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_confirmCheckoutSession_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ConfirmCheckoutSession(childComplexity, args["input"].(model.ConfirmCheckoutSessionInput)), true
+
 	case "Mutation.createAddress":
 		if e.complexity.Mutation.CreateAddress == nil {
 			break
@@ -722,12 +782,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.CreateAddress(childComplexity, args["input"].(model.CreateAddressInput)), true
 
-	case "Mutation.createOrder":
-		if e.complexity.Mutation.CreateOrder == nil {
+	case "Mutation.createOrderFromSession":
+		if e.complexity.Mutation.CreateOrderFromSession == nil {
 			break
 		}
 
-		return e.complexity.Mutation.CreateOrder(childComplexity), true
+		args, err := ec.field_Mutation_createOrderFromSession_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateOrderFromSession(childComplexity, args["input"].(model.CreateOrderFromSessionInput)), true
 
 	case "Mutation.createProduct":
 		if e.complexity.Mutation.CreateProduct == nil {
@@ -741,17 +806,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.CreateProduct(childComplexity, args["input"].(model.NewProduct)), true
 
-	case "Mutation.createSessionOrder":
-		if e.complexity.Mutation.CreateSessionOrder == nil {
+	case "Mutation.createSessionCheckout":
+		if e.complexity.Mutation.CreateSessionCheckout == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_createSessionOrder_args(ctx, rawArgs)
+		args, err := ec.field_Mutation_createSessionCheckout_args(ctx, rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateSessionOrder(childComplexity, args["input"].(model.CreateSessionOrderInput)), true
+		return e.complexity.Mutation.CreateSessionCheckout(childComplexity, args["input"].(model.CreateSessionCheckoutInput)), true
 
 	case "Mutation.createVariants":
 		if e.complexity.Mutation.CreateVariants == nil {
@@ -925,12 +990,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Order.Status(childComplexity), true
 
-	case "Order.total":
-		if e.complexity.Order.Total == nil {
+	case "Order.totalPrice":
+		if e.complexity.Order.TotalPrice == nil {
 			break
 		}
 
-		return e.complexity.Order.Total(childComplexity), true
+		return e.complexity.Order.TotalPrice(childComplexity), true
 
 	case "Order.updatedAt":
 		if e.complexity.Order.UpdatedAt == nil {
@@ -939,12 +1004,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Order.UpdatedAt(childComplexity), true
 
-	case "Order.userId":
-		if e.complexity.Order.UserID == nil {
+	case "Order.user":
+		if e.complexity.Order.User == nil {
 			break
 		}
 
-		return e.complexity.Order.UserID(childComplexity), true
+		return e.complexity.Order.User(childComplexity), true
 
 	case "OrderItem.id":
 		if e.complexity.OrderItem.ID == nil {
@@ -980,6 +1045,34 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.OrderItem.Quantity(childComplexity), true
+
+	case "OrderListResponse.items":
+		if e.complexity.OrderListResponse.Items == nil {
+			break
+		}
+
+		return e.complexity.OrderListResponse.Items(childComplexity), true
+
+	case "OrderListResponse.limit":
+		if e.complexity.OrderListResponse.Limit == nil {
+			break
+		}
+
+		return e.complexity.OrderListResponse.Limit(childComplexity), true
+
+	case "OrderListResponse.page":
+		if e.complexity.OrderListResponse.Page == nil {
+			break
+		}
+
+		return e.complexity.OrderListResponse.Page(childComplexity), true
+
+	case "OrderListResponse.total":
+		if e.complexity.OrderListResponse.Total == nil {
+			break
+		}
+
+		return e.complexity.OrderListResponse.Total(childComplexity), true
 
 	case "Package.id":
 		if e.complexity.Package.ID == nil {
@@ -1127,6 +1220,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.PageInfo.StartCursor(childComplexity), true
+
+	case "Payment.provider":
+		if e.complexity.Payment.Provider == nil {
+			break
+		}
+
+		return e.complexity.Payment.Provider(childComplexity), true
+
+	case "Payment.status":
+		if e.complexity.Payment.Status == nil {
+			break
+		}
+
+		return e.complexity.Payment.Status(childComplexity), true
+
+	case "Payment.url":
+		if e.complexity.Payment.URL == nil {
+			break
+		}
+
+		return e.complexity.Payment.URL(childComplexity), true
 
 	case "Product.categoryID":
 		if e.complexity.Product.CategoryID == nil {
@@ -1589,26 +1703,26 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Response.Success(childComplexity), true
 
-	case "SessionOrderResponse.expiresAt":
-		if e.complexity.SessionOrderResponse.ExpiresAt == nil {
+	case "SessionCheckoutResponse.expiresAt":
+		if e.complexity.SessionCheckoutResponse.ExpiresAt == nil {
 			break
 		}
 
-		return e.complexity.SessionOrderResponse.ExpiresAt(childComplexity), true
+		return e.complexity.SessionCheckoutResponse.ExpiresAt(childComplexity), true
 
-	case "SessionOrderResponse.sessionId":
-		if e.complexity.SessionOrderResponse.SessionID == nil {
+	case "SessionCheckoutResponse.sessionId":
+		if e.complexity.SessionCheckoutResponse.SessionID == nil {
 			break
 		}
 
-		return e.complexity.SessionOrderResponse.SessionID(childComplexity), true
+		return e.complexity.SessionCheckoutResponse.SessionID(childComplexity), true
 
-	case "SessionOrderResponse.status":
-		if e.complexity.SessionOrderResponse.Status == nil {
+	case "SessionCheckoutResponse.status":
+		if e.complexity.SessionCheckoutResponse.Status == nil {
 			break
 		}
 
-		return e.complexity.SessionOrderResponse.Status(childComplexity), true
+		return e.complexity.SessionCheckoutResponse.Status(childComplexity), true
 
 	case "Subcategory.categoryID":
 		if e.complexity.Subcategory.CategoryID == nil {
@@ -1638,19 +1752,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.UpdateAddressResponse.Address(childComplexity), true
 
-	case "UpdateSessionAddressResponse.addressId":
-		if e.complexity.UpdateSessionAddressResponse.AddressID == nil {
+	case "UpdateSessionAddressResponse.success":
+		if e.complexity.UpdateSessionAddressResponse.Success == nil {
 			break
 		}
 
-		return e.complexity.UpdateSessionAddressResponse.AddressID(childComplexity), true
-
-	case "UpdateSessionAddressResponse.sessionId":
-		if e.complexity.UpdateSessionAddressResponse.SessionID == nil {
-			break
-		}
-
-		return e.complexity.UpdateSessionAddressResponse.SessionID(childComplexity), true
+		return e.complexity.UpdateSessionAddressResponse.Success(childComplexity), true
 
 	case "User.email":
 		if e.complexity.User.Email == nil {
@@ -1762,8 +1869,10 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputAddressInput,
 		ec.unmarshalInputCartFilterInput,
 		ec.unmarshalInputCartSortInput,
+		ec.unmarshalInputConfirmCheckoutSessionInput,
 		ec.unmarshalInputCreateAddressInput,
-		ec.unmarshalInputCreateSessionOrderInput,
+		ec.unmarshalInputCreateOrderFromSessionInput,
+		ec.unmarshalInputCreateSessionCheckoutInput,
 		ec.unmarshalInputDeleteAddressInput,
 		ec.unmarshalInputLoginInput,
 		ec.unmarshalInputNewProduct,
@@ -1775,7 +1884,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputProductFilterInput,
 		ec.unmarshalInputProductSortInput,
 		ec.unmarshalInputRegisterInput,
-		ec.unmarshalInputSessionOrderItemInput,
+		ec.unmarshalInputSessionCheckoutItemInput,
 		ec.unmarshalInputUpdateAddressInput,
 		ec.unmarshalInputUpdateCartInput,
 		ec.unmarshalInputUpdateOrderStatusInput,

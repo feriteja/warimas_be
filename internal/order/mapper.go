@@ -2,7 +2,6 @@ package order
 
 import (
 	"fmt"
-	"time"
 	"warimas-be/internal/graph/model"
 )
 
@@ -11,7 +10,7 @@ func ToGraphQLOrderItem(item *OrderItem) *model.OrderItem {
 		ID:       fmt.Sprint(item.ID),
 		Product:  &model.Product{ID: fmt.Sprint(item.Product.ID), Name: item.Product.Name},
 		Quantity: int32(item.Quantity),
-		Price:    item.Price,
+		Price:    int32(item.Price),
 	}
 }
 
@@ -26,11 +25,11 @@ func ToGraphQLOrder(o *Order) *model.Order {
 	}
 
 	return &model.Order{
-		ID:        fmt.Sprint(o.ID),
-		Total:     o.Total,
-		Status:    model.OrderStatus(o.Status),
-		CreatedAt: o.CreatedAt.Format(time.RFC3339),
-		UpdatedAt: o.UpdatedAt.Format(time.RFC3339),
-		Items:     items,
+		ID:         fmt.Sprint(o.ID),
+		TotalPrice: int32(o.Total),
+		Status:     model.OrderStatus(o.Status),
+		CreatedAt:  o.CreatedAt,
+		UpdatedAt:  o.UpdatedAt,
+		Items:      items,
 	}
 }

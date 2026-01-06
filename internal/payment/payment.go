@@ -8,7 +8,7 @@ import (
 type Gateway interface {
 	CreateInvoice(orderID uint,
 		buyerName string,
-		amount float64,
+		amount uint,
 		customerEmail string,
 		items []OrderItem,
 		channelCode ChannelCode,

@@ -5,10 +5,23 @@ enum OrderStatus {
   CANCELED
 }
 
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+}
+
 enum OrderSortField {
-  NAME
-  PRICE
+  TOTAL
   CREATED_AT
+}
+
+enum CheckoutSessionStatus {
+  PENDING
+  PAID
+  EXPIRED
+  CANCELLED
 }
 
 input UpdateOrderStatusInput {
@@ -18,9 +31,9 @@ input UpdateOrderStatusInput {
 
 input OrderFilterInput {
   search: String
-  status: String
-  dateFrom: DateTime
-  dateTo: DateTime
+  status: OrderStatus
+  dateFrom: Time
+  dateTo: Time
 }
 
 input OrderSortInput {
@@ -28,11 +41,11 @@ input OrderSortInput {
   direction: SortDirection! = ASC
 }
 
-input CreateSessionOrderInput {
-  items: [SessionOrderItemInput!]!
+input CreateSessionCheckoutInput {
+  items: [SessionCheckoutItemInput!]!
 }
 
-input SessionOrderItemInput {
+input SessionCheckoutItemInput {
   variantId: ID!
   quantity: Int!
 }
@@ -42,47 +55,42 @@ input UpdateSessionAddressInput {
   addressId: ID!
 }
 
+input ConfirmCheckoutSessionInput {
+  sessionId: ID!
+}
+
+input CreateOrderFromSessionInput {
+  sessionId: ID!
+}
+
+"""
+====================
+Core Types
+====================
+"""
+type Order {
+  id: ID!
+  user: User
+  totalPrice: Int!
+  status: OrderStatus!
+  createdAt: Time!
+  updatedAt: Time!
+  items: [OrderItem!]!
+}
+
 type OrderItem {
   id: ID!
   orderId: ID!
   product: Product!
   quantity: Int!
-  price: Float!
-}
-
-type Order {
-  id: ID!
-  userId: ID!
-  total: Float!
-  status: OrderStatus!
-  createdAt: String!
-  updatedAt: String!
-  items: [OrderItem!]!
-}
-
-type CreateOrderResponse {
-  success: Boolean!
-  message: String
-  order: Order
-  paymentURL: String!
-  paymentStat: String!
-}
-
-type SessionOrderResponse {
-  sessionId: ID!
-  status: String!
-  expiresAt: Time!
-}
-
-type UpdateSessionAddressResponse {
-  sessionId: ID!
-  addressId: ID!
+  price: Int!
 }
 
 type CheckoutSession {
   id: ID!
-  status: String!
+  status: CheckoutSessionStatus!
   expiresAt: Time!
+  createdAt: Time!
 
   address: Address
   items: [CheckoutSessionItem!]!
@@ -104,8 +112,45 @@ type CheckoutSessionItem {
   quantity: Int!
   quantityType: String!
 
-  unitPrice: Int!
+  price: Int!
   subtotal: Int!
+}
+
+type OrderListResponse {
+  items: [Order!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+}
+
+type Payment {
+  status: PaymentStatus!
+  url: String
+  provider: String
+}
+
+type CreateOrderResponse {
+  success: Boolean!
+  message: String
+  order: Order
+  paymentURL: String
+  payment: Payment
+}
+
+type SessionCheckoutResponse {
+  sessionId: ID!
+  status: CheckoutSessionStatus!
+  expiresAt: Time!
+}
+
+type UpdateSessionAddressResponse {
+  success: Boolean!
+}
+
+type ConfirmCheckoutSessionResponse {
+  success: Boolean!
+  message: String
+  session: CheckoutSession
 }
 
 extend type Query {
@@ -114,7 +159,7 @@ extend type Query {
     sort: OrderSortInput
     limit: Int = 20
     page: Int = 1
-  ): [Order!]!
+  ): OrderListResponse
 
   orderDetail(orderId: ID!): Order! @auth(role: USER)
 
@@ -122,11 +167,22 @@ extend type Query {
 }
 
 extend type Mutation {
-  createOrder: CreateOrderResponse! @auth(role: USER)
+  createOrderFromSession(
+    input: CreateOrderFromSessionInput!
+  ): CreateOrderResponse! @auth(role: ADMIN)
+
   updateOrderStatus(input: UpdateOrderStatusInput!): CreateOrderResponse!
     @auth(role: ADMIN)
-  createSessionOrder(input: CreateSessionOrderInput!): SessionOrderResponse!
+
+  createSessionCheckout(
+    input: CreateSessionCheckoutInput!
+  ): SessionCheckoutResponse!
+
   updateSessionAddress(
     input: UpdateSessionAddressInput!
   ): UpdateSessionAddressResponse!
+
+  confirmCheckoutSession(
+    input: ConfirmCheckoutSessionInput!
+  ): ConfirmCheckoutSessionResponse!
 }

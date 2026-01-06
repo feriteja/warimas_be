@@ -68,7 +68,7 @@ func (ec *executionContext) _CheckoutSession_status(ctx context.Context, field g
 			return obj.Status, nil
 		},
 		nil,
-		ec.marshalNString2string,
+		ec.marshalNCheckoutSessionStatus2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSessionStatus,
 		true,
 		true,
 	)
@@ -81,7 +81,7 @@ func (ec *executionContext) fieldContext_CheckoutSession_status(_ context.Contex
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type CheckoutSessionStatus does not have child fields")
 		},
 	}
 	return fc, nil
@@ -104,6 +104,35 @@ func (ec *executionContext) _CheckoutSession_expiresAt(ctx context.Context, fiel
 }
 
 func (ec *executionContext) fieldContext_CheckoutSession_expiresAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CheckoutSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CheckoutSession_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.CheckoutSession) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CheckoutSession_createdAt,
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		ec.marshalNTime2timeᚐTime,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CheckoutSession_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "CheckoutSession",
 		Field:      field,
@@ -203,8 +232,8 @@ func (ec *executionContext) fieldContext_CheckoutSession_items(_ context.Context
 				return ec.fieldContext_CheckoutSessionItem_quantity(ctx, field)
 			case "quantityType":
 				return ec.fieldContext_CheckoutSessionItem_quantityType(ctx, field)
-			case "unitPrice":
-				return ec.fieldContext_CheckoutSessionItem_unitPrice(ctx, field)
+			case "price":
+				return ec.fieldContext_CheckoutSessionItem_price(ctx, field)
 			case "subtotal":
 				return ec.fieldContext_CheckoutSessionItem_subtotal(ctx, field)
 			}
@@ -533,14 +562,14 @@ func (ec *executionContext) fieldContext_CheckoutSessionItem_quantityType(_ cont
 	return fc, nil
 }
 
-func (ec *executionContext) _CheckoutSessionItem_unitPrice(ctx context.Context, field graphql.CollectedField, obj *model.CheckoutSessionItem) (ret graphql.Marshaler) {
+func (ec *executionContext) _CheckoutSessionItem_price(ctx context.Context, field graphql.CollectedField, obj *model.CheckoutSessionItem) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_CheckoutSessionItem_unitPrice,
+		ec.fieldContext_CheckoutSessionItem_price,
 		func(ctx context.Context) (any, error) {
-			return obj.UnitPrice, nil
+			return obj.Price, nil
 		},
 		nil,
 		ec.marshalNInt2int32,
@@ -549,7 +578,7 @@ func (ec *executionContext) _CheckoutSessionItem_unitPrice(ctx context.Context, 
 	)
 }
 
-func (ec *executionContext) fieldContext_CheckoutSessionItem_unitPrice(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_CheckoutSessionItem_price(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "CheckoutSessionItem",
 		Field:      field,
@@ -586,6 +615,117 @@ func (ec *executionContext) fieldContext_CheckoutSessionItem_subtotal(_ context.
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ConfirmCheckoutSessionResponse_success(ctx context.Context, field graphql.CollectedField, obj *model.ConfirmCheckoutSessionResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ConfirmCheckoutSessionResponse_success,
+		func(ctx context.Context) (any, error) {
+			return obj.Success, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ConfirmCheckoutSessionResponse_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ConfirmCheckoutSessionResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ConfirmCheckoutSessionResponse_message(ctx context.Context, field graphql.CollectedField, obj *model.ConfirmCheckoutSessionResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ConfirmCheckoutSessionResponse_message,
+		func(ctx context.Context) (any, error) {
+			return obj.Message, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ConfirmCheckoutSessionResponse_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ConfirmCheckoutSessionResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ConfirmCheckoutSessionResponse_session(ctx context.Context, field graphql.CollectedField, obj *model.ConfirmCheckoutSessionResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ConfirmCheckoutSessionResponse_session,
+		func(ctx context.Context) (any, error) {
+			return obj.Session, nil
+		},
+		nil,
+		ec.marshalOCheckoutSession2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSession,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ConfirmCheckoutSessionResponse_session(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ConfirmCheckoutSessionResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_CheckoutSession_id(ctx, field)
+			case "status":
+				return ec.fieldContext_CheckoutSession_status(ctx, field)
+			case "expiresAt":
+				return ec.fieldContext_CheckoutSession_expiresAt(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_CheckoutSession_createdAt(ctx, field)
+			case "address":
+				return ec.fieldContext_CheckoutSession_address(ctx, field)
+			case "items":
+				return ec.fieldContext_CheckoutSession_items(ctx, field)
+			case "subtotal":
+				return ec.fieldContext_CheckoutSession_subtotal(ctx, field)
+			case "tax":
+				return ec.fieldContext_CheckoutSession_tax(ctx, field)
+			case "shippingFee":
+				return ec.fieldContext_CheckoutSession_shippingFee(ctx, field)
+			case "discount":
+				return ec.fieldContext_CheckoutSession_discount(ctx, field)
+			case "totalPrice":
+				return ec.fieldContext_CheckoutSession_totalPrice(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CheckoutSession", field.Name)
 		},
 	}
 	return fc, nil
@@ -675,10 +815,10 @@ func (ec *executionContext) fieldContext_CreateOrderResponse_order(_ context.Con
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Order_id(ctx, field)
-			case "userId":
-				return ec.fieldContext_Order_userId(ctx, field)
-			case "total":
-				return ec.fieldContext_Order_total(ctx, field)
+			case "user":
+				return ec.fieldContext_Order_user(ctx, field)
+			case "totalPrice":
+				return ec.fieldContext_Order_totalPrice(ctx, field)
 			case "status":
 				return ec.fieldContext_Order_status(ctx, field)
 			case "createdAt":
@@ -704,9 +844,9 @@ func (ec *executionContext) _CreateOrderResponse_paymentURL(ctx context.Context,
 			return obj.PaymentURL, nil
 		},
 		nil,
-		ec.marshalNString2string,
+		ec.marshalOString2ᚖstring,
 		true,
-		true,
+		false,
 	)
 }
 
@@ -723,30 +863,38 @@ func (ec *executionContext) fieldContext_CreateOrderResponse_paymentURL(_ contex
 	return fc, nil
 }
 
-func (ec *executionContext) _CreateOrderResponse_paymentStat(ctx context.Context, field graphql.CollectedField, obj *model.CreateOrderResponse) (ret graphql.Marshaler) {
+func (ec *executionContext) _CreateOrderResponse_payment(ctx context.Context, field graphql.CollectedField, obj *model.CreateOrderResponse) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_CreateOrderResponse_paymentStat,
+		ec.fieldContext_CreateOrderResponse_payment,
 		func(ctx context.Context) (any, error) {
-			return obj.PaymentStat, nil
+			return obj.Payment, nil
 		},
 		nil,
-		ec.marshalNString2string,
+		ec.marshalOPayment2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPayment,
 		true,
-		true,
+		false,
 	)
 }
 
-func (ec *executionContext) fieldContext_CreateOrderResponse_paymentStat(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_CreateOrderResponse_payment(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "CreateOrderResponse",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			switch field.Name {
+			case "status":
+				return ec.fieldContext_Payment_status(ctx, field)
+			case "url":
+				return ec.fieldContext_Payment_url(ctx, field)
+			case "provider":
+				return ec.fieldContext_Payment_provider(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Payment", field.Name)
 		},
 	}
 	return fc, nil
@@ -781,59 +929,67 @@ func (ec *executionContext) fieldContext_Order_id(_ context.Context, field graph
 	return fc, nil
 }
 
-func (ec *executionContext) _Order_userId(ctx context.Context, field graphql.CollectedField, obj *model.Order) (ret graphql.Marshaler) {
+func (ec *executionContext) _Order_user(ctx context.Context, field graphql.CollectedField, obj *model.Order) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Order_userId,
+		ec.fieldContext_Order_user,
 		func(ctx context.Context) (any, error) {
-			return obj.UserID, nil
+			return obj.User, nil
 		},
 		nil,
-		ec.marshalNID2string,
+		ec.marshalOUser2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐUser,
 		true,
-		true,
+		false,
 	)
 }
 
-func (ec *executionContext) fieldContext_Order_userId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Order_user(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Order",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "role":
+				return ec.fieldContext_User_role(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Order_total(ctx context.Context, field graphql.CollectedField, obj *model.Order) (ret graphql.Marshaler) {
+func (ec *executionContext) _Order_totalPrice(ctx context.Context, field graphql.CollectedField, obj *model.Order) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Order_total,
+		ec.fieldContext_Order_totalPrice,
 		func(ctx context.Context) (any, error) {
-			return obj.Total, nil
+			return obj.TotalPrice, nil
 		},
 		nil,
-		ec.marshalNFloat2float64,
+		ec.marshalNInt2int32,
 		true,
 		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_Order_total(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Order_totalPrice(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Order",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Float does not have child fields")
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -878,7 +1034,7 @@ func (ec *executionContext) _Order_createdAt(ctx context.Context, field graphql.
 			return obj.CreatedAt, nil
 		},
 		nil,
-		ec.marshalNString2string,
+		ec.marshalNTime2timeᚐTime,
 		true,
 		true,
 	)
@@ -891,7 +1047,7 @@ func (ec *executionContext) fieldContext_Order_createdAt(_ context.Context, fiel
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type Time does not have child fields")
 		},
 	}
 	return fc, nil
@@ -907,7 +1063,7 @@ func (ec *executionContext) _Order_updatedAt(ctx context.Context, field graphql.
 			return obj.UpdatedAt, nil
 		},
 		nil,
-		ec.marshalNString2string,
+		ec.marshalNTime2timeᚐTime,
 		true,
 		true,
 	)
@@ -920,7 +1076,7 @@ func (ec *executionContext) fieldContext_Order_updatedAt(_ context.Context, fiel
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type Time does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1125,7 +1281,7 @@ func (ec *executionContext) _OrderItem_price(ctx context.Context, field graphql.
 			return obj.Price, nil
 		},
 		nil,
-		ec.marshalNFloat2float64,
+		ec.marshalNInt2int32,
 		true,
 		true,
 	)
@@ -1138,60 +1294,192 @@ func (ec *executionContext) fieldContext_OrderItem_price(_ context.Context, fiel
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Float does not have child fields")
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _SessionOrderResponse_sessionId(ctx context.Context, field graphql.CollectedField, obj *model.SessionOrderResponse) (ret graphql.Marshaler) {
+func (ec *executionContext) _OrderListResponse_items(ctx context.Context, field graphql.CollectedField, obj *model.OrderListResponse) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_SessionOrderResponse_sessionId,
+		ec.fieldContext_OrderListResponse_items,
 		func(ctx context.Context) (any, error) {
-			return obj.SessionID, nil
+			return obj.Items, nil
 		},
 		nil,
-		ec.marshalNID2string,
+		ec.marshalNOrder2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderᚄ,
 		true,
 		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_SessionOrderResponse_sessionId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_OrderListResponse_items(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "SessionOrderResponse",
+		Object:     "OrderListResponse",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Order_id(ctx, field)
+			case "user":
+				return ec.fieldContext_Order_user(ctx, field)
+			case "totalPrice":
+				return ec.fieldContext_Order_totalPrice(ctx, field)
+			case "status":
+				return ec.fieldContext_Order_status(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Order_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Order_updatedAt(ctx, field)
+			case "items":
+				return ec.fieldContext_Order_items(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Order", field.Name)
 		},
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _SessionOrderResponse_status(ctx context.Context, field graphql.CollectedField, obj *model.SessionOrderResponse) (ret graphql.Marshaler) {
+func (ec *executionContext) _OrderListResponse_total(ctx context.Context, field graphql.CollectedField, obj *model.OrderListResponse) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_SessionOrderResponse_status,
+		ec.fieldContext_OrderListResponse_total,
 		func(ctx context.Context) (any, error) {
-			return obj.Status, nil
+			return obj.Total, nil
 		},
 		nil,
-		ec.marshalNString2string,
+		ec.marshalNInt2int32,
 		true,
 		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_SessionOrderResponse_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_OrderListResponse_total(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "SessionOrderResponse",
+		Object:     "OrderListResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _OrderListResponse_page(ctx context.Context, field graphql.CollectedField, obj *model.OrderListResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_OrderListResponse_page,
+		func(ctx context.Context) (any, error) {
+			return obj.Page, nil
+		},
+		nil,
+		ec.marshalNInt2int32,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_OrderListResponse_page(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OrderListResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _OrderListResponse_limit(ctx context.Context, field graphql.CollectedField, obj *model.OrderListResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_OrderListResponse_limit,
+		func(ctx context.Context) (any, error) {
+			return obj.Limit, nil
+		},
+		nil,
+		ec.marshalNInt2int32,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_OrderListResponse_limit(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OrderListResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Payment_status(ctx context.Context, field graphql.CollectedField, obj *model.Payment) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Payment_status,
+		func(ctx context.Context) (any, error) {
+			return obj.Status, nil
+		},
+		nil,
+		ec.marshalNPaymentStatus2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPaymentStatus,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Payment_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Payment",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type PaymentStatus does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Payment_url(ctx context.Context, field graphql.CollectedField, obj *model.Payment) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Payment_url,
+		func(ctx context.Context) (any, error) {
+			return obj.URL, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Payment_url(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Payment",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -1202,41 +1490,41 @@ func (ec *executionContext) fieldContext_SessionOrderResponse_status(_ context.C
 	return fc, nil
 }
 
-func (ec *executionContext) _SessionOrderResponse_expiresAt(ctx context.Context, field graphql.CollectedField, obj *model.SessionOrderResponse) (ret graphql.Marshaler) {
+func (ec *executionContext) _Payment_provider(ctx context.Context, field graphql.CollectedField, obj *model.Payment) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_SessionOrderResponse_expiresAt,
+		ec.fieldContext_Payment_provider,
 		func(ctx context.Context) (any, error) {
-			return obj.ExpiresAt, nil
+			return obj.Provider, nil
 		},
 		nil,
-		ec.marshalNTime2timeᚐTime,
+		ec.marshalOString2ᚖstring,
 		true,
-		true,
+		false,
 	)
 }
 
-func (ec *executionContext) fieldContext_SessionOrderResponse_expiresAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Payment_provider(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "SessionOrderResponse",
+		Object:     "Payment",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _UpdateSessionAddressResponse_sessionId(ctx context.Context, field graphql.CollectedField, obj *model.UpdateSessionAddressResponse) (ret graphql.Marshaler) {
+func (ec *executionContext) _SessionCheckoutResponse_sessionId(ctx context.Context, field graphql.CollectedField, obj *model.SessionCheckoutResponse) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_UpdateSessionAddressResponse_sessionId,
+		ec.fieldContext_SessionCheckoutResponse_sessionId,
 		func(ctx context.Context) (any, error) {
 			return obj.SessionID, nil
 		},
@@ -1247,9 +1535,9 @@ func (ec *executionContext) _UpdateSessionAddressResponse_sessionId(ctx context.
 	)
 }
 
-func (ec *executionContext) fieldContext_UpdateSessionAddressResponse_sessionId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SessionCheckoutResponse_sessionId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "UpdateSessionAddressResponse",
+		Object:     "SessionCheckoutResponse",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -1260,30 +1548,88 @@ func (ec *executionContext) fieldContext_UpdateSessionAddressResponse_sessionId(
 	return fc, nil
 }
 
-func (ec *executionContext) _UpdateSessionAddressResponse_addressId(ctx context.Context, field graphql.CollectedField, obj *model.UpdateSessionAddressResponse) (ret graphql.Marshaler) {
+func (ec *executionContext) _SessionCheckoutResponse_status(ctx context.Context, field graphql.CollectedField, obj *model.SessionCheckoutResponse) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_UpdateSessionAddressResponse_addressId,
+		ec.fieldContext_SessionCheckoutResponse_status,
 		func(ctx context.Context) (any, error) {
-			return obj.AddressID, nil
+			return obj.Status, nil
 		},
 		nil,
-		ec.marshalNID2string,
+		ec.marshalNCheckoutSessionStatus2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSessionStatus,
 		true,
 		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_UpdateSessionAddressResponse_addressId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SessionCheckoutResponse_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SessionCheckoutResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type CheckoutSessionStatus does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SessionCheckoutResponse_expiresAt(ctx context.Context, field graphql.CollectedField, obj *model.SessionCheckoutResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SessionCheckoutResponse_expiresAt,
+		func(ctx context.Context) (any, error) {
+			return obj.ExpiresAt, nil
+		},
+		nil,
+		ec.marshalNTime2timeᚐTime,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SessionCheckoutResponse_expiresAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SessionCheckoutResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UpdateSessionAddressResponse_success(ctx context.Context, field graphql.CollectedField, obj *model.UpdateSessionAddressResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UpdateSessionAddressResponse_success,
+		func(ctx context.Context) (any, error) {
+			return obj.Success, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UpdateSessionAddressResponse_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "UpdateSessionAddressResponse",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1293,8 +1639,62 @@ func (ec *executionContext) fieldContext_UpdateSessionAddressResponse_addressId(
 
 // region    **************************** input.gotpl *****************************
 
-func (ec *executionContext) unmarshalInputCreateSessionOrderInput(ctx context.Context, obj any) (model.CreateSessionOrderInput, error) {
-	var it model.CreateSessionOrderInput
+func (ec *executionContext) unmarshalInputConfirmCheckoutSessionInput(ctx context.Context, obj any) (model.ConfirmCheckoutSessionInput, error) {
+	var it model.ConfirmCheckoutSessionInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"sessionId"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "sessionId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SessionID = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputCreateOrderFromSessionInput(ctx context.Context, obj any) (model.CreateOrderFromSessionInput, error) {
+	var it model.CreateOrderFromSessionInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"sessionId"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "sessionId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SessionID = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputCreateSessionCheckoutInput(ctx context.Context, obj any) (model.CreateSessionCheckoutInput, error) {
+	var it model.CreateSessionCheckoutInput
 	asMap := map[string]any{}
 	for k, v := range obj.(map[string]any) {
 		asMap[k] = v
@@ -1309,7 +1709,7 @@ func (ec *executionContext) unmarshalInputCreateSessionOrderInput(ctx context.Co
 		switch k {
 		case "items":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("items"))
-			data, err := ec.unmarshalNSessionOrderItemInput2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionOrderItemInputᚄ(ctx, v)
+			data, err := ec.unmarshalNSessionCheckoutItemInput2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionCheckoutItemInputᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -1343,21 +1743,21 @@ func (ec *executionContext) unmarshalInputOrderFilterInput(ctx context.Context, 
 			it.Search = data
 		case "status":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			data, err := ec.unmarshalOOrderStatus2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderStatus(ctx, v)
 			if err != nil {
 				return it, err
 			}
 			it.Status = data
 		case "dateFrom":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("dateFrom"))
-			data, err := ec.unmarshalODateTime2ᚖtimeᚐTime(ctx, v)
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
 			if err != nil {
 				return it, err
 			}
 			it.DateFrom = data
 		case "dateTo":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("dateTo"))
-			data, err := ec.unmarshalODateTime2ᚖtimeᚐTime(ctx, v)
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -1406,8 +1806,8 @@ func (ec *executionContext) unmarshalInputOrderSortInput(ctx context.Context, ob
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputSessionOrderItemInput(ctx context.Context, obj any) (model.SessionOrderItemInput, error) {
-	var it model.SessionOrderItemInput
+func (ec *executionContext) unmarshalInputSessionCheckoutItemInput(ctx context.Context, obj any) (model.SessionCheckoutItemInput, error) {
+	var it model.SessionCheckoutItemInput
 	asMap := map[string]any{}
 	for k, v := range obj.(map[string]any) {
 		asMap[k] = v
@@ -1542,6 +1942,11 @@ func (ec *executionContext) _CheckoutSession(ctx context.Context, sel ast.Select
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "createdAt":
+			out.Values[i] = ec._CheckoutSession_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "address":
 			out.Values[i] = ec._CheckoutSession_address(ctx, field, obj)
 		case "items":
@@ -1635,8 +2040,8 @@ func (ec *executionContext) _CheckoutSessionItem(ctx context.Context, sel ast.Se
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "unitPrice":
-			out.Values[i] = ec._CheckoutSessionItem_unitPrice(ctx, field, obj)
+		case "price":
+			out.Values[i] = ec._CheckoutSessionItem_price(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -1645,6 +2050,49 @@ func (ec *executionContext) _CheckoutSessionItem(ctx context.Context, sel ast.Se
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var confirmCheckoutSessionResponseImplementors = []string{"ConfirmCheckoutSessionResponse"}
+
+func (ec *executionContext) _ConfirmCheckoutSessionResponse(ctx context.Context, sel ast.SelectionSet, obj *model.ConfirmCheckoutSessionResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, confirmCheckoutSessionResponseImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ConfirmCheckoutSessionResponse")
+		case "success":
+			out.Values[i] = ec._ConfirmCheckoutSessionResponse_success(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "message":
+			out.Values[i] = ec._ConfirmCheckoutSessionResponse_message(ctx, field, obj)
+		case "session":
+			out.Values[i] = ec._ConfirmCheckoutSessionResponse_session(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -1690,14 +2138,8 @@ func (ec *executionContext) _CreateOrderResponse(ctx context.Context, sel ast.Se
 			out.Values[i] = ec._CreateOrderResponse_order(ctx, field, obj)
 		case "paymentURL":
 			out.Values[i] = ec._CreateOrderResponse_paymentURL(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "paymentStat":
-			out.Values[i] = ec._CreateOrderResponse_paymentStat(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
+		case "payment":
+			out.Values[i] = ec._CreateOrderResponse_payment(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -1737,13 +2179,10 @@ func (ec *executionContext) _Order(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "userId":
-			out.Values[i] = ec._Order_userId(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "total":
-			out.Values[i] = ec._Order_total(ctx, field, obj)
+		case "user":
+			out.Values[i] = ec._Order_user(ctx, field, obj)
+		case "totalPrice":
+			out.Values[i] = ec._Order_totalPrice(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -1849,29 +2288,126 @@ func (ec *executionContext) _OrderItem(ctx context.Context, sel ast.SelectionSet
 	return out
 }
 
-var sessionOrderResponseImplementors = []string{"SessionOrderResponse"}
+var orderListResponseImplementors = []string{"OrderListResponse"}
 
-func (ec *executionContext) _SessionOrderResponse(ctx context.Context, sel ast.SelectionSet, obj *model.SessionOrderResponse) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, sessionOrderResponseImplementors)
+func (ec *executionContext) _OrderListResponse(ctx context.Context, sel ast.SelectionSet, obj *model.OrderListResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, orderListResponseImplementors)
 
 	out := graphql.NewFieldSet(fields)
 	deferred := make(map[string]*graphql.FieldSet)
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("SessionOrderResponse")
+			out.Values[i] = graphql.MarshalString("OrderListResponse")
+		case "items":
+			out.Values[i] = ec._OrderListResponse_items(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "total":
+			out.Values[i] = ec._OrderListResponse_total(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "page":
+			out.Values[i] = ec._OrderListResponse_page(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "limit":
+			out.Values[i] = ec._OrderListResponse_limit(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var paymentImplementors = []string{"Payment"}
+
+func (ec *executionContext) _Payment(ctx context.Context, sel ast.SelectionSet, obj *model.Payment) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, paymentImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Payment")
+		case "status":
+			out.Values[i] = ec._Payment_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "url":
+			out.Values[i] = ec._Payment_url(ctx, field, obj)
+		case "provider":
+			out.Values[i] = ec._Payment_provider(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var sessionCheckoutResponseImplementors = []string{"SessionCheckoutResponse"}
+
+func (ec *executionContext) _SessionCheckoutResponse(ctx context.Context, sel ast.SelectionSet, obj *model.SessionCheckoutResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, sessionCheckoutResponseImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SessionCheckoutResponse")
 		case "sessionId":
-			out.Values[i] = ec._SessionOrderResponse_sessionId(ctx, field, obj)
+			out.Values[i] = ec._SessionCheckoutResponse_sessionId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		case "status":
-			out.Values[i] = ec._SessionOrderResponse_status(ctx, field, obj)
+			out.Values[i] = ec._SessionCheckoutResponse_status(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		case "expiresAt":
-			out.Values[i] = ec._SessionOrderResponse_expiresAt(ctx, field, obj)
+			out.Values[i] = ec._SessionCheckoutResponse_expiresAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -1909,13 +2445,8 @@ func (ec *executionContext) _UpdateSessionAddressResponse(ctx context.Context, s
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("UpdateSessionAddressResponse")
-		case "sessionId":
-			out.Values[i] = ec._UpdateSessionAddressResponse_sessionId(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "addressId":
-			out.Values[i] = ec._UpdateSessionAddressResponse_addressId(ctx, field, obj)
+		case "success":
+			out.Values[i] = ec._UpdateSessionAddressResponse_success(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -2000,6 +2531,40 @@ func (ec *executionContext) marshalNCheckoutSessionItem2ᚖwarimasᚑbeᚋintern
 	return ec._CheckoutSessionItem(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNCheckoutSessionStatus2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSessionStatus(ctx context.Context, v any) (model.CheckoutSessionStatus, error) {
+	var res model.CheckoutSessionStatus
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNCheckoutSessionStatus2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSessionStatus(ctx context.Context, sel ast.SelectionSet, v model.CheckoutSessionStatus) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNConfirmCheckoutSessionInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐConfirmCheckoutSessionInput(ctx context.Context, v any) (model.ConfirmCheckoutSessionInput, error) {
+	res, err := ec.unmarshalInputConfirmCheckoutSessionInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNConfirmCheckoutSessionResponse2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐConfirmCheckoutSessionResponse(ctx context.Context, sel ast.SelectionSet, v model.ConfirmCheckoutSessionResponse) graphql.Marshaler {
+	return ec._ConfirmCheckoutSessionResponse(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNConfirmCheckoutSessionResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐConfirmCheckoutSessionResponse(ctx context.Context, sel ast.SelectionSet, v *model.ConfirmCheckoutSessionResponse) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ConfirmCheckoutSessionResponse(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNCreateOrderFromSessionInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCreateOrderFromSessionInput(ctx context.Context, v any) (model.CreateOrderFromSessionInput, error) {
+	res, err := ec.unmarshalInputCreateOrderFromSessionInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNCreateOrderResponse2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCreateOrderResponse(ctx context.Context, sel ast.SelectionSet, v model.CreateOrderResponse) graphql.Marshaler {
 	return ec._CreateOrderResponse(ctx, sel, &v)
 }
@@ -2014,8 +2579,8 @@ func (ec *executionContext) marshalNCreateOrderResponse2ᚖwarimasᚑbeᚋintern
 	return ec._CreateOrderResponse(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNCreateSessionOrderInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCreateSessionOrderInput(ctx context.Context, v any) (model.CreateSessionOrderInput, error) {
-	res, err := ec.unmarshalInputCreateSessionOrderInput(ctx, v)
+func (ec *executionContext) unmarshalNCreateSessionCheckoutInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCreateSessionCheckoutInput(ctx context.Context, v any) (model.CreateSessionCheckoutInput, error) {
+	res, err := ec.unmarshalInputCreateSessionCheckoutInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -2151,14 +2716,24 @@ func (ec *executionContext) marshalNOrderStatus2warimasᚑbeᚋinternalᚋgraph�
 	return v
 }
 
-func (ec *executionContext) unmarshalNSessionOrderItemInput2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionOrderItemInputᚄ(ctx context.Context, v any) ([]*model.SessionOrderItemInput, error) {
+func (ec *executionContext) unmarshalNPaymentStatus2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPaymentStatus(ctx context.Context, v any) (model.PaymentStatus, error) {
+	var res model.PaymentStatus
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPaymentStatus2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPaymentStatus(ctx context.Context, sel ast.SelectionSet, v model.PaymentStatus) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNSessionCheckoutItemInput2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionCheckoutItemInputᚄ(ctx context.Context, v any) ([]*model.SessionCheckoutItemInput, error) {
 	var vSlice []any
 	vSlice = graphql.CoerceList(v)
 	var err error
-	res := make([]*model.SessionOrderItemInput, len(vSlice))
+	res := make([]*model.SessionCheckoutItemInput, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNSessionOrderItemInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionOrderItemInput(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNSessionCheckoutItemInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionCheckoutItemInput(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -2166,23 +2741,23 @@ func (ec *executionContext) unmarshalNSessionOrderItemInput2ᚕᚖwarimasᚑbe�
 	return res, nil
 }
 
-func (ec *executionContext) unmarshalNSessionOrderItemInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionOrderItemInput(ctx context.Context, v any) (*model.SessionOrderItemInput, error) {
-	res, err := ec.unmarshalInputSessionOrderItemInput(ctx, v)
+func (ec *executionContext) unmarshalNSessionCheckoutItemInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionCheckoutItemInput(ctx context.Context, v any) (*model.SessionCheckoutItemInput, error) {
+	res, err := ec.unmarshalInputSessionCheckoutItemInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNSessionOrderResponse2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionOrderResponse(ctx context.Context, sel ast.SelectionSet, v model.SessionOrderResponse) graphql.Marshaler {
-	return ec._SessionOrderResponse(ctx, sel, &v)
+func (ec *executionContext) marshalNSessionCheckoutResponse2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionCheckoutResponse(ctx context.Context, sel ast.SelectionSet, v model.SessionCheckoutResponse) graphql.Marshaler {
+	return ec._SessionCheckoutResponse(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNSessionOrderResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionOrderResponse(ctx context.Context, sel ast.SelectionSet, v *model.SessionOrderResponse) graphql.Marshaler {
+func (ec *executionContext) marshalNSessionCheckoutResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionCheckoutResponse(ctx context.Context, sel ast.SelectionSet, v *model.SessionCheckoutResponse) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
 		}
 		return graphql.Null
 	}
-	return ec._SessionOrderResponse(ctx, sel, v)
+	return ec._SessionCheckoutResponse(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNUpdateOrderStatusInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐUpdateOrderStatusInput(ctx context.Context, v any) (model.UpdateOrderStatusInput, error) {
@@ -2231,12 +2806,42 @@ func (ec *executionContext) unmarshalOOrderFilterInput2ᚖwarimasᚑbeᚋinterna
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) marshalOOrderListResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderListResponse(ctx context.Context, sel ast.SelectionSet, v *model.OrderListResponse) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._OrderListResponse(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalOOrderSortInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderSortInput(ctx context.Context, v any) (*model.OrderSortInput, error) {
 	if v == nil {
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputOrderSortInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOOrderStatus2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderStatus(ctx context.Context, v any) (*model.OrderStatus, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.OrderStatus)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOOrderStatus2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderStatus(ctx context.Context, sel ast.SelectionSet, v *model.OrderStatus) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
+func (ec *executionContext) marshalOPayment2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPayment(ctx context.Context, sel ast.SelectionSet, v *model.Payment) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Payment(ctx, sel, v)
 }
 
 // endregion ***************************** type.gotpl *****************************

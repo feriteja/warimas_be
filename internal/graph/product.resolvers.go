@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
-	"warimas-be/internal/product"
 	prodInternal "warimas-be/internal/product"
 	"warimas-be/internal/utils"
 
@@ -86,7 +85,7 @@ func (r *queryResolver) ProductList(ctx context.Context, filter *model.ProductFi
 		filter = &model.ProductFilterInput{}
 	}
 
-	opts := product.ProductQueryOptions{
+	opts := prodInternal.ProductQueryOptions{
 		CategoryID: filter.CategoryID,
 		SellerName: filter.SellerName,
 		Status:     filter.Status,
@@ -183,7 +182,7 @@ func (r *queryResolver) ProductsHome(ctx context.Context, filter *model.ProductF
 	// -------------------------------
 	// 3. Build service query options
 	// -------------------------------
-	opts := product.ProductQueryOptions{
+	opts := prodInternal.ProductQueryOptions{
 		CategoryID: filter.CategoryID,
 		SellerName: filter.SellerName,
 		Status:     filter.Status,

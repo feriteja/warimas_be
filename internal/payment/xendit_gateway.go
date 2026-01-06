@@ -59,7 +59,7 @@ func NewXenditGateway(apiKey string) Gateway {
 func (x *xenditGateway) CreateInvoice(
 	orderID uint,
 	buyerName string,
-	amount float64,
+	amount uint,
 	customerEmail string,
 	items []OrderItem,
 	channelCode ChannelCode,
@@ -68,7 +68,7 @@ func (x *xenditGateway) CreateInvoice(
 	log := logger.L().With(
 		zap.Uint("order_id", orderID),
 		zap.String("buyer", buyerName),
-		zap.Float64("amount", amount),
+		zap.Uint("amount", amount),
 		zap.String("channel", string(channelCode)),
 	)
 

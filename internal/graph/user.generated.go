@@ -389,4 +389,11 @@ func (ec *executionContext) marshalNUser2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmo
 	return ec._User(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalOUser2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v *model.User) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._User(ctx, sel, v)
+}
+
 // endregion ***************************** type.gotpl *****************************

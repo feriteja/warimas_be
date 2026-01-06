@@ -51,7 +51,7 @@ func (r *repository) CreateOrder(userID uint) (*Order, error) {
 	defer rows.Close()
 
 	var items []OrderItem
-	var total float64
+	var total int
 
 	for rows.Next() {
 		var item OrderItem
@@ -60,7 +60,7 @@ func (r *repository) CreateOrder(userID uint) (*Order, error) {
 			return nil, err
 		}
 		items = append(items, item)
-		total += float64(item.Quantity) * item.Price
+		total += item.Quantity * item.Price
 	}
 
 	if len(items) == 0 {
@@ -104,7 +104,7 @@ func (r *repository) CreateOrder(userID uint) (*Order, error) {
 	return &Order{
 		ID:     orderID,
 		UserID: userID,
-		Total:  total,
+		Total:  uint(total),
 		Status: StatusPending,
 		Items:  items,
 	}, nil
@@ -153,7 +153,6 @@ func (r *repository) GetOrders(
 	query := `
 		SELECT
 			o.id,
-			o.user_id,
 			o.total,
 			o.status,
 			o.created_at,
@@ -213,9 +212,7 @@ func (r *repository) GetOrders(
 		}
 
 		switch sort.Field {
-		case model.OrderSortFieldName:
-			orderBy = "o.id " + dir
-		case model.OrderSortFieldPrice:
+		case model.OrderSortFieldTotal:
 			orderBy = "o.total " + dir
 		case model.OrderSortFieldCreatedAt:
 			orderBy = "o.created_at " + dir
@@ -247,8 +244,7 @@ func (r *repository) GetOrders(
 		var o model.Order
 		if err := rows.Scan(
 			&o.ID,
-			&o.UserID,
-			&o.Total,
+			&o.TotalPrice,
 			&o.Status,
 			&o.CreatedAt,
 			&o.UpdatedAt,

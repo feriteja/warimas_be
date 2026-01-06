@@ -12,33 +12,9 @@ import (
 	"warimas-be/internal/utils"
 )
 
-// CreateOrder is the resolver for the createOrder field.
-func (r *mutationResolver) CreateOrder(ctx context.Context) (*model.CreateOrderResponse, error) {
-	userID, ok := utils.GetUserIDFromContext(ctx)
-	if !ok {
-		return &model.CreateOrderResponse{
-			Success: false,
-			Message: utils.StrPtr("Unauthorized"),
-		}, nil
-	}
-
-	userEmail := utils.GetUserEmailFromContext(ctx)
-
-	newOrder, payment, err := r.OrderSvc.CreateOrder(uint(userID), userEmail)
-	if err != nil {
-		return &model.CreateOrderResponse{
-			Success: false,
-			Message: utils.StrPtr(err.Error()),
-		}, nil
-	}
-
-	return &model.CreateOrderResponse{
-		Success:     true,
-		Message:     utils.StrPtr("Order created successfully"),
-		Order:       order.ToGraphQLOrder(newOrder),
-		PaymentURL:  payment.InvoiceURL,
-		PaymentStat: payment.Status,
-	}, nil
+// CreateOrderFromSession is the resolver for the createOrderFromSession field.
+func (r *mutationResolver) CreateOrderFromSession(ctx context.Context, input model.CreateOrderFromSessionInput) (*model.CreateOrderResponse, error) {
+	panic(fmt.Errorf("not implemented: CreateOrderFromSession - createOrderFromSession"))
 }
 
 // UpdateOrderStatus is the resolver for the updateOrderStatus field.
@@ -68,9 +44,9 @@ func (r *mutationResolver) UpdateOrderStatus(ctx context.Context, input model.Up
 	}, nil
 }
 
-// CreateSessionOrder is the resolver for the createSessionOrder field.
-func (r *mutationResolver) CreateSessionOrder(ctx context.Context, input model.CreateSessionOrderInput) (*model.SessionOrderResponse, error) {
-	panic(fmt.Errorf("not implemented: CreateSessionOrder - createSessionOrder"))
+// CreateSessionCheckout is the resolver for the createSessionCheckout field.
+func (r *mutationResolver) CreateSessionCheckout(ctx context.Context, input model.CreateSessionCheckoutInput) (*model.SessionCheckoutResponse, error) {
+	panic(fmt.Errorf("not implemented: CreateSessionCheckout - createSessionCheckout"))
 }
 
 // UpdateSessionAddress is the resolver for the updateSessionAddress field.
@@ -78,14 +54,22 @@ func (r *mutationResolver) UpdateSessionAddress(ctx context.Context, input model
 	panic(fmt.Errorf("not implemented: UpdateSessionAddress - updateSessionAddress"))
 }
 
+// ConfirmCheckoutSession is the resolver for the confirmCheckoutSession field.
+func (r *mutationResolver) ConfirmCheckoutSession(ctx context.Context, input model.ConfirmCheckoutSessionInput) (*model.ConfirmCheckoutSessionResponse, error) {
+	panic(fmt.Errorf("not implemented: ConfirmCheckoutSession - confirmCheckoutSession"))
+}
+
 // OrderList is the resolver for the orderList field.
-func (r *queryResolver) OrderList(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, page *int32) ([]*model.Order, error) {
+func (r *queryResolver) OrderList(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, page *int32) (*model.OrderListResponse, error) {
 	orders, err := r.OrderSvc.GetOrders(ctx, filter, sort, limit, page)
 	if err != nil {
 		return nil, err
 	}
 
-	return (orders), nil
+	return &model.OrderListResponse{
+		Items: orders,
+		Total: int32(len(orders)),
+	}, nil
 }
 
 // OrderDetail is the resolver for the orderDetail field.
@@ -112,3 +96,42 @@ func (r *queryResolver) OrderDetail(ctx context.Context, orderID string) (*model
 func (r *queryResolver) CheckoutSession(ctx context.Context, id string) (*model.CheckoutSession, error) {
 	panic(fmt.Errorf("not implemented: CheckoutSession - checkoutSession"))
 }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+/*
+	func (r *mutationResolver) CreateOrder(ctx context.Context) (*model.CreateOrderResponse, error) {
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		return &model.CreateOrderResponse{
+			Success: false,
+			Message: utils.StrPtr("Unauthorized"),
+		}, nil
+	}
+
+	userEmail := utils.GetUserEmailFromContext(ctx)
+
+	newOrder, payment, err := r.OrderSvc.CreateOrder(uint(userID), userEmail)
+	if err != nil {
+		return &model.CreateOrderResponse{
+			Success: false,
+			Message: utils.StrPtr(err.Error()),
+		}, nil
+	}
+
+	return &model.CreateOrderResponse{
+		Success:     true,
+		Message:     utils.StrPtr("Order created successfully"),
+		Order:       order.ToGraphQLOrder(newOrder),
+		PaymentURL:  payment.InvoiceURL,
+		PaymentStat: payment.Status,
+	}, nil
+}
+func (r *mutationResolver) CreateSessionOrder(ctx context.Context, input model.CreateSessionOrderInput) (*model.SessionOrderResponse, error) {
+	panic(fmt.Errorf("not implemented: CreateSessionOrder - createSessionOrder"))
+}
+*/

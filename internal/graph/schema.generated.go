@@ -26,10 +26,11 @@ type MutationResolver interface {
 	RemoveFromCart(ctx context.Context, variantID string) (*model.Response, error)
 	AddCategory(ctx context.Context, name string) (*model.Category, error)
 	AddSubcategory(ctx context.Context, categoryID string, name string) (*model.Subcategory, error)
-	CreateOrder(ctx context.Context) (*model.CreateOrderResponse, error)
+	CreateOrderFromSession(ctx context.Context, input model.CreateOrderFromSessionInput) (*model.CreateOrderResponse, error)
 	UpdateOrderStatus(ctx context.Context, input model.UpdateOrderStatusInput) (*model.CreateOrderResponse, error)
-	CreateSessionOrder(ctx context.Context, input model.CreateSessionOrderInput) (*model.SessionOrderResponse, error)
+	CreateSessionCheckout(ctx context.Context, input model.CreateSessionCheckoutInput) (*model.SessionCheckoutResponse, error)
 	UpdateSessionAddress(ctx context.Context, input model.UpdateSessionAddressInput) (*model.UpdateSessionAddressResponse, error)
+	ConfirmCheckoutSession(ctx context.Context, input model.ConfirmCheckoutSessionInput) (*model.ConfirmCheckoutSessionResponse, error)
 	CreateProduct(ctx context.Context, input model.NewProduct) (*model.Product, error)
 	UpdateProduct(ctx context.Context, input model.UpdateProduct) (*model.Product, error)
 	Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error)
@@ -43,7 +44,7 @@ type QueryResolver interface {
 	MyCart(ctx context.Context, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) ([]*model.CartItem, error)
 	Category(ctx context.Context, filter *string, limit *int32, page *int32) ([]*model.Category, error)
 	Subcategory(ctx context.Context, filter *string, categoryID string, limit *int32, page *int32) ([]*model.Subcategory, error)
-	OrderList(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, page *int32) ([]*model.Order, error)
+	OrderList(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, page *int32) (*model.OrderListResponse, error)
 	OrderDetail(ctx context.Context, orderID string) (*model.Order, error)
 	CheckoutSession(ctx context.Context, id string) (*model.CheckoutSession, error)
 	PackageRecomamendation(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) (*model.PackageResponse, error)
@@ -94,10 +95,32 @@ func (ec *executionContext) field_Mutation_addToCart_args(ctx context.Context, r
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_confirmCheckoutSession_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNConfirmCheckoutSessionInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐConfirmCheckoutSessionInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_createAddress_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNCreateAddressInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCreateAddressInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createOrderFromSession_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNCreateOrderFromSessionInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCreateOrderFromSessionInput)
 	if err != nil {
 		return nil, err
 	}
@@ -116,10 +139,10 @@ func (ec *executionContext) field_Mutation_createProduct_args(ctx context.Contex
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_createSessionOrder_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+func (ec *executionContext) field_Mutation_createSessionCheckout_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNCreateSessionOrderInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCreateSessionOrderInput)
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNCreateSessionCheckoutInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCreateSessionCheckoutInput)
 	if err != nil {
 		return nil, err
 	}
@@ -1004,20 +1027,21 @@ func (ec *executionContext) fieldContext_Mutation_addSubcategory(ctx context.Con
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_createOrder(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Mutation_createOrderFromSession(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Mutation_createOrder,
+		ec.fieldContext_Mutation_createOrderFromSession,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Mutation().CreateOrder(ctx)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().CreateOrderFromSession(ctx, fc.Args["input"].(model.CreateOrderFromSessionInput))
 		},
 		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
 			directive0 := next
 
 			directive1 := func(ctx context.Context) (any, error) {
-				role, err := ec.unmarshalORole2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐRole(ctx, "USER")
+				role, err := ec.unmarshalORole2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐRole(ctx, "ADMIN")
 				if err != nil {
 					var zeroVal *model.CreateOrderResponse
 					return zeroVal, err
@@ -1038,7 +1062,7 @@ func (ec *executionContext) _Mutation_createOrder(ctx context.Context, field gra
 	)
 }
 
-func (ec *executionContext) fieldContext_Mutation_createOrder(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_createOrderFromSession(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -1054,11 +1078,22 @@ func (ec *executionContext) fieldContext_Mutation_createOrder(_ context.Context,
 				return ec.fieldContext_CreateOrderResponse_order(ctx, field)
 			case "paymentURL":
 				return ec.fieldContext_CreateOrderResponse_paymentURL(ctx, field)
-			case "paymentStat":
-				return ec.fieldContext_CreateOrderResponse_paymentStat(ctx, field)
+			case "payment":
+				return ec.fieldContext_CreateOrderResponse_payment(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type CreateOrderResponse", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createOrderFromSession_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -1114,8 +1149,8 @@ func (ec *executionContext) fieldContext_Mutation_updateOrderStatus(ctx context.
 				return ec.fieldContext_CreateOrderResponse_order(ctx, field)
 			case "paymentURL":
 				return ec.fieldContext_CreateOrderResponse_paymentURL(ctx, field)
-			case "paymentStat":
-				return ec.fieldContext_CreateOrderResponse_paymentStat(ctx, field)
+			case "payment":
+				return ec.fieldContext_CreateOrderResponse_payment(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type CreateOrderResponse", field.Name)
 		},
@@ -1134,24 +1169,24 @@ func (ec *executionContext) fieldContext_Mutation_updateOrderStatus(ctx context.
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_createSessionOrder(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Mutation_createSessionCheckout(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Mutation_createSessionOrder,
+		ec.fieldContext_Mutation_createSessionCheckout,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().CreateSessionOrder(ctx, fc.Args["input"].(model.CreateSessionOrderInput))
+			return ec.resolvers.Mutation().CreateSessionCheckout(ctx, fc.Args["input"].(model.CreateSessionCheckoutInput))
 		},
 		nil,
-		ec.marshalNSessionOrderResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionOrderResponse,
+		ec.marshalNSessionCheckoutResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionCheckoutResponse,
 		true,
 		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_Mutation_createSessionOrder(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_createSessionCheckout(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -1160,13 +1195,13 @@ func (ec *executionContext) fieldContext_Mutation_createSessionOrder(ctx context
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "sessionId":
-				return ec.fieldContext_SessionOrderResponse_sessionId(ctx, field)
+				return ec.fieldContext_SessionCheckoutResponse_sessionId(ctx, field)
 			case "status":
-				return ec.fieldContext_SessionOrderResponse_status(ctx, field)
+				return ec.fieldContext_SessionCheckoutResponse_status(ctx, field)
 			case "expiresAt":
-				return ec.fieldContext_SessionOrderResponse_expiresAt(ctx, field)
+				return ec.fieldContext_SessionCheckoutResponse_expiresAt(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type SessionOrderResponse", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type SessionCheckoutResponse", field.Name)
 		},
 	}
 	defer func() {
@@ -1176,7 +1211,7 @@ func (ec *executionContext) fieldContext_Mutation_createSessionOrder(ctx context
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_createSessionOrder_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_createSessionCheckout_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -1208,10 +1243,8 @@ func (ec *executionContext) fieldContext_Mutation_updateSessionAddress(ctx conte
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "sessionId":
-				return ec.fieldContext_UpdateSessionAddressResponse_sessionId(ctx, field)
-			case "addressId":
-				return ec.fieldContext_UpdateSessionAddressResponse_addressId(ctx, field)
+			case "success":
+				return ec.fieldContext_UpdateSessionAddressResponse_success(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpdateSessionAddressResponse", field.Name)
 		},
@@ -1224,6 +1257,55 @@ func (ec *executionContext) fieldContext_Mutation_updateSessionAddress(ctx conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_updateSessionAddress_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_confirmCheckoutSession(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_confirmCheckoutSession,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().ConfirmCheckoutSession(ctx, fc.Args["input"].(model.ConfirmCheckoutSessionInput))
+		},
+		nil,
+		ec.marshalNConfirmCheckoutSessionResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐConfirmCheckoutSessionResponse,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_confirmCheckoutSession(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "success":
+				return ec.fieldContext_ConfirmCheckoutSessionResponse_success(ctx, field)
+			case "message":
+				return ec.fieldContext_ConfirmCheckoutSessionResponse_message(ctx, field)
+			case "session":
+				return ec.fieldContext_ConfirmCheckoutSessionResponse_session(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ConfirmCheckoutSessionResponse", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_confirmCheckoutSession_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -1966,9 +2048,9 @@ func (ec *executionContext) _Query_orderList(ctx context.Context, field graphql.
 			return ec.resolvers.Query().OrderList(ctx, fc.Args["filter"].(*model.OrderFilterInput), fc.Args["sort"].(*model.OrderSortInput), fc.Args["limit"].(*int32), fc.Args["page"].(*int32))
 		},
 		nil,
-		ec.marshalNOrder2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderᚄ,
+		ec.marshalOOrderListResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderListResponse,
 		true,
-		true,
+		false,
 	)
 }
 
@@ -1980,22 +2062,16 @@ func (ec *executionContext) fieldContext_Query_orderList(ctx context.Context, fi
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Order_id(ctx, field)
-			case "userId":
-				return ec.fieldContext_Order_userId(ctx, field)
-			case "total":
-				return ec.fieldContext_Order_total(ctx, field)
-			case "status":
-				return ec.fieldContext_Order_status(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Order_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Order_updatedAt(ctx, field)
 			case "items":
-				return ec.fieldContext_Order_items(ctx, field)
+				return ec.fieldContext_OrderListResponse_items(ctx, field)
+			case "total":
+				return ec.fieldContext_OrderListResponse_total(ctx, field)
+			case "page":
+				return ec.fieldContext_OrderListResponse_page(ctx, field)
+			case "limit":
+				return ec.fieldContext_OrderListResponse_limit(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Order", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type OrderListResponse", field.Name)
 		},
 	}
 	defer func() {
@@ -2057,10 +2133,10 @@ func (ec *executionContext) fieldContext_Query_orderDetail(ctx context.Context, 
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Order_id(ctx, field)
-			case "userId":
-				return ec.fieldContext_Order_userId(ctx, field)
-			case "total":
-				return ec.fieldContext_Order_total(ctx, field)
+			case "user":
+				return ec.fieldContext_Order_user(ctx, field)
+			case "totalPrice":
+				return ec.fieldContext_Order_totalPrice(ctx, field)
 			case "status":
 				return ec.fieldContext_Order_status(ctx, field)
 			case "createdAt":
@@ -2118,6 +2194,8 @@ func (ec *executionContext) fieldContext_Query_checkoutSession(ctx context.Conte
 				return ec.fieldContext_CheckoutSession_status(ctx, field)
 			case "expiresAt":
 				return ec.fieldContext_CheckoutSession_expiresAt(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_CheckoutSession_createdAt(ctx, field)
 			case "address":
 				return ec.fieldContext_CheckoutSession_address(ctx, field)
 			case "items":
@@ -2572,9 +2650,9 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_addSubcategory(ctx, field)
 			})
-		case "createOrder":
+		case "createOrderFromSession":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_createOrder(ctx, field)
+				return ec._Mutation_createOrderFromSession(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -2586,9 +2664,9 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "createSessionOrder":
+		case "createSessionCheckout":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_createSessionOrder(ctx, field)
+				return ec._Mutation_createSessionCheckout(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -2596,6 +2674,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "updateSessionAddress":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateSessionAddress(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "confirmCheckoutSession":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_confirmCheckoutSession(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -2791,16 +2876,13 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		case "orderList":
 			field := field
 
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
 				defer func() {
 					if r := recover(); r != nil {
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
 				res = ec._Query_orderList(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
 				return res
 			}
 

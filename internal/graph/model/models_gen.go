@@ -76,8 +76,9 @@ type Category struct {
 
 type CheckoutSession struct {
 	ID          string                 `json:"id"`
-	Status      string                 `json:"status"`
+	Status      CheckoutSessionStatus  `json:"status"`
 	ExpiresAt   time.Time              `json:"expiresAt"`
+	CreatedAt   time.Time              `json:"createdAt"`
 	Address     *Address               `json:"address,omitempty"`
 	Items       []*CheckoutSessionItem `json:"items"`
 	Subtotal    int32                  `json:"subtotal"`
@@ -94,8 +95,18 @@ type CheckoutSessionItem struct {
 	ImageURL     *string `json:"imageUrl,omitempty"`
 	Quantity     int32   `json:"quantity"`
 	QuantityType string  `json:"quantityType"`
-	UnitPrice    int32   `json:"unitPrice"`
+	Price        int32   `json:"price"`
 	Subtotal     int32   `json:"subtotal"`
+}
+
+type ConfirmCheckoutSessionInput struct {
+	SessionID string `json:"sessionId"`
+}
+
+type ConfirmCheckoutSessionResponse struct {
+	Success bool             `json:"success"`
+	Message *string          `json:"message,omitempty"`
+	Session *CheckoutSession `json:"session,omitempty"`
 }
 
 type CreateAddressInput struct {
@@ -107,16 +118,20 @@ type CreateAddressResponse struct {
 	Address *Address `json:"address"`
 }
 
-type CreateOrderResponse struct {
-	Success     bool    `json:"success"`
-	Message     *string `json:"message,omitempty"`
-	Order       *Order  `json:"order,omitempty"`
-	PaymentURL  string  `json:"paymentURL"`
-	PaymentStat string  `json:"paymentStat"`
+type CreateOrderFromSessionInput struct {
+	SessionID string `json:"sessionId"`
 }
 
-type CreateSessionOrderInput struct {
-	Items []*SessionOrderItemInput `json:"items"`
+type CreateOrderResponse struct {
+	Success    bool     `json:"success"`
+	Message    *string  `json:"message,omitempty"`
+	Order      *Order   `json:"order,omitempty"`
+	PaymentURL *string  `json:"paymentURL,omitempty"`
+	Payment    *Payment `json:"payment,omitempty"`
+}
+
+type CreateSessionCheckoutInput struct {
+	Items []*SessionCheckoutItemInput `json:"items"`
 }
 
 type DeleteAddressInput struct {
@@ -153,21 +168,24 @@ type NewVariant struct {
 	Description  *string `json:"description,omitempty"`
 }
 
+// ====================
+// Core Types
+// ====================
 type Order struct {
-	ID        string       `json:"id"`
-	UserID    string       `json:"userId"`
-	Total     float64      `json:"total"`
-	Status    OrderStatus  `json:"status"`
-	CreatedAt string       `json:"createdAt"`
-	UpdatedAt string       `json:"updatedAt"`
-	Items     []*OrderItem `json:"items"`
+	ID         string       `json:"id"`
+	User       *User        `json:"user,omitempty"`
+	TotalPrice int32        `json:"totalPrice"`
+	Status     OrderStatus  `json:"status"`
+	CreatedAt  time.Time    `json:"createdAt"`
+	UpdatedAt  time.Time    `json:"updatedAt"`
+	Items      []*OrderItem `json:"items"`
 }
 
 type OrderFilterInput struct {
-	Search   *string    `json:"search,omitempty"`
-	Status   *string    `json:"status,omitempty"`
-	DateFrom *time.Time `json:"dateFrom,omitempty"`
-	DateTo   *time.Time `json:"dateTo,omitempty"`
+	Search   *string      `json:"search,omitempty"`
+	Status   *OrderStatus `json:"status,omitempty"`
+	DateFrom *time.Time   `json:"dateFrom,omitempty"`
+	DateTo   *time.Time   `json:"dateTo,omitempty"`
 }
 
 type OrderItem struct {
@@ -175,7 +193,14 @@ type OrderItem struct {
 	OrderID  string   `json:"orderId"`
 	Product  *Product `json:"product"`
 	Quantity int32    `json:"quantity"`
-	Price    float64  `json:"price"`
+	Price    int32    `json:"price"`
+}
+
+type OrderListResponse struct {
+	Items []*Order `json:"items"`
+	Total int32    `json:"total"`
+	Page  int32    `json:"page"`
+	Limit int32    `json:"limit"`
 }
 
 type OrderSortInput struct {
@@ -224,6 +249,12 @@ type PageInfo struct {
 	HasPreviousPage bool    `json:"hasPreviousPage"`
 	StartCursor     *string `json:"startCursor,omitempty"`
 	EndCursor       *string `json:"endCursor,omitempty"`
+}
+
+type Payment struct {
+	Status   PaymentStatus `json:"status"`
+	URL      *string       `json:"url,omitempty"`
+	Provider *string       `json:"provider,omitempty"`
 }
 
 type Product struct {
@@ -316,15 +347,15 @@ type Response struct {
 	Message *string `json:"message,omitempty"`
 }
 
-type SessionOrderItemInput struct {
+type SessionCheckoutItemInput struct {
 	VariantID string `json:"variantId"`
 	Quantity  int32  `json:"quantity"`
 }
 
-type SessionOrderResponse struct {
-	SessionID string    `json:"sessionId"`
-	Status    string    `json:"status"`
-	ExpiresAt time.Time `json:"expiresAt"`
+type SessionCheckoutResponse struct {
+	SessionID string                `json:"sessionId"`
+	Status    CheckoutSessionStatus `json:"status"`
+	ExpiresAt time.Time             `json:"expiresAt"`
 }
 
 type Subcategory struct {
@@ -369,8 +400,7 @@ type UpdateSessionAddressInput struct {
 }
 
 type UpdateSessionAddressResponse struct {
-	SessionID string `json:"sessionId"`
-	AddressID string `json:"addressId"`
+	Success bool `json:"success"`
 }
 
 type UpdateVariant struct {
@@ -461,23 +491,80 @@ func (e CartSortField) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+type CheckoutSessionStatus string
+
+const (
+	CheckoutSessionStatusPending   CheckoutSessionStatus = "PENDING"
+	CheckoutSessionStatusPaid      CheckoutSessionStatus = "PAID"
+	CheckoutSessionStatusExpired   CheckoutSessionStatus = "EXPIRED"
+	CheckoutSessionStatusCancelled CheckoutSessionStatus = "CANCELLED"
+)
+
+var AllCheckoutSessionStatus = []CheckoutSessionStatus{
+	CheckoutSessionStatusPending,
+	CheckoutSessionStatusPaid,
+	CheckoutSessionStatusExpired,
+	CheckoutSessionStatusCancelled,
+}
+
+func (e CheckoutSessionStatus) IsValid() bool {
+	switch e {
+	case CheckoutSessionStatusPending, CheckoutSessionStatusPaid, CheckoutSessionStatusExpired, CheckoutSessionStatusCancelled:
+		return true
+	}
+	return false
+}
+
+func (e CheckoutSessionStatus) String() string {
+	return string(e)
+}
+
+func (e *CheckoutSessionStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = CheckoutSessionStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid CheckoutSessionStatus", str)
+	}
+	return nil
+}
+
+func (e CheckoutSessionStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *CheckoutSessionStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e CheckoutSessionStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type OrderSortField string
 
 const (
-	OrderSortFieldName      OrderSortField = "NAME"
-	OrderSortFieldPrice     OrderSortField = "PRICE"
+	OrderSortFieldTotal     OrderSortField = "TOTAL"
 	OrderSortFieldCreatedAt OrderSortField = "CREATED_AT"
 )
 
 var AllOrderSortField = []OrderSortField{
-	OrderSortFieldName,
-	OrderSortFieldPrice,
+	OrderSortFieldTotal,
 	OrderSortFieldCreatedAt,
 }
 
 func (e OrderSortField) IsValid() bool {
 	switch e {
-	case OrderSortFieldName, OrderSortFieldPrice, OrderSortFieldCreatedAt:
+	case OrderSortFieldTotal, OrderSortFieldCreatedAt:
 		return true
 	}
 	return false
@@ -627,6 +714,65 @@ func (e *PackageSortField) UnmarshalJSON(b []byte) error {
 }
 
 func (e PackageSortField) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type PaymentStatus string
+
+const (
+	PaymentStatusPending PaymentStatus = "PENDING"
+	PaymentStatusPaid    PaymentStatus = "PAID"
+	PaymentStatusFailed  PaymentStatus = "FAILED"
+	PaymentStatusExpired PaymentStatus = "EXPIRED"
+)
+
+var AllPaymentStatus = []PaymentStatus{
+	PaymentStatusPending,
+	PaymentStatusPaid,
+	PaymentStatusFailed,
+	PaymentStatusExpired,
+}
+
+func (e PaymentStatus) IsValid() bool {
+	switch e {
+	case PaymentStatusPending, PaymentStatusPaid, PaymentStatusFailed, PaymentStatusExpired:
+		return true
+	}
+	return false
+}
+
+func (e PaymentStatus) String() string {
+	return string(e)
+}
+
+func (e *PaymentStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = PaymentStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid PaymentStatus", str)
+	}
+	return nil
+}
+
+func (e PaymentStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *PaymentStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e PaymentStatus) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
