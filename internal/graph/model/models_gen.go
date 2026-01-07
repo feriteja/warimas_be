@@ -394,8 +394,9 @@ type UpdateProduct struct {
 }
 
 type UpdateSessionAddressInput struct {
-	SessionID string `json:"sessionId"`
-	AddressID string `json:"addressId"`
+	SessionID string  `json:"sessionId"`
+	AddressID string  `json:"addressId"`
+	GuestID   *string `json:"guestId,omitempty"`
 }
 
 type UpdateSessionAddressResponse struct {
@@ -607,22 +608,24 @@ func (e OrderSortField) MarshalJSON() ([]byte, error) {
 type OrderStatus string
 
 const (
-	OrderStatusPending  OrderStatus = "PENDING"
-	OrderStatusAccepted OrderStatus = "ACCEPTED"
-	OrderStatusRejected OrderStatus = "REJECTED"
-	OrderStatusCanceled OrderStatus = "CANCELED"
+	OrderStatusPendingPayment OrderStatus = "PENDING_PAYMENT"
+	OrderStatusPaid           OrderStatus = "PAID"
+	OrderStatusFulfilling     OrderStatus = "FULFILLING"
+	OrderStatusCompleted      OrderStatus = "COMPLETED"
+	OrderStatusCancelled      OrderStatus = "CANCELLED"
 )
 
 var AllOrderStatus = []OrderStatus{
-	OrderStatusPending,
-	OrderStatusAccepted,
-	OrderStatusRejected,
-	OrderStatusCanceled,
+	OrderStatusPendingPayment,
+	OrderStatusPaid,
+	OrderStatusFulfilling,
+	OrderStatusCompleted,
+	OrderStatusCancelled,
 }
 
 func (e OrderStatus) IsValid() bool {
 	switch e {
-	case OrderStatusPending, OrderStatusAccepted, OrderStatusRejected, OrderStatusCanceled:
+	case OrderStatusPendingPayment, OrderStatusPaid, OrderStatusFulfilling, OrderStatusCompleted, OrderStatusCancelled:
 		return true
 	}
 	return false

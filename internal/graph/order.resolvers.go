@@ -73,11 +73,7 @@ func (r *mutationResolver) UpdateOrderStatus(ctx context.Context, input model.Up
 }
 
 // CreateSessionCheckout is the resolver for the createSessionCheckout field.
-func (r *mutationResolver) CreateSessionCheckout(
-	ctx context.Context,
-	input model.CreateSessionCheckoutInput,
-) (*model.SessionCheckoutResponse, error) {
-
+func (r *mutationResolver) CreateSessionCheckout(ctx context.Context, input model.CreateSessionCheckoutInput) (*model.SessionCheckoutResponse, error) {
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "resolver"),
 		zap.String("method", "CreateSessionCheckout"),
@@ -116,23 +112,17 @@ func (r *mutationResolver) CreateSessionCheckout(
 
 // UpdateSessionAddress is the resolver for the updateSessionAddress field.
 func (r *mutationResolver) UpdateSessionAddress(ctx context.Context, input model.UpdateSessionAddressInput) (*model.UpdateSessionAddressResponse, error) {
-	userID, ok := utils.GetUserIDFromContext(ctx)
-	if !ok {
-		return nil, errors.New("unauthorized")
-	}
-
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "resolver"),
 		zap.String("method", "UpdateSessionAddress"),
 		zap.String("session_id", input.SessionID),
-		zap.Uint("user_id", userID),
 	)
 
 	err := r.OrderSvc.UpdateSessionAddress(
 		ctx,
 		input.SessionID,
-		userID,
 		input.AddressID,
+		input.GuestID,
 	)
 	if err != nil {
 		log.Error("failed to update session address", zap.Error(err))
@@ -146,22 +136,15 @@ func (r *mutationResolver) UpdateSessionAddress(ctx context.Context, input model
 
 // ConfirmCheckoutSession is the resolver for the confirmCheckoutSession field.
 func (r *mutationResolver) ConfirmCheckoutSession(ctx context.Context, input model.ConfirmCheckoutSessionInput) (*model.ConfirmCheckoutSessionResponse, error) {
-	userID, ok := utils.GetUserIDFromContext(ctx)
-	if !ok {
-		return nil, errors.New("unauthorized")
-	}
-
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "resolver"),
 		zap.String("method", "ConfirmCheckoutSession"),
 		zap.String("session_id", input.SessionID),
-		zap.Uint("user_id", userID),
 	)
 
 	session, err := r.OrderSvc.ConfirmSession(
 		ctx,
 		input.SessionID,
-		userID,
 	)
 	if err != nil {
 		log.Error("failed to confirm checkout session", zap.Error(err))

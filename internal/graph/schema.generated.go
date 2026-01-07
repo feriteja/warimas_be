@@ -40,7 +40,7 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	Addresses(ctx context.Context) ([]*model.Address, error)
-	Address(ctx context.Context, id string) (*model.Address, error)
+	Address(ctx context.Context, addressID string) (*model.Address, error)
 	MyCart(ctx context.Context, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) ([]*model.CartItem, error)
 	Category(ctx context.Context, filter *string, limit *int32, page *int32) ([]*model.Category, error)
 	Subcategory(ctx context.Context, filter *string, categoryID string, limit *int32, page *int32) ([]*model.Subcategory, error)
@@ -296,11 +296,11 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 func (ec *executionContext) field_Query_address_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNID2string)
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "addressId", ec.unmarshalNID2string)
 	if err != nil {
 		return nil, err
 	}
-	args["id"] = arg0
+	args["addressId"] = arg0
 	return args, nil
 }
 
@@ -1813,7 +1813,7 @@ func (ec *executionContext) _Query_address(ctx context.Context, field graphql.Co
 		ec.fieldContext_Query_address,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().Address(ctx, fc.Args["id"].(string))
+			return ec.resolvers.Query().Address(ctx, fc.Args["addressId"].(string))
 		},
 		nil,
 		ec.marshalOAddress2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐAddress,

@@ -92,7 +92,7 @@ func (r *repository) GetOrderBySessionID(
 ) (*Order, error) {
 
 	query := `
-		SELECT id, status, total_price
+		SELECT id, status, total_amount
 		FROM orders
 		WHERE checkout_session_id = $1
 	`
@@ -117,71 +117,130 @@ func (r *repository) CreateOrderTx(
 	session *CheckoutSession,
 ) error {
 
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "CreateOrderTx"),
+		zap.String("session_id", session.ID.String()),
+	)
+
+	log.Info("starting order transaction")
+
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
+		log.Error("failed to begin transaction", zap.Error(err))
 		return err
 	}
 	defer tx.Rollback()
 
-	// 1. Insert order
-	_, err = tx.ExecContext(ctx, `
+	// 1. Insert order (RETURNING id)
+	err = tx.QueryRowContext(ctx, `
 		INSERT INTO orders (
-			id, user_id, checkout_session_id,
-			status, total_price, created_at
-		) VALUES ($1,$2,$3,$4,$5,$6)
+			user_id,
+			checkout_session_id,
+			status,
+			total_amount,
+			currency,
+			external_id,
+			subtotal,
+			tax,
+			shipping_fee,
+			discount,
+			address_id
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+		RETURNING id
 	`,
-		order.ID,
 		order.UserID,
 		session.ID,
 		order.Status,
 		order.Total,
-		order.CreatedAt,
-	)
+		order.Currency,
+		order.ExternalID,
+		session.Subtotal,
+		session.Tax,
+		session.ShippingFee,
+		session.Discount,
+		session.AddressID,
+	).Scan(&order.ID)
 	if err != nil {
+		log.Error("failed to insert order", zap.Error(err))
 		return err
 	}
+
+	log.Info("order created",
+		zap.Uint("order_id", order.ID),
+		zap.Int("items_count", len(session.Items)),
+	)
 
 	// 2. Insert order items + deduct stock
 	for _, item := range session.Items {
+
 		_, err = tx.ExecContext(ctx, `
 			INSERT INTO order_items (
-				order_id, variant_id, variant_name,
-				quantity, price, subtotal
-			) VALUES ($1,$2,$3,$4,$5,$6)
+				order_id,
+				quantity,
+				unit_price,
+				variant_id,
+				variant_name,
+				product_name,
+				subtotal
+			) VALUES ($1,$2,$3,$4,$5,$6,$7)
 		`,
 			order.ID,
-			item.VariantID,
-			item.VariantName,
 			item.Quantity,
 			item.Price,
+			item.VariantID,
+			item.VariantName,
+			item.ProductName,
 			item.Subtotal,
 		)
 		if err != nil {
+			log.Error("failed to insert order item",
+				zap.String("variant_id", item.VariantID),
+				zap.Error(err),
+			)
 			return err
 		}
 
-		// Deduct stock
-		_, err = tx.ExecContext(ctx, `
+		// Deduct stock (safe)
+		res, err := tx.ExecContext(ctx, `
 			UPDATE variants
 			SET stock = stock - $1
 			WHERE id = $2 AND stock >= $1
-		`, item.Quantity, item.VariantID)
+		`,
+			item.Quantity,
+			item.VariantID,
+		)
 		if err != nil {
+			log.Error("failed to deduct stock",
+				zap.String("variant_id", item.VariantID),
+				zap.Error(err),
+			)
 			return err
+		}
+
+		rows, _ := res.RowsAffected()
+		if rows == 0 {
+			log.Warn("insufficient stock during order creation",
+				zap.String("variant_id", item.VariantID),
+				zap.Int("quantity", item.Quantity),
+			)
+			return errors.New("insufficient stock")
 		}
 	}
 
-	// 3. Mark session as completed
-	_, err = tx.ExecContext(ctx, `
-		UPDATE checkout_sessions
-		SET status = 'PAID'
-		WHERE id = $1
-	`, session.ID)
-	if err != nil {
+	log.Info("all order items inserted and stock deducted")
+
+	// 4. Commit
+	if err := tx.Commit(); err != nil {
+		log.Error("failed to commit order transaction", zap.Error(err))
 		return err
 	}
 
-	return tx.Commit()
+	log.Info("order transaction committed successfully",
+		zap.Uint("order_id", order.ID),
+	)
+
+	return nil
 }
 
 // ✅ Create new order from user’s cart
@@ -609,7 +668,7 @@ func (r *repository) CreateCheckoutSession(
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO checkout_sessions (
 			id, user_id, status, subtotal, tax, shipping_fee,
-			discount, total_price, expires_at
+			discount, total_amount, expires_at
 		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
 	`,
 		session.ID,
@@ -690,8 +749,8 @@ func (r *repository) GetCheckoutSession(
 		SELECT
 			id, status, expires_at, created_at,
 			user_id, address_id,
-			subtotal, tax, shipping_fee, discount, total_price,
-			confirmed_at, payment_ref
+			subtotal, tax, shipping_fee, discount, total_amount, currency,
+			confirmed_at
 		FROM checkout_sessions
 		WHERE id = $1
 	`
@@ -709,8 +768,8 @@ func (r *repository) GetCheckoutSession(
 			&s.ShippingFee,
 			&s.Discount,
 			&s.TotalPrice,
+			&s.Currency,
 			&s.ConfirmedAt,
-			&s.PaymentRef,
 		)
 	if err != nil {
 		return nil, err
@@ -719,8 +778,8 @@ func (r *repository) GetCheckoutSession(
 	// Load items
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT
-			id, variant_id, variant_name, image_url,
-			quantity, quantity_type, price, subtotal
+			id, variant_id, variant_name, product_name, imageurl,
+			quantity, quantity_type, unit_price, subtotal
 		FROM checkout_session_items
 		WHERE checkout_session_id = $1
 	`, s.ID)
@@ -735,6 +794,7 @@ func (r *repository) GetCheckoutSession(
 			&item.ID,
 			&item.VariantID,
 			&item.VariantName,
+			&item.ProductName,
 			&item.ImageURL,
 			&item.Quantity,
 			&item.QuantityType,
@@ -784,7 +844,7 @@ func (r *repository) UpdateSessionAddressAndPricing(
 			address_id = $1,
 			shipping_fee = $2,
 			tax = $3,
-			total_price = $4
+			total_amount = $4
 		WHERE id = $5
 	`
 
@@ -826,18 +886,14 @@ func (r *repository) ConfirmCheckoutSession(
 	query := `
 		UPDATE checkout_sessions
 		SET
-			status = $1,
-			payment_ref = $2,
 			confirmed_at = NOW()
-		WHERE id = $3
+		WHERE id = $1
 		  AND status = 'PENDING'
 	`
 
 	res, err := r.db.ExecContext(
 		ctx,
 		query,
-		session.Status,
-		session.PaymentRef,
 		session.ID,
 	)
 	if err != nil {

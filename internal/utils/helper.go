@@ -2,6 +2,8 @@ package utils
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -125,4 +127,13 @@ func IsInternalRequest(ctx context.Context) bool {
 
 	isInternal, ok := v.(bool)
 	return ok && isInternal
+}
+
+func ExternalIDFromSession(prefix, sessionID string) string {
+	h := sha1.Sum([]byte(sessionID))
+	return fmt.Sprintf(
+		"%s_%s",
+		prefix,
+		hex.EncodeToString(h[:6]), // short but safe
+	)
 }

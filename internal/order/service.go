@@ -35,13 +35,12 @@ type Service interface {
 	UpdateSessionAddress(
 		ctx context.Context,
 		sessionID string,
-		userID uint,
 		addressID string,
+		guestID *string,
 	) error
 	ConfirmSession(
 		ctx context.Context,
 		sessionID string,
-		userID uint,
 	) (*CheckoutSession, error)
 	GetSession(
 		ctx context.Context,
@@ -92,10 +91,11 @@ func (s *service) CreateFromSession(
 
 	// 4. Create order domain
 	order := &Order{
-		UserID:    session.UserID,
-		Status:    OrderStatus(model.OrderStatusPending),
-		Total:     uint(session.TotalPrice),
-		CreatedAt: time.Now(),
+		UserID:     session.UserID,
+		Status:     OrderStatus(model.OrderStatusPendingPayment),
+		Total:      uint(session.TotalPrice),
+		Currency:   session.Currency,
+		ExternalID: utils.ExternalIDFromSession("pay", sessionID),
 	}
 
 	// 5. Transaction boundary
@@ -347,17 +347,28 @@ func (s *service) CreateSession(
 func (s *service) UpdateSessionAddress(
 	ctx context.Context,
 	sessionID string,
-	userID uint,
 	addressID string,
+	guestID *string,
 ) error {
 
-	// 1. Load session
 	session, err := s.repo.GetCheckoutSession(ctx, sessionID)
 	if err != nil {
 		return err
 	}
 
-	// 2. Validate session state
+	userID, _ := utils.GetUserIDFromContext(ctx)
+
+	if guestID != nil {
+		guestUUID := uuid.MustParse(*guestID)
+		if session.GuestID == nil || *session.GuestID != guestUUID {
+			return errors.New("forbidden: guest ID mismatch")
+		}
+	} else {
+		if session.UserID == nil || *session.UserID != userID {
+			return errors.New("forbidden: cannot update others' sessions")
+		}
+	}
+
 	if session.Status != CheckoutSessionStatusPending {
 		return errors.New("checkout session is not editable")
 	}
@@ -366,7 +377,6 @@ func (s *service) UpdateSessionAddress(
 		return errors.New("checkout session expired")
 	}
 
-	// 3. Validate address ownership
 	address, err := s.repo.GetUserAddress(ctx, addressID, userID)
 	if err != nil {
 		return err
@@ -406,34 +416,61 @@ func (s *service) calculateTax(
 func (s *service) ConfirmSession(
 	ctx context.Context,
 	sessionID string,
-	userID uint,
 ) (*CheckoutSession, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "ConfirmSession"),
+		zap.String("session_id", sessionID),
+	)
+
+	userID, _ := utils.GetUserIDFromContext(ctx)
+
+	log.Info("confirm checkout session started")
 
 	// 1. Load session (with items)
 	session, err := s.repo.GetCheckoutSession(ctx, sessionID)
 	if err != nil {
+		log.Error("failed to load checkout session", zap.Error(err))
 		return nil, err
 	}
 
+	log.Debug("checkout session loaded",
+		zap.String("status", string(session.Status)),
+		zap.Int("items_count", len(session.Items)),
+	)
+
 	// 2. Ownership check (if not guest)
 	if session.UserID != nil && *session.UserID != userID {
+		log.Warn("ownership check failed",
+			zap.Uint("session_user_id", *session.UserID),
+			zap.Uint("request_user_id", userID),
+		)
 		return nil, errors.New("forbidden")
 	}
 
 	// 3. Validate state
 	if session.Status != CheckoutSessionStatusPending {
+		log.Warn("invalid session status",
+			zap.String("status", string(session.Status)),
+		)
 		return nil, errors.New("checkout session already confirmed")
 	}
 
 	if time.Now().After(session.ExpiresAt) {
+		log.Warn("checkout session expired",
+			zap.Time("expires_at", session.ExpiresAt),
+		)
 		return nil, errors.New("checkout session expired")
 	}
 
 	if session.AddressID == nil {
+		log.Warn("shipping address not set")
 		return nil, errors.New("shipping address not set")
 	}
 
 	if len(session.Items) == 0 {
+		log.Warn("checkout session has no items")
 		return nil, errors.New("checkout session has no items")
 	}
 
@@ -445,34 +482,51 @@ func (s *service) ConfirmSession(
 			item.Quantity,
 		)
 		if err != nil {
+			log.Error("failed to validate variant stock",
+				zap.String("variant_id", item.VariantID),
+				zap.Int("quantity", item.Quantity),
+				zap.Error(err),
+			)
 			return nil, err
 		}
 		if !ok {
+			log.Warn("product out of stock",
+				zap.String("variant_id", item.VariantID),
+				zap.Int("quantity", item.Quantity),
+			)
 			return nil, errors.New("product out of stock")
 		}
 	}
 
-	// 5. Lock session
-	session.Status = CheckoutSessionStatusPending // still pending, but locked
+	log.Info("stock validation passed")
 
-	// 6. Create payment intent (stub for now)
-	// paymentRef, err := s.payment.CreatePaymentIntent(
-	// 	ctx,
-	// 	session.ID,
-	// 	session.TotalPrice,
-	// )
-	// if err != nil {
-	// 	return nil, err
-	// }
+	order := &Order{
+		UserID:     session.UserID,
+		Status:     OrderStatus(model.OrderStatusPendingPayment),
+		Total:      uint(session.TotalPrice),
+		Currency:   session.Currency,
+		ExternalID: utils.ExternalIDFromSession("pay", sessionID),
+	}
 
-	// session.PaymentRef = &paymentRef
-	session.PaymentRef = nil
+	err = s.repo.CreateOrderTx(
+		ctx,
+		order,
+		session,
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	// 7. Persist changes
 	err = s.repo.ConfirmCheckoutSession(ctx, session)
 	if err != nil {
+		log.Error("failed to confirm checkout session", zap.Error(err))
 		return nil, err
 	}
+
+	log.Info("checkout session confirmed successfully",
+		zap.String("final_status", string(session.Status)),
+	)
 
 	return session, nil
 }
@@ -506,3 +560,5 @@ func (s *service) GetSession(
 
 	return session, nil
 }
+
+func (s *service) CreatePaymentIntent() {}

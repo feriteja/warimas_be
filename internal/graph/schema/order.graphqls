@@ -1,8 +1,8 @@
-enum OrderStatus {
+enum CheckoutSessionStatus {
   PENDING
-  ACCEPTED
-  REJECTED
-  CANCELED
+  PAID
+  EXPIRED
+  CANCELLED
 }
 
 enum PaymentStatus {
@@ -12,16 +12,17 @@ enum PaymentStatus {
   EXPIRED
 }
 
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  FULFILLING
+  COMPLETED
+  CANCELLED
+}
+
 enum OrderSortField {
   TOTAL
   CREATED_AT
-}
-
-enum CheckoutSessionStatus {
-  PENDING
-  PAID
-  EXPIRED
-  CANCELLED
 }
 
 input UpdateOrderStatusInput {
@@ -53,6 +54,7 @@ input SessionCheckoutItemInput {
 input UpdateSessionAddressInput {
   sessionId: ID!
   addressId: ID!
+  guestId: ID
 }
 
 input ConfirmCheckoutSessionInput {

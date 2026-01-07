@@ -24,12 +24,10 @@ type CheckoutSession struct {
 
 	// Optional / lifecycle-dependent
 	UserID    *uint
+	GuestID   *uuid.UUID
 	AddressID *uuid.UUID
 
 	Items []CheckoutSessionItem
-
-	// Payment
-	PaymentRef *string
 
 	// Pricing (server-calculated only)
 	Subtotal    int
@@ -37,6 +35,7 @@ type CheckoutSession struct {
 	ShippingFee int
 	Discount    int
 	TotalPrice  int
+	Currency    string
 }
 
 type CheckoutSessionItem struct {

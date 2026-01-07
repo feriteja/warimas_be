@@ -278,7 +278,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Address                func(childComplexity int, id string) int
+		Address                func(childComplexity int, addressID string) int
 		Addresses              func(childComplexity int) int
 		Category               func(childComplexity int, filter *string, limit *int32, page *int32) int
 		CheckoutSession        func(childComplexity int, id string) int
@@ -1552,7 +1552,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.Address(childComplexity, args["id"].(string)), true
+		return e.complexity.Query.Address(childComplexity, args["addressId"].(string)), true
 
 	case "Query.addresses":
 		if e.complexity.Query.Addresses == nil {

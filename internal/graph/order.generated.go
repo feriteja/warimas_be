@@ -1850,7 +1850,7 @@ func (ec *executionContext) unmarshalInputUpdateSessionAddressInput(ctx context.
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"sessionId", "addressId"}
+	fieldsInOrder := [...]string{"sessionId", "addressId", "guestId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -1871,6 +1871,13 @@ func (ec *executionContext) unmarshalInputUpdateSessionAddressInput(ctx context.
 				return it, err
 			}
 			it.AddressID = data
+		case "guestId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("guestId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.GuestID = data
 		}
 	}
 

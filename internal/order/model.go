@@ -15,13 +15,15 @@ const (
 )
 
 type Order struct {
-	ID        uint
-	UserID    *uint
-	Total     uint
-	Status    OrderStatus
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Items     []OrderItem
+	ID         uint
+	UserID     *uint
+	Total      uint
+	Status     OrderStatus
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	Items      []OrderItem
+	Currency   string
+	ExternalID string
 }
 
 type OrderItem struct {
