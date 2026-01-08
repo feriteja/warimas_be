@@ -6,11 +6,11 @@ import (
 )
 
 type Gateway interface {
-	CreateInvoice(orderID uint,
+	CreateInvoice(externalID string,
 		buyerName string,
-		amount uint,
+		amount int64,
 		customerEmail string,
-		items []OrderItem,
+		items []XenditItem,
 		channelCode ChannelCode,
 	) (*PaymentResponse, error)
 	GetPaymentStatus(externalID string) (*PaymentStatus, error)

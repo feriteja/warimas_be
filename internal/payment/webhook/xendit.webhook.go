@@ -42,10 +42,7 @@ type WebhookPayload struct {
 		} `json:"captures"`
 
 		Metadata struct {
-			Items []struct {
-				Quantity  int `json:"Quantity"`
-				ProductID int `json:"ProductID"`
-			} `json:"items"`
+			Items []payment.XenditItem `json:"items"`
 		} `json:"metadata"`
 	} `json:"data"`
 }
@@ -83,6 +80,12 @@ func (h *Handler) PaymentWebhookHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	defer r.Body.Close()
+
+	raw := json.RawMessage(body)
+
+	log.Info("raw body WebhookPayload",
+		zap.Any("raw", raw),
+	)
 
 	var payload WebhookPayload
 	if err := json.Unmarshal(body, &payload); err != nil {
@@ -125,7 +128,7 @@ func (h *Handler) handleEvent(ctx context.Context, payload WebhookPayload) {
 		log.Info("Processing capture event")
 
 		if payload.Data.Status == "SUCCEEDED" {
-			if err := h.OrderSvc.MarkAsPaid(ref); err != nil {
+			if err := h.OrderSvc.MarkAsPaid(ctx, ref, payload.Data.PaymentRequestID); err != nil {
 				log.Error("Failed to mark order as PAID", zap.Error(err))
 				return
 			}
@@ -138,7 +141,7 @@ func (h *Handler) handleEvent(ctx context.Context, payload WebhookPayload) {
 	case "payment.failed", "payment.failure":
 		log.Warn("Payment failed")
 
-		if err := h.OrderSvc.MarkAsFailed(ref); err != nil {
+		if err := h.OrderSvc.MarkAsFailed(ctx, ref, payload.Data.PaymentRequestID); err != nil {
 			log.Error("Failed to mark order as FAILED", zap.Error(err))
 			return
 		}

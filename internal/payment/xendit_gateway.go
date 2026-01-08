@@ -21,24 +21,6 @@ type xenditGateway struct {
 	httpClient *http.Client
 }
 
-type XenditPaymentResponse struct {
-	ID            string  `json:"payment_request_id"`
-	ReferenceID   string  `json:"reference_id"`
-	Amount        float64 `json:"request_amount"`
-	ChannelCode   string  `json:"channel_code"`
-	Status        string  `json:"status"`
-	PaymentMethod string  `json:"type"`
-	ChannelProps  struct {
-		DisplayName string `json:"display_name"`
-		ExpiresAt   string `json:"expires_at"`
-	} `json:"channel_properties"`
-	Actions []struct {
-		Type       string `json:"type"`
-		Descriptor string `json:"descriptor"`
-		Value      string `json:"value"`
-	} `json:"actions"`
-}
-
 // ----------------- Constructor -----------------
 
 func NewXenditGateway(apiKey string) Gateway {
@@ -57,32 +39,32 @@ func NewXenditGateway(apiKey string) Gateway {
 // ----------------- CreateInvoice -----------------
 
 func (x *xenditGateway) CreateInvoice(
-	orderID uint,
+	externalID string,
 	buyerName string,
-	amount uint,
+	amount int64,
 	customerEmail string,
-	items []OrderItem,
+	items []XenditItem,
 	channelCode ChannelCode,
 ) (*PaymentResponse, error) {
 
 	log := logger.L().With(
-		zap.Uint("order_id", orderID),
+		zap.String("order_id", externalID),
 		zap.String("buyer", buyerName),
-		zap.Uint("amount", amount),
+		zap.Int64("amount", amount),
 		zap.String("channel", string(channelCode)),
 	)
 
 	expiry := time.Now().Add(24 * time.Hour).Format(time.RFC3339)
 
 	body := map[string]interface{}{
-		"reference_id":   fmt.Sprintf("%d", orderID),
+		"reference_id":   externalID,
 		"type":           "PAY",
 		"country":        "ID",
 		"currency":       "IDR",
 		"request_amount": amount,
 		"customer": map[string]interface{}{
 			"type":         "INDIVIDUAL",
-			"reference_id": fmt.Sprintf("%d", orderID),
+			"reference_id": externalID,
 			"email":        customerEmail,
 			"individual_detail": map[string]interface{}{
 				"given_names": buyerName,
@@ -126,6 +108,7 @@ func (x *xenditGateway) CreateInvoice(
 	defer resp.Body.Close()
 
 	bodyBytes, _ := io.ReadAll(resp.Body)
+	raw := json.RawMessage(bodyBytes)
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		log.Error("Xendit returned non-success status",
@@ -142,25 +125,30 @@ func (x *xenditGateway) CreateInvoice(
 	}
 
 	log.Info("Xendit payment created",
-		zap.String("payment_id", res.ID),
+		zap.String("payment_id", res.PaymentRequestID),
 		zap.String("reference_id", res.ReferenceID),
 		zap.String("status", res.Status),
 	)
 
 	// Prevent panic if Actions is empty
 	var paymentCode string
-	if len(res.Actions) > 0 {
-		paymentCode = res.Actions[0].Value
+	for _, a := range res.Actions {
+		if a.Descriptor == "VIRTUAL_ACCOUNT_NUMBER" {
+			paymentCode = a.Value
+			break
+		}
 	}
 
 	return &PaymentResponse{
-		ExternalID:     res.ID,
-		Amount:         res.Amount,
-		Status:         res.Status,
-		PaymentMethod:  res.PaymentMethod,
-		PaymentCode:    paymentCode,
-		ChannelCode:    res.ChannelCode,
-		ExpirationTime: res.ChannelProps.ExpiresAt,
+		ProviderPaymentID: res.PaymentRequestID,
+		ReferenceID:       res.ReferenceID,
+		Amount:            res.RequestAmount,
+		Status:            res.Status,
+		PaymentMethod:     res.ChannelCode,
+		PaymentCode:       paymentCode,
+		ChannelCode:       res.ChannelCode,
+		ExpirationTime:    res.ChannelProperties.ExpiresAt,
+		RawResponse:       &raw,
 	}, nil
 }
 

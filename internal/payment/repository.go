@@ -20,10 +20,20 @@ func NewRepository(db *sql.DB) Repository {
 
 func (r *repository) SavePayment(p *Payment) error {
 	_, err := r.db.Exec(`
-		INSERT INTO payments (order_id, external_id, invoice_url, amount, status, payment_method, channel_code, payment_code)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO payments (order_id, 
+		external_reference, 
+		invoice_url, 
+		amount, 
+		status, 
+		payment_method, 
+		channel_code, 
+		payment_code,
+		provider,
+		currency)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`,
-		p.OrderID, p.ExternalID, p.InvoiceURL, p.Amount, p.Status, p.PaymentMethod, p.ChannelCode, p.PaymentCode,
+		p.OrderID, p.ExternalReference, p.InvoiceURL, p.Amount, p.Status, p.PaymentMethod, p.ChannelCode, p.PaymentCode,
+		"XENDIT", "IDR",
 	)
 	return err
 }
@@ -43,7 +53,7 @@ func (r *repository) GetPaymentByOrder(orderID uint) (*Payment, error) {
 
 	var p Payment
 	err := row.Scan(
-		&p.ID, &p.OrderID, &p.ExternalID, &p.InvoiceURL,
+		&p.ID, &p.OrderID, &p.ExternalReference, &p.InvoiceURL,
 		&p.Amount, &p.Status, &p.PaymentMethod, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {

@@ -8,22 +8,24 @@ import (
 type OrderStatus string
 
 const (
-	StatusPending  OrderStatus = "PENDING"
-	StatusAccepted OrderStatus = "ACCEPTED"
-	StatusRejected OrderStatus = "REJECTED"
-	StatusCanceled OrderStatus = "CANCELED"
+	StatusPendingPayment OrderStatus = "PENDING_PAYMENT"
+	StatusPaid           OrderStatus = "PAID"
+	StatusFulFilling     OrderStatus = "FULFILLING"
+	StatusCompleted      OrderStatus = "COMPLETED"
+	StatusCanceled       OrderStatus = "CANCELLED"
 )
 
 type Order struct {
-	ID         uint
-	UserID     *uint
-	Total      uint
-	Status     OrderStatus
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	Items      []OrderItem
-	Currency   string
+	ID        uint
+	UserID    *uint
+	Total     uint
+	Status    OrderStatus
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Items     []OrderItem
+	string
 	ExternalID string
+	Currency   string
 }
 
 type OrderItem struct {

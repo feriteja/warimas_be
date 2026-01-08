@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 	"warimas-be/internal/address"
 	"warimas-be/internal/graph/model"
@@ -21,12 +20,12 @@ type Service interface {
 		ctx context.Context,
 		sessionID string,
 	) (*Order, error)
-	CreateOrder(userID uint, userEmail string) (*Order, *payment.PaymentResponse, error)
+	OrderToPaymentProcess(ctx context.Context, sessionID, externalID string, orderId uint) (*payment.PaymentResponse, error)
 	GetOrders(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit, page *int32) ([]*model.Order, error)
 	GetOrderDetail(userID, orderID uint, isAdmin bool) (*Order, error)
 	UpdateOrderStatus(orderID uint, status OrderStatus) error
-	MarkAsPaid(referenceID string) error
-	MarkAsFailed(referenceID string) error
+	MarkAsPaid(ctx context.Context, referenceID, paymentRequestID string) error
+	MarkAsFailed(ctx context.Context, referenceID, paymentRequestID string) error
 	CreateSession(
 		ctx context.Context,
 		input model.CreateSessionCheckoutInput,
@@ -112,45 +111,50 @@ func (s *service) CreateFromSession(
 }
 
 // ✅ Create new order from cart
-func (s *service) CreateOrder(userID uint, userEmail string) (*Order, *payment.PaymentResponse, error) {
-	if userID == 0 {
-		return nil, nil, errors.New("unauthorized")
-	}
-
-	order, err := s.repo.CreateOrder(userID)
+func (s *service) OrderToPaymentProcess(ctx context.Context, sessionID string, externalID string, orderId uint) (*payment.PaymentResponse, error) {
+	session, err := s.repo.GetCheckoutSession(context.Background(), sessionID)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	var items []payment.OrderItem
-	for _, oi := range order.Items {
-		items = append(items, payment.OrderItem{
-			ProductID: oi.ProductID,
-			Quantity:  oi.Quantity,
+	userEmail := utils.GetUserEmailFromContext(ctx)
+
+	var items []payment.XenditItem
+	for _, s := range session.Items {
+		items = append(items, payment.XenditItem{
+			Name:     s.ProductName + " - " + s.VariantName,
+			Quantity: s.Quantity,
+			Price:    int64(s.Price),
 		})
 	}
-	payResp, err := s.paymentGate.CreateInvoice(order.ID, userEmail, order.Total, userEmail, items, payment.ChannelBCA)
+	payResp, err := s.paymentGate.CreateInvoice(externalID,
+		"userEmail",
+		int64(session.TotalPrice),
+		userEmail,
+		items,
+		payment.ChannelBCA)
+
 	if err != nil {
-		return order, nil, fmt.Errorf("failed to create payment invoice: %w", err)
+		return nil, fmt.Errorf("failed to create payment invoice: %w", err)
 	}
 
 	p := &payment.Payment{
-		OrderID:       order.ID,
-		ExternalID:    payResp.ExternalID,
-		InvoiceURL:    payResp.InvoiceURL,
-		Amount:        payResp.Amount,
-		Status:        payResp.Status,
-		PaymentMethod: payResp.PaymentMethod,
-		ChannelCode:   payResp.ChannelCode,
-		PaymentCode:   payResp.PaymentCode,
+		OrderID:           orderId,
+		ExternalReference: payResp.ProviderPaymentID,
+		InvoiceURL:        payResp.InvoiceURL,
+		Amount:            payResp.Amount,
+		Status:            payResp.Status,
+		PaymentMethod:     payResp.PaymentMethod,
+		ChannelCode:       payResp.ChannelCode,
+		PaymentCode:       payResp.PaymentCode,
 	}
 
 	err = s.paymentRepo.SavePayment(p)
 	if err != nil {
-		return order, nil, fmt.Errorf("failed to save payment: %w", err)
+		return nil, fmt.Errorf("failed to save payment: %w", err)
 	}
 
-	return order, payResp, nil
+	return payResp, nil
 }
 
 // ✅ Get list of orders (user or admin)
@@ -181,9 +185,11 @@ func (s *service) GetOrderDetail(userID, orderID uint, isAdmin bool) (*Order, er
 // ✅ Update order status (admin only)
 func (s *service) UpdateOrderStatus(orderID uint, status OrderStatus) error {
 	validStatuses := map[OrderStatus]bool{
-		StatusAccepted: true,
-		StatusRejected: true,
-		StatusCanceled: true,
+		StatusPendingPayment: true,
+		StatusPaid:           true,
+		StatusFulFilling:     true,
+		StatusCompleted:      true,
+		StatusCanceled:       true,
 	}
 
 	if !validStatuses[status] {
@@ -193,43 +199,99 @@ func (s *service) UpdateOrderStatus(orderID uint, status OrderStatus) error {
 	return s.repo.UpdateOrderStatus(orderID, status)
 }
 
-func (s *service) MarkAsPaid(referenceID string) error {
-	// order, err := s.repo.GetByReferenceID(referenceID)
-	// if err != nil {
-	// 	return err
-	// }
+func (s *service) MarkAsPaid(
+	ctx context.Context,
+	referenceID string,
+	paymentRequestID string,
+) error {
 
-	// if order.Status == "PAID" {
-	// 	log.Printf("Order %s already marked as paid", referenceID)
-	// 	return nil
-	// }
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "MarkAsPaid"),
+		zap.String("reference_id", referenceID),
+		zap.String("payment_request_id", paymentRequestID),
+	)
 
-	err := s.repo.UpdateStatusByReferenceID(referenceID, "PAID")
+	log.Info("mark as paid started")
+
+	order, err := s.repo.GetByReferenceID(ctx, referenceID)
 	if err != nil {
+		log.Error("failed to fetch order", zap.Error(err))
 		return err
 	}
 
-	log.Printf("✅ Order %s marked as PAID", referenceID)
-	return nil
-}
-
-func (s *service) MarkAsFailed(referenceID string) error {
-	order, err := s.repo.GetByReferenceID(referenceID)
-	if err != nil {
-		return err
-	}
-
-	if order.Status == "FAILED" {
-		log.Printf("Order %s already marked as failed", referenceID)
+	// Idempotency guard
+	if order.Status == "PAID" {
+		log.Info("order already marked as PAID")
 		return nil
 	}
 
-	err = s.repo.UpdateStatusByReferenceID(referenceID, "FAILED")
+	// Optional safety check
+	if order.Status == "FAILED" {
+		log.Warn("cannot mark FAILED order as PAID")
+		return fmt.Errorf("invalid status transition: FAILED -> PAID")
+	}
+
+	err = s.repo.UpdateStatusByReferenceID(
+		ctx,
+		referenceID,
+		paymentRequestID,
+		"PAID",
+	)
 	if err != nil {
+		log.Error("failed to update order status to PAID", zap.Error(err))
 		return err
 	}
 
-	log.Printf("❌ Order %s marked as FAILED", referenceID)
+	log.Info("order successfully marked as PAID")
+	return nil
+}
+
+func (s *service) MarkAsFailed(
+	ctx context.Context,
+	referenceID string,
+	paymentRequestID string,
+) error {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "MarkAsFailed"),
+		zap.String("reference_id", referenceID),
+		zap.String("payment_request_id", paymentRequestID),
+	)
+
+	log.Info("mark as failed started")
+
+	order, err := s.repo.GetByReferenceID(ctx, referenceID)
+	if err != nil {
+		log.Error("failed to fetch order", zap.Error(err))
+		return err
+	}
+
+	// Idempotency guard
+	if order.Status == "FAILED" {
+		log.Info("order already marked as FAILED")
+		return nil
+	}
+
+	// Optional safety check
+	if order.Status == "PAID" {
+		log.Warn("cannot mark PAID order as FAILED")
+		return fmt.Errorf("invalid status transition: PAID -> FAILED")
+	}
+
+	err = s.repo.UpdateStatusByReferenceID(
+		ctx,
+		referenceID,
+		paymentRequestID,
+		"FAILED",
+	)
+	if err != nil {
+		log.Error("failed to update order status to FAILED", zap.Error(err))
+		return err
+	}
+
+	log.Info("order successfully marked as FAILED")
 	return nil
 }
 
@@ -500,12 +562,14 @@ func (s *service) ConfirmSession(
 
 	log.Info("stock validation passed")
 
+	externalID := utils.ExternalIDFromSession("pay", sessionID)
+
 	order := &Order{
 		UserID:     session.UserID,
 		Status:     OrderStatus(model.OrderStatusPendingPayment),
 		Total:      uint(session.TotalPrice),
 		Currency:   session.Currency,
-		ExternalID: utils.ExternalIDFromSession("pay", sessionID),
+		ExternalID: externalID,
 	}
 
 	err = s.repo.CreateOrderTx(
@@ -523,6 +587,8 @@ func (s *service) ConfirmSession(
 		log.Error("failed to confirm checkout session", zap.Error(err))
 		return nil, err
 	}
+
+	_, err = s.OrderToPaymentProcess(ctx, sessionID, externalID, order.ID)
 
 	log.Info("checkout session confirmed successfully",
 		zap.String("final_status", string(session.Status)),
