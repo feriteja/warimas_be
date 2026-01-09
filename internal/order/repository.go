@@ -7,18 +7,31 @@ import (
 	"fmt"
 	"strings"
 	"warimas-be/internal/address"
-	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
 	"warimas-be/internal/product"
-	"warimas-be/internal/utils"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
 type Repository interface {
 	CreateOrder(userID uint) (*Order, error)
-	GetOrders(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit, page *int32) ([]*model.Order, error)
+	FetchOrders(
+		ctx context.Context,
+		filter *OrderFilterInput,
+		sort *OrderSortInput,
+		limit int32,
+		offset int32,
+	) ([]*Order, error)
+	FetchOrderItems(
+		ctx context.Context,
+		orderIDs []uint,
+	) (map[uint][]*OrderItem, error)
+	CountOrders(
+		ctx context.Context,
+		filter *OrderFilterInput,
+	) (int64, error)
 	GetOrderDetail(orderID uint) (*Order, error)
 	UpdateOrderStatus(orderID uint, status OrderStatus) error
 	UpdateStatusByReferenceID(ctx context.Context, referenceID, ExternalReference string, status string) error
@@ -99,7 +112,7 @@ func (r *repository) GetOrderBySessionID(
 
 	var o Order
 	err := r.db.QueryRowContext(ctx, query, sessionID).
-		Scan(&o.ID, &o.Status, &o.Total)
+		Scan(&o.ID, &o.Status, &o.TotalAmount)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -152,7 +165,7 @@ func (r *repository) CreateOrderTx(
 		order.UserID,
 		session.ID,
 		order.Status,
-		order.Total,
+		order.TotalAmount,
 		order.Currency,
 		order.ExternalID,
 		session.Subtotal,
@@ -263,7 +276,7 @@ func (r *repository) CreateOrder(userID uint) (*Order, error) {
 	}
 	defer rows.Close()
 
-	var items []OrderItem
+	var items []*OrderItem
 	var total int
 
 	for rows.Next() {
@@ -272,8 +285,8 @@ func (r *repository) CreateOrder(userID uint) (*Order, error) {
 		if err != nil {
 			return nil, err
 		}
-		items = append(items, item)
-		total += item.Quantity * item.Price
+		items = append(items, &item)
+		total += item.Quantity * int(item.Price)
 	}
 
 	if len(items) == 0 {
@@ -315,169 +328,12 @@ func (r *repository) CreateOrder(userID uint) (*Order, error) {
 
 	// Return order struct
 	return &Order{
-		ID:     orderID,
-		UserID: &userID,
-		Total:  uint(total),
-		Status: StatusPendingPayment,
-		Items:  items,
+		ID:          orderID,
+		UserID:      &userID,
+		TotalAmount: uint(total),
+		Status:      StatusPendingPayment,
+		Items:       items,
 	}, nil
-}
-
-// ✅ Get all orders for a user or admin
-func (r *repository) GetOrders(
-	ctx context.Context,
-	filter *model.OrderFilterInput,
-	sort *model.OrderSortInput,
-	limit, page *int32,
-) ([]*model.Order, error) {
-
-	// ---------- AUTH ----------
-	userID, _ := utils.GetUserIDFromContext(ctx)
-	role := utils.GetUserRoleFromContext(ctx)
-	isAdmin := role == "ADMIN"
-
-	// ---------- PAGINATION ----------
-	finalLimit := int32(20)
-	finalPage := int32(1)
-
-	if limit != nil && *limit > 0 {
-		finalLimit = *limit
-	}
-	if page != nil && *page > 0 {
-		finalPage = *page
-	}
-	if finalLimit > 100 {
-		finalLimit = 100
-	}
-
-	offset := (finalPage - 1) * finalLimit
-
-	log := logger.FromCtx(ctx).With(
-		zap.String("method", "GetOrders"),
-		zap.String("role", role),
-		zap.Int32("limit", finalLimit),
-		zap.Int32("page", finalPage),
-		zap.Int32("offset", offset),
-	)
-
-	log.Debug("start get orders")
-
-	// ---------- BASE QUERY ----------
-	query := `
-		SELECT
-			o.id,
-			o.total,
-			o.status,
-			o.created_at,
-			o.updated_at
-		FROM orders o
-		WHERE 1=1
-	`
-
-	args := []any{}
-	argIndex := 1
-
-	// ---------- ACCESS CONTROL ----------
-	if !isAdmin {
-		query += fmt.Sprintf(" AND o.user_id = $%d", argIndex)
-		args = append(args, userID)
-		argIndex++
-	}
-
-	// ---------- FILTERING ----------
-	if filter != nil {
-
-		if filter.Search != nil && *filter.Search != "" {
-			query += fmt.Sprintf(
-				" AND (o.id::text ILIKE $%d OR o.status ILIKE $%d)",
-				argIndex, argIndex,
-			)
-			args = append(args, "%"+*filter.Search+"%")
-			argIndex++
-		}
-
-		if filter.Status != nil && *filter.Status != "" {
-			query += fmt.Sprintf(" AND o.status = $%d", argIndex)
-			args = append(args, *filter.Status)
-			argIndex++
-		}
-
-		if filter.DateFrom != nil {
-			query += fmt.Sprintf(" AND o.created_at >= $%d", argIndex)
-			args = append(args, *filter.DateFrom)
-			argIndex++
-		}
-
-		if filter.DateTo != nil {
-			query += fmt.Sprintf(" AND o.created_at <= $%d", argIndex)
-			args = append(args, *filter.DateTo)
-			argIndex++
-		}
-	}
-
-	// ---------- SORTING ----------
-	orderBy := "o.created_at DESC"
-
-	if sort != nil {
-		dir := strings.ToUpper(string(sort.Direction))
-		if dir != "ASC" && dir != "DESC" {
-			dir = "DESC"
-		}
-
-		switch sort.Field {
-		case model.OrderSortFieldTotal:
-			orderBy = "o.total " + dir
-		case model.OrderSortFieldCreatedAt:
-			orderBy = "o.created_at " + dir
-		}
-	}
-
-	query += " ORDER BY " + orderBy
-
-	// ---------- PAGINATION ----------
-	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
-	args = append(args, finalLimit, offset)
-
-	log.Debug("executing get orders query",
-		zap.String("query", query),
-		zap.Any("args", args),
-	)
-
-	// ---------- EXECUTE ----------
-	rows, err := r.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		log.Error("failed to query orders", zap.Error(err))
-		return nil, err
-	}
-	defer rows.Close()
-
-	var orders []*model.Order
-
-	for rows.Next() {
-		var o model.Order
-		if err := rows.Scan(
-			&o.ID,
-			&o.TotalPrice,
-			&o.Status,
-			&o.CreatedAt,
-			&o.UpdatedAt,
-		); err != nil {
-			log.Error("failed to scan order row", zap.Error(err))
-			return nil, err
-		}
-		orders = append(orders, &o)
-	}
-
-	if err := rows.Err(); err != nil {
-		log.Error("rows iteration error", zap.Error(err))
-		return nil, err
-	}
-
-	log.Info("get orders success",
-		zap.Int("count", len(orders)),
-	)
-
-	return orders, nil
 }
 
 // ✅ Get detailed order with items
@@ -486,7 +342,7 @@ func (r *repository) GetOrderDetail(orderID uint) (*Order, error) {
 	err := r.db.QueryRow(`
 		SELECT id, user_id, total, status, created_at, updated_at
 		FROM orders WHERE id = $1
-	`, orderID).Scan(&o.ID, &o.UserID, &o.Total, &o.Status, &o.CreatedAt, &o.UpdatedAt)
+	`, orderID).Scan(&o.ID, &o.UserID, &o.TotalAmount, &o.Status, &o.CreatedAt, &o.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, errors.New("order not found")
 	}
@@ -495,9 +351,8 @@ func (r *repository) GetOrderDetail(orderID uint) (*Order, error) {
 	}
 
 	rows, err := r.db.Query(`
-		SELECT oi.id, oi.product_id, oi.quantity, oi.price, p.name
-		FROM order_items oi
-		JOIN products p ON oi.product_id = p.id
+	SELECT id, order_id, quantity, unit_price, variant_id, variant_name, product_name, subtotal
+		FROM order_items
 		WHERE oi.order_id = $1
 	`, orderID)
 	if err != nil {
@@ -507,10 +362,18 @@ func (r *repository) GetOrderDetail(orderID uint) (*Order, error) {
 
 	for rows.Next() {
 		var item OrderItem
-		if err := rows.Scan(&item.ID, &item.ProductID, &item.Quantity, &item.Price, &item.Product.Name); err != nil {
+		if err := rows.Scan(
+			&item.ID,
+			&item.OrderID,
+			&item.Quantity,
+			&item.Price,
+			&item.VariantID,
+			&item.VariantName,
+			&item.ProductName,
+			&item.Subtotal); err != nil {
 			return nil, err
 		}
-		o.Items = append(o.Items, item)
+		o.Items = append(o.Items, &item)
 	}
 
 	return &o, nil
@@ -662,7 +525,7 @@ func (r *repository) GetByReferenceID(
 
 	var o Order
 	err := r.db.QueryRowContext(ctx, query, referenceID).
-		Scan(&o.ID, &o.Total, &o.Status)
+		Scan(&o.ID, &o.TotalAmount, &o.Status)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -1031,4 +894,256 @@ func (r *repository) MarkSessionExpired(
 	`, sessionID)
 
 	return err
+}
+
+func (r *repository) CountOrders(
+	ctx context.Context,
+	filter *OrderFilterInput,
+) (int64, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "countOrders"),
+	)
+
+	var (
+		total int64
+		args  []any
+		where []string
+	)
+
+	baseQuery := `
+		SELECT COUNT(1)
+		FROM orders
+	`
+
+	// Default condition
+	// where = append(where, "deleted_at IS NULL")
+
+	// -------------------------
+	// Dynamic filters
+	// -------------------------
+
+	if filter != nil {
+
+		// Search (example: order_id or external_id)
+		if filter.Search != nil && *filter.Search != "" {
+			args = append(args, "%"+*filter.Search+"%")
+			where = append(where,
+				fmt.Sprintf("(id::text ILIKE $%d OR external_id ILIKE $%d)", len(args), len(args)),
+			)
+		}
+
+		// Status
+		if filter.Status != nil {
+			args = append(args, *filter.Status)
+			where = append(where,
+				fmt.Sprintf("status = $%d", len(args)),
+			)
+		}
+
+		// Date From
+		if filter.DateFrom != nil {
+			args = append(args, *filter.DateFrom)
+			where = append(where,
+				fmt.Sprintf("created_at >= $%d", len(args)),
+			)
+		}
+
+		// Date To
+		if filter.DateTo != nil {
+			args = append(args, *filter.DateTo)
+			where = append(where,
+				fmt.Sprintf("created_at <= $%d", len(args)),
+			)
+		}
+	}
+
+	// -------------------------
+	// Final query
+	// -------------------------
+
+	query := baseQuery
+	if len(where) > 0 {
+		query += " WHERE " + strings.Join(where, " AND ")
+	}
+
+	log.Debug("count orders query built",
+		zap.String("query", query),
+		zap.Any("args", args),
+	)
+
+	err := r.db.QueryRowContext(ctx, query, args...).Scan(&total)
+	if err != nil {
+		log.Error("failed to count orders",
+			zap.Error(err),
+		)
+		return 0, err
+	}
+
+	log.Info("orders counted",
+		zap.Int64("total", total),
+	)
+
+	return total, nil
+}
+
+func (r *repository) FetchOrders(
+	ctx context.Context,
+	filter *OrderFilterInput,
+	sort *OrderSortInput,
+	limit int32,
+	offset int32,
+) ([]*Order, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "fetchOrders"),
+	)
+
+	var (
+		args  []any
+		where []string
+	)
+
+	baseQuery := `
+		SELECT o.id, o.user_id, o.status, o.total_amount, o.created_at
+		FROM orders o
+	`
+
+	// Default condition
+	// where = append(where, "o.deleted_at IS NULL")
+
+	if filter != nil {
+
+		if filter.Search != nil && *filter.Search != "" {
+			args = append(args, "%"+*filter.Search+"%")
+			where = append(where,
+				fmt.Sprintf("(o.id::text ILIKE $%d OR o.external_id ILIKE $%d)", len(args), len(args)),
+			)
+		}
+
+		if filter.Status != nil {
+			args = append(args, *filter.Status)
+			where = append(where,
+				fmt.Sprintf("o.status = $%d", len(args)),
+			)
+		}
+
+		if filter.DateFrom != nil {
+			args = append(args, *filter.DateFrom)
+			where = append(where,
+				fmt.Sprintf("o.created_at >= $%d", len(args)),
+			)
+		}
+
+		if filter.DateTo != nil {
+			args = append(args, *filter.DateTo)
+			where = append(where,
+				fmt.Sprintf("o.created_at <= $%d", len(args)),
+			)
+		}
+	}
+
+	orderBy := "o.created_at DESC"
+	if sort != nil {
+		switch sort.Field {
+		case OrderSortFieldCreatedAt:
+			if sort.Direction == SortDirectionAsc {
+				orderBy = "o.created_at ASC"
+			}
+		case OrderSortFieldTotal:
+			if sort.Direction == SortDirectionAsc {
+				orderBy = "o.total_amount ASC"
+			} else {
+				orderBy = "o.total_amount DESC"
+			}
+		}
+	}
+
+	query := baseQuery
+	if len(where) > 0 {
+		query += " WHERE " + strings.Join(where, " AND ")
+	}
+
+	args = append(args, limit, offset)
+	query += fmt.Sprintf(
+		" ORDER BY %s LIMIT $%d OFFSET $%d",
+		orderBy,
+		len(args)-1,
+		len(args),
+	)
+
+	log.Debug("fetch orders query built",
+		zap.String("query", query),
+		zap.Any("args", args),
+	)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		log.Error("failed to query orders", zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []*Order
+	for rows.Next() {
+		var o Order
+		if err := rows.Scan(
+			&o.ID,
+			&o.UserID,
+			&o.Status,
+			&o.TotalAmount,
+			&o.CreatedAt,
+		); err != nil {
+			log.Error("failed to scan order row", zap.Error(err))
+			return nil, err
+		}
+		orders = append(orders, &o)
+	}
+
+	return orders, rows.Err()
+}
+
+func (r *repository) FetchOrderItems(
+	ctx context.Context,
+	orderIDs []uint,
+) (map[uint][]*OrderItem, error) {
+
+	if len(orderIDs) == 0 {
+		return map[uint][]*OrderItem{}, nil
+	}
+
+	query := `
+		SELECT id, order_id, quantity, unit_price, variant_id, variant_name, product_name, subtotal
+		FROM order_items
+		WHERE order_id = ANY($1)
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, pq.Array(orderIDs))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	itemsMap := make(map[uint][]*OrderItem)
+
+	for rows.Next() {
+		var item OrderItem
+		if err := rows.Scan(
+			&item.ID,
+			&item.OrderID,
+			&item.Quantity,
+			&item.Price,
+			&item.VariantID,
+			&item.VariantName,
+			&item.ProductName,
+			&item.Subtotal,
+		); err != nil {
+			return nil, err
+		}
+		itemsMap[item.OrderID] = append(itemsMap[item.OrderID], &item)
+	}
+
+	return itemsMap, rows.Err()
 }

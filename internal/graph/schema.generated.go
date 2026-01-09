@@ -2133,10 +2133,22 @@ func (ec *executionContext) fieldContext_Query_orderDetail(ctx context.Context, 
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Order_id(ctx, field)
-			case "user":
-				return ec.fieldContext_Order_user(ctx, field)
+			case "userId":
+				return ec.fieldContext_Order_userId(ctx, field)
+			case "currency":
+				return ec.fieldContext_Order_currency(ctx, field)
 			case "totalPrice":
 				return ec.fieldContext_Order_totalPrice(ctx, field)
+			case "subtotal":
+				return ec.fieldContext_Order_subtotal(ctx, field)
+			case "tax":
+				return ec.fieldContext_Order_tax(ctx, field)
+			case "shippingFee":
+				return ec.fieldContext_Order_shippingFee(ctx, field)
+			case "addressID":
+				return ec.fieldContext_Order_addressID(ctx, field)
+			case "discount":
+				return ec.fieldContext_Order_discount(ctx, field)
 			case "status":
 				return ec.fieldContext_Order_status(ctx, field)
 			case "createdAt":

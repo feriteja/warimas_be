@@ -162,14 +162,63 @@ func (r *mutationResolver) ConfirmCheckoutSession(ctx context.Context, input mod
 
 // OrderList is the resolver for the orderList field.
 func (r *queryResolver) OrderList(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, page *int32) (*model.OrderListResponse, error) {
-	orders, err := r.OrderSvc.GetOrders(ctx, filter, sort, limit, page)
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "OrderList"),
+	)
+
+	log.Info("order list request started",
+		zap.Any("filter", filter),
+		zap.Any("sort", sort),
+		zap.Int32p("limit", limit),
+		zap.Int32p("page", page),
+	)
+
+	filterOrder := &order.OrderFilterInput{}
+	if filter != nil {
+		filterOrder = &order.OrderFilterInput{
+			Search:   filter.Search,
+			Status:   (*order.OrderStatus)(filter.Status),
+			DateFrom: filter.DateFrom,
+			DateTo:   filter.DateTo,
+		}
+	}
+
+	sortOrder := &order.OrderSortInput{}
+	if sort != nil {
+		sortOrder = &order.OrderSortInput{
+			Field:     order.OrderSortField(sort.Field),
+			Direction: order.SortDirection(sort.Direction),
+		}
+	} else {
+		// default sort
+		sortOrder = &order.OrderSortInput{
+			Field:     order.OrderSortFieldCreatedAt,
+			Direction: order.SortDirectionDesc,
+		}
+	}
+
+	orders, total, err := r.OrderSvc.GetOrders(ctx, filterOrder, sortOrder, limit, page)
 	if err != nil {
+		log.Error("order list request failed", zap.Error(err))
 		return nil, err
 	}
 
+	log.Info("order list request success",
+		zap.Int("items_count", len(orders)),
+		zap.Int64("total", total),
+	)
+
+	var mapOrder []*model.Order
+	for _, o := range orders {
+		mapOrder = append(mapOrder, order.ToGraphQLOrder(o))
+	}
+
 	return &model.OrderListResponse{
-		Items: orders,
-		Total: int32(len(orders)),
+		Items: mapOrder,
+		Total: int32(total),
+		Page:  *page,
+		Limit: *limit,
 	}, nil
 }
 

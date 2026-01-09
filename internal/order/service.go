@@ -21,7 +21,11 @@ type Service interface {
 		sessionID string,
 	) (*Order, error)
 	OrderToPaymentProcess(ctx context.Context, sessionID, externalID string, orderId uint) (*payment.PaymentResponse, error)
-	GetOrders(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit, page *int32) ([]*model.Order, error)
+	GetOrders(ctx context.Context,
+		filter *OrderFilterInput,
+		sort *OrderSortInput,
+		limit *int32,
+		page *int32) ([]*Order, int64, error)
 	GetOrderDetail(userID, orderID uint, isAdmin bool) (*Order, error)
 	UpdateOrderStatus(orderID uint, status OrderStatus) error
 	MarkAsPaid(ctx context.Context, referenceID, paymentRequestID string) error
@@ -90,11 +94,11 @@ func (s *service) CreateFromSession(
 
 	// 4. Create order domain
 	order := &Order{
-		UserID:     session.UserID,
-		Status:     OrderStatus(model.OrderStatusPendingPayment),
-		Total:      uint(session.TotalPrice),
-		Currency:   session.Currency,
-		ExternalID: utils.ExternalIDFromSession("pay", sessionID),
+		UserID:      session.UserID,
+		Status:      OrderStatus(model.OrderStatusPendingPayment),
+		TotalAmount: uint(session.TotalPrice),
+		Currency:    session.Currency,
+		ExternalID:  utils.ExternalIDFromSession("pay", sessionID),
 	}
 
 	// 5. Transaction boundary
@@ -158,14 +162,69 @@ func (s *service) OrderToPaymentProcess(ctx context.Context, sessionID string, e
 }
 
 // ✅ Get list of orders (user or admin)
-func (s *service) GetOrders(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit, page *int32) ([]*model.Order, error) {
 
-	orders, err := s.repo.GetOrders(ctx, filter, sort, limit, page)
-	if err != nil {
-		return nil, err
+func (s *service) GetOrders(
+	ctx context.Context,
+	filter *OrderFilterInput,
+	sort *OrderSortInput,
+	limit *int32,
+	page *int32,
+) ([]*Order, int64, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "GetOrders"),
+	)
+
+	l := defaultLimit
+	if limit != nil && *limit > 0 {
+		l = *limit
+	}
+	if l > maxLimit {
+		l = maxLimit
 	}
 
-	return orders, nil
+	p := defaultPage
+	if page != nil && *page > 0 {
+		p = *page
+	}
+
+	offset := (p - 1) * l
+
+	log.Info("fetching orders",
+		zap.Int32("limit", l),
+		zap.Int32("page", p),
+		zap.Int32("offset", offset),
+	)
+
+	orders, err := s.repo.FetchOrders(ctx, filter, sort, l, offset)
+
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total, err := s.repo.CountOrders(ctx, filter)
+
+	ids := make([]uint, 0, len(orders))
+	for _, o := range orders {
+		ids = append(ids, o.ID)
+	}
+
+	itemsMap, err := s.repo.FetchOrderItems(ctx, ids)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	for _, o := range orders {
+		o.Items = itemsMap[o.ID]
+	}
+
+	log.Info("orders fetched",
+		zap.Int("items_count", len(orders)),
+		zap.Int64("total", total),
+	)
+
+	return orders, total, nil
 }
 
 // ✅ Get order detail (user only sees their own order)
@@ -565,11 +624,11 @@ func (s *service) ConfirmSession(
 	externalID := utils.ExternalIDFromSession("pay", sessionID)
 
 	order := &Order{
-		UserID:     session.UserID,
-		Status:     OrderStatus(model.OrderStatusPendingPayment),
-		Total:      uint(session.TotalPrice),
-		Currency:   session.Currency,
-		ExternalID: externalID,
+		UserID:      session.UserID,
+		Status:      OrderStatus(model.OrderStatusPendingPayment),
+		TotalAmount: uint(session.TotalPrice),
+		Currency:    session.Currency,
+		ExternalID:  externalID,
 	}
 
 	err = s.repo.CreateOrderTx(

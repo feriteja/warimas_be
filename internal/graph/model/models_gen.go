@@ -172,13 +172,19 @@ type NewVariant struct {
 // Core Types
 // ====================
 type Order struct {
-	ID         int32        `json:"id"`
-	User       *User        `json:"user,omitempty"`
-	TotalPrice int32        `json:"totalPrice"`
-	Status     OrderStatus  `json:"status"`
-	CreatedAt  time.Time    `json:"createdAt"`
-	UpdatedAt  time.Time    `json:"updatedAt"`
-	Items      []*OrderItem `json:"items"`
+	ID          int32        `json:"id"`
+	UserID      *int32       `json:"userId,omitempty"`
+	Currency    string       `json:"currency"`
+	TotalPrice  int32        `json:"totalPrice"`
+	Subtotal    int32        `json:"subtotal"`
+	Tax         int32        `json:"tax"`
+	ShippingFee int32        `json:"shippingFee"`
+	AddressID   string       `json:"addressID"`
+	Discount    int32        `json:"discount"`
+	Status      OrderStatus  `json:"status"`
+	CreatedAt   time.Time    `json:"createdAt"`
+	UpdatedAt   time.Time    `json:"updatedAt"`
+	Items       []*OrderItem `json:"items"`
 }
 
 type OrderFilterInput struct {
@@ -189,10 +195,13 @@ type OrderFilterInput struct {
 }
 
 type OrderItem struct {
-	ID       int32    `json:"id"`
-	Product  *Product `json:"product"`
-	Quantity int32    `json:"quantity"`
-	Price    int32    `json:"price"`
+	ID          int32  `json:"id"`
+	VariantID   string `json:"variantId"`
+	VariantName string `json:"variantName"`
+	ProductName string `json:"productName"`
+	Subtotal    int32  `json:"subtotal"`
+	Quantity    int32  `json:"quantity"`
+	Price       int32  `json:"price"`
 }
 
 type OrderListResponse struct {

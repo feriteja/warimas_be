@@ -72,8 +72,14 @@ Core Types
 """
 type Order {
   id: Int!
-  user: User
+  userId: Int
+  currency: String!
   totalPrice: Int!
+  subtotal: Int!
+  tax: Int!
+  shippingFee: Int!
+  addressID: ID!
+  discount: Int!
   status: OrderStatus!
   createdAt: Time!
   updatedAt: Time!
@@ -82,7 +88,10 @@ type Order {
 
 type OrderItem {
   id: Int!
-  product: Product!
+  variantId: ID!
+  variantName: String!
+  productName: String!
+  subtotal: Int!
   quantity: Int!
   price: Int!
 }
