@@ -52,17 +52,17 @@ input SessionCheckoutItemInput {
 }
 
 input UpdateSessionAddressInput {
-  sessionId: ID!
+  externalId: ID!
   addressId: ID!
   guestId: ID
 }
 
 input ConfirmCheckoutSessionInput {
-  sessionId: ID!
+  externalId: ID!
 }
 
 input CreateOrderFromSessionInput {
-  sessionId: ID!
+  externalId: ID!
 }
 
 """
@@ -98,11 +98,12 @@ type OrderItem {
 
 type CheckoutSession {
   id: ID!
+  externalId: String!
   status: CheckoutSessionStatus!
   expiresAt: Time!
   createdAt: Time!
 
-  address: Address
+  addressId: ID
   items: [CheckoutSessionItem!]!
 
   subtotal: Int!
@@ -148,7 +149,7 @@ type CreateOrderResponse {
 }
 
 type SessionCheckoutResponse {
-  sessionId: ID!
+  externalId: ID!
   status: CheckoutSessionStatus!
   expiresAt: Time!
 }
@@ -173,7 +174,7 @@ extend type Query {
 
   orderDetail(orderId: ID!): Order! @auth(role: USER)
 
-  checkoutSession(id: ID!): CheckoutSession
+  checkoutSession(externalId: String!): CheckoutSession
 }
 
 extend type Mutation {

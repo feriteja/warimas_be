@@ -27,12 +27,12 @@ func (r *mutationResolver) CreateOrderFromSession(ctx context.Context, input mod
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "resolver"),
 		zap.String("method", "CreateOrderFromSession"),
-		zap.String("session_id", input.SessionID),
+		zap.String("session_id", input.ExternalID),
 	)
 
 	orderCreated, err := r.OrderSvc.CreateFromSession(
 		ctx,
-		input.SessionID,
+		input.ExternalID,
 	)
 	if err != nil {
 		log.Error("failed to create order from session", zap.Error(err))
@@ -104,9 +104,9 @@ func (r *mutationResolver) CreateSessionCheckout(ctx context.Context, input mode
 	)
 
 	return &model.SessionCheckoutResponse{
-		SessionID: session.ID.String(),
-		Status:    model.CheckoutSessionStatus(session.Status),
-		ExpiresAt: session.ExpiresAt,
+		ExternalID: session.ExternalID,
+		Status:     model.CheckoutSessionStatus(session.Status),
+		ExpiresAt:  session.ExpiresAt,
 	}, nil
 }
 
@@ -115,12 +115,12 @@ func (r *mutationResolver) UpdateSessionAddress(ctx context.Context, input model
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "resolver"),
 		zap.String("method", "UpdateSessionAddress"),
-		zap.String("session_id", input.SessionID),
+		zap.String("session_id", input.ExternalID),
 	)
 
 	err := r.OrderSvc.UpdateSessionAddress(
 		ctx,
-		input.SessionID,
+		input.ExternalID,
 		input.AddressID,
 		input.GuestID,
 	)
@@ -139,12 +139,12 @@ func (r *mutationResolver) ConfirmCheckoutSession(ctx context.Context, input mod
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "resolver"),
 		zap.String("method", "ConfirmCheckoutSession"),
-		zap.String("session_id", input.SessionID),
+		zap.String("external_id", input.ExternalID),
 	)
 
 	session, err := r.OrderSvc.ConfirmSession(
 		ctx,
-		input.SessionID,
+		input.ExternalID,
 	)
 	if err != nil {
 		log.Error("failed to confirm checkout session", zap.Error(err))
@@ -243,19 +243,16 @@ func (r *queryResolver) OrderDetail(ctx context.Context, orderID string) (*model
 }
 
 // CheckoutSession is the resolver for the checkoutSession field.
-func (r *queryResolver) CheckoutSession(ctx context.Context, id string) (*model.CheckoutSession, error) {
-	userID, _ := utils.GetUserIDFromContext(ctx) // guest allowed
-
+func (r *queryResolver) CheckoutSession(ctx context.Context, externalID string) (*model.CheckoutSession, error) {
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "resolver"),
 		zap.String("method", "CheckoutSession"),
-		zap.String("session_id", id),
+		zap.String("external_id", externalID),
 	)
 
 	session, err := r.OrderSvc.GetSession(
 		ctx,
-		id,
-		&userID,
+		externalID,
 	)
 	if err != nil {
 		log.Error("failed to get checkout session", zap.Error(err))

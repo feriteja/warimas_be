@@ -17,6 +17,7 @@ const (
 
 type CheckoutSession struct {
 	ID          uuid.UUID
+	ExternalID  string
 	Status      CheckoutSessionStatus
 	ExpiresAt   time.Time
 	CreatedAt   time.Time

@@ -18,9 +18,9 @@ import (
 type Service interface {
 	CreateFromSession(
 		ctx context.Context,
-		sessionID string,
+		externalID string,
 	) (*Order, error)
-	OrderToPaymentProcess(ctx context.Context, sessionID, externalID string, orderId uint) (*payment.PaymentResponse, error)
+	OrderToPaymentProcess(ctx context.Context, sessionExternalID, externalID string, orderId uint) (*payment.PaymentResponse, error)
 	GetOrders(ctx context.Context,
 		filter *OrderFilterInput,
 		sort *OrderSortInput,
@@ -37,7 +37,7 @@ type Service interface {
 
 	UpdateSessionAddress(
 		ctx context.Context,
-		sessionID string,
+		externalID string,
 		addressID string,
 		guestID *string,
 	) error
@@ -47,8 +47,7 @@ type Service interface {
 	) (*CheckoutSession, error)
 	GetSession(
 		ctx context.Context,
-		sessionID string,
-		userID *uint,
+		externalID string,
 	) (*CheckoutSession, error)
 }
 
@@ -68,11 +67,11 @@ func NewService(repo Repository, payRepo payment.Repository, payGate payment.Gat
 
 func (s *service) CreateFromSession(
 	ctx context.Context,
-	sessionID string,
+	externalID string,
 ) (*Order, error) {
 
 	// 1. Load session
-	session, err := s.repo.GetCheckoutSession(ctx, sessionID)
+	session, err := s.repo.GetCheckoutSession(ctx, externalID)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +97,7 @@ func (s *service) CreateFromSession(
 		Status:      OrderStatus(model.OrderStatusPendingPayment),
 		TotalAmount: uint(session.TotalPrice),
 		Currency:    session.Currency,
-		ExternalID:  utils.ExternalIDFromSession("pay", sessionID),
+		ExternalID:  utils.ExternalIDFromSession("pay", externalID),
 	}
 
 	// 5. Transaction boundary
@@ -115,8 +114,8 @@ func (s *service) CreateFromSession(
 }
 
 // ✅ Create new order from cart
-func (s *service) OrderToPaymentProcess(ctx context.Context, sessionID string, externalID string, orderId uint) (*payment.PaymentResponse, error) {
-	session, err := s.repo.GetCheckoutSession(context.Background(), sessionID)
+func (s *service) OrderToPaymentProcess(ctx context.Context, sessionExternalID string, externalID string, orderId uint) (*payment.PaymentResponse, error) {
+	session, err := s.repo.GetCheckoutSession(context.Background(), sessionExternalID)
 	if err != nil {
 		return nil, err
 	}
@@ -433,9 +432,12 @@ func (s *service) CreateSession(
 		zap.Int("total_price", totalPrice),
 	)
 
+	sessionID := uuid.New()
+	sessionExternalID := utils.ExternalIDFromSession("ck", sessionID.String())
 	// 3. Create session model
 	session := &CheckoutSession{
-		ID:          uuid.New(),
+		ID:          sessionID,
+		ExternalID:  sessionExternalID,
 		UserID:      &userId,
 		Status:      CheckoutSessionStatusPending,
 		Subtotal:    subtotal,
@@ -467,12 +469,12 @@ func (s *service) CreateSession(
 
 func (s *service) UpdateSessionAddress(
 	ctx context.Context,
-	sessionID string,
+	externalID string,
 	addressID string,
 	guestID *string,
 ) error {
 
-	session, err := s.repo.GetCheckoutSession(ctx, sessionID)
+	session, err := s.repo.GetCheckoutSession(ctx, externalID)
 	if err != nil {
 		return err
 	}
@@ -536,13 +538,13 @@ func (s *service) calculateTax(
 
 func (s *service) ConfirmSession(
 	ctx context.Context,
-	sessionID string,
+	externalID string,
 ) (*CheckoutSession, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "service"),
 		zap.String("method", "ConfirmSession"),
-		zap.String("session_id", sessionID),
+		zap.String("externa_idD", externalID),
 	)
 
 	userID, _ := utils.GetUserIDFromContext(ctx)
@@ -550,7 +552,7 @@ func (s *service) ConfirmSession(
 	log.Info("confirm checkout session started")
 
 	// 1. Load session (with items)
-	session, err := s.repo.GetCheckoutSession(ctx, sessionID)
+	session, err := s.repo.GetCheckoutSession(ctx, externalID)
 	if err != nil {
 		log.Error("failed to load checkout session", zap.Error(err))
 		return nil, err
@@ -621,14 +623,14 @@ func (s *service) ConfirmSession(
 
 	log.Info("stock validation passed")
 
-	externalID := utils.ExternalIDFromSession("pay", sessionID)
+	externalOrderID := utils.ExternalIDFromSession("pay", session.ID.String())
 
 	order := &Order{
 		UserID:      session.UserID,
 		Status:      OrderStatus(model.OrderStatusPendingPayment),
 		TotalAmount: uint(session.TotalPrice),
 		Currency:    session.Currency,
-		ExternalID:  externalID,
+		ExternalID:  externalOrderID,
 	}
 
 	err = s.repo.CreateOrderTx(
@@ -647,7 +649,7 @@ func (s *service) ConfirmSession(
 		return nil, err
 	}
 
-	_, err = s.OrderToPaymentProcess(ctx, sessionID, externalID, order.ID)
+	_, err = s.OrderToPaymentProcess(ctx, session.ExternalID, externalID, order.ID)
 
 	log.Info("checkout session confirmed successfully",
 		zap.String("final_status", string(session.Status)),
@@ -658,18 +660,18 @@ func (s *service) ConfirmSession(
 
 func (s *service) GetSession(
 	ctx context.Context,
-	sessionID string,
-	userID *uint,
+	externalID string,
 ) (*CheckoutSession, error) {
 
-	session, err := s.repo.GetCheckoutSession(ctx, sessionID)
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	session, err := s.repo.GetCheckoutSession(ctx, externalID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Ownership check (if session is tied to a user)
-	if session.UserID != nil && userID != nil {
-		if *session.UserID != *userID {
+	if session.UserID != nil && ok {
+		if *session.UserID != userID {
 			return nil, errors.New("forbidden")
 		}
 	}

@@ -60,7 +60,7 @@ type Repository interface {
 
 	GetCheckoutSession(
 		ctx context.Context,
-		sessionID string,
+		externalID string,
 	) (*CheckoutSession, error)
 
 	GetUserAddress(
@@ -641,8 +641,8 @@ func (r *repository) CreateCheckoutSession(
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO checkout_sessions (
 			id, user_id, status, subtotal, tax, shipping_fee,
-			discount, total_amount, expires_at
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+			discount, total_amount, expires_at, external_id
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, $10)
 	`,
 		session.ID,
 		session.UserID,
@@ -653,6 +653,7 @@ func (r *repository) CreateCheckoutSession(
 		session.Discount,
 		session.TotalPrice,
 		session.ExpiresAt,
+		session.ExternalID,
 	)
 	if err != nil {
 		log.Error(
@@ -713,7 +714,7 @@ func (r *repository) CreateCheckoutSession(
 
 func (r *repository) GetCheckoutSession(
 	ctx context.Context,
-	sessionID string,
+	externalID string,
 ) (*CheckoutSession, error) {
 
 	var s CheckoutSession
@@ -722,13 +723,13 @@ func (r *repository) GetCheckoutSession(
 		SELECT
 			id, status, expires_at, created_at,
 			user_id, address_id,
-			subtotal, tax, shipping_fee, discount, total_amount, currency,
+			subtotal, tax, shipping_fee, discount, total_amount, currency, external_id,
 			confirmed_at
 		FROM checkout_sessions
-		WHERE id = $1
+		WHERE external_id = $1
 	`
 
-	err := r.db.QueryRowContext(ctx, query, sessionID).
+	err := r.db.QueryRowContext(ctx, query, externalID).
 		Scan(
 			&s.ID,
 			&s.Status,
@@ -742,6 +743,7 @@ func (r *repository) GetCheckoutSession(
 			&s.Discount,
 			&s.TotalPrice,
 			&s.Currency,
+			&s.ExternalID,
 			&s.ConfirmedAt,
 		)
 	if err != nil {

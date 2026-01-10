@@ -46,7 +46,7 @@ type QueryResolver interface {
 	Subcategory(ctx context.Context, filter *string, categoryID string, limit *int32, page *int32) ([]*model.Subcategory, error)
 	OrderList(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, page *int32) (*model.OrderListResponse, error)
 	OrderDetail(ctx context.Context, orderID string) (*model.Order, error)
-	CheckoutSession(ctx context.Context, id string) (*model.CheckoutSession, error)
+	CheckoutSession(ctx context.Context, externalID string) (*model.CheckoutSession, error)
 	PackageRecomamendation(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) (*model.PackageResponse, error)
 	ProductList(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) (*model.ProductPage, error)
 	ProductsHome(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) ([]*model.ProductByCategory, error)
@@ -328,11 +328,11 @@ func (ec *executionContext) field_Query_category_args(ctx context.Context, rawAr
 func (ec *executionContext) field_Query_checkoutSession_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNID2string)
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "externalId", ec.unmarshalNString2string)
 	if err != nil {
 		return nil, err
 	}
-	args["id"] = arg0
+	args["externalId"] = arg0
 	return args, nil
 }
 
@@ -1194,8 +1194,8 @@ func (ec *executionContext) fieldContext_Mutation_createSessionCheckout(ctx cont
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "sessionId":
-				return ec.fieldContext_SessionCheckoutResponse_sessionId(ctx, field)
+			case "externalId":
+				return ec.fieldContext_SessionCheckoutResponse_externalId(ctx, field)
 			case "status":
 				return ec.fieldContext_SessionCheckoutResponse_status(ctx, field)
 			case "expiresAt":
@@ -2183,7 +2183,7 @@ func (ec *executionContext) _Query_checkoutSession(ctx context.Context, field gr
 		ec.fieldContext_Query_checkoutSession,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().CheckoutSession(ctx, fc.Args["id"].(string))
+			return ec.resolvers.Query().CheckoutSession(ctx, fc.Args["externalId"].(string))
 		},
 		nil,
 		ec.marshalOCheckoutSession2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSession,
@@ -2202,14 +2202,16 @@ func (ec *executionContext) fieldContext_Query_checkoutSession(ctx context.Conte
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_CheckoutSession_id(ctx, field)
+			case "externalId":
+				return ec.fieldContext_CheckoutSession_externalId(ctx, field)
 			case "status":
 				return ec.fieldContext_CheckoutSession_status(ctx, field)
 			case "expiresAt":
 				return ec.fieldContext_CheckoutSession_expiresAt(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_CheckoutSession_createdAt(ctx, field)
-			case "address":
-				return ec.fieldContext_CheckoutSession_address(ctx, field)
+			case "addressId":
+				return ec.fieldContext_CheckoutSession_addressId(ctx, field)
 			case "items":
 				return ec.fieldContext_CheckoutSession_items(ctx, field)
 			case "subtotal":

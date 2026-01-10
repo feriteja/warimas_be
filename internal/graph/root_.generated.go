@@ -83,10 +83,11 @@ type ComplexityRoot struct {
 	}
 
 	CheckoutSession struct {
-		Address     func(childComplexity int) int
+		AddressID   func(childComplexity int) int
 		CreatedAt   func(childComplexity int) int
 		Discount    func(childComplexity int) int
 		ExpiresAt   func(childComplexity int) int
+		ExternalID  func(childComplexity int) int
 		ID          func(childComplexity int) int
 		Items       func(childComplexity int) int
 		ShippingFee func(childComplexity int) int
@@ -290,7 +291,7 @@ type ComplexityRoot struct {
 		Address                func(childComplexity int, addressID string) int
 		Addresses              func(childComplexity int) int
 		Category               func(childComplexity int, filter *string, limit *int32, page *int32) int
-		CheckoutSession        func(childComplexity int, id string) int
+		CheckoutSession        func(childComplexity int, externalID string) int
 		MyCart                 func(childComplexity int, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) int
 		OrderDetail            func(childComplexity int, orderID string) int
 		OrderList              func(childComplexity int, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, page *int32) int
@@ -307,9 +308,9 @@ type ComplexityRoot struct {
 	}
 
 	SessionCheckoutResponse struct {
-		ExpiresAt func(childComplexity int) int
-		SessionID func(childComplexity int) int
-		Status    func(childComplexity int) int
+		ExpiresAt  func(childComplexity int) int
+		ExternalID func(childComplexity int) int
+		Status     func(childComplexity int) int
 	}
 
 	Subcategory struct {
@@ -527,12 +528,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Category.Name(childComplexity), true
 
-	case "CheckoutSession.address":
-		if e.complexity.CheckoutSession.Address == nil {
+	case "CheckoutSession.addressId":
+		if e.complexity.CheckoutSession.AddressID == nil {
 			break
 		}
 
-		return e.complexity.CheckoutSession.Address(childComplexity), true
+		return e.complexity.CheckoutSession.AddressID(childComplexity), true
 
 	case "CheckoutSession.createdAt":
 		if e.complexity.CheckoutSession.CreatedAt == nil {
@@ -554,6 +555,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.CheckoutSession.ExpiresAt(childComplexity), true
+
+	case "CheckoutSession.externalId":
+		if e.complexity.CheckoutSession.ExternalID == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSession.ExternalID(childComplexity), true
 
 	case "CheckoutSession.id":
 		if e.complexity.CheckoutSession.ID == nil {
@@ -1655,7 +1663,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.CheckoutSession(childComplexity, args["id"].(string)), true
+		return e.complexity.Query.CheckoutSession(childComplexity, args["externalId"].(string)), true
 
 	case "Query.myCart":
 		if e.complexity.Query.MyCart == nil {
@@ -1774,12 +1782,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.SessionCheckoutResponse.ExpiresAt(childComplexity), true
 
-	case "SessionCheckoutResponse.sessionId":
-		if e.complexity.SessionCheckoutResponse.SessionID == nil {
+	case "SessionCheckoutResponse.externalId":
+		if e.complexity.SessionCheckoutResponse.ExternalID == nil {
 			break
 		}
 
-		return e.complexity.SessionCheckoutResponse.SessionID(childComplexity), true
+		return e.complexity.SessionCheckoutResponse.ExternalID(childComplexity), true
 
 	case "SessionCheckoutResponse.status":
 		if e.complexity.SessionCheckoutResponse.Status == nil {

@@ -76,10 +76,11 @@ type Category struct {
 
 type CheckoutSession struct {
 	ID          string                 `json:"id"`
+	ExternalID  string                 `json:"externalId"`
 	Status      CheckoutSessionStatus  `json:"status"`
 	ExpiresAt   time.Time              `json:"expiresAt"`
 	CreatedAt   time.Time              `json:"createdAt"`
-	Address     *Address               `json:"address,omitempty"`
+	AddressID   *string                `json:"addressId,omitempty"`
 	Items       []*CheckoutSessionItem `json:"items"`
 	Subtotal    int32                  `json:"subtotal"`
 	Tax         int32                  `json:"tax"`
@@ -100,7 +101,7 @@ type CheckoutSessionItem struct {
 }
 
 type ConfirmCheckoutSessionInput struct {
-	SessionID string `json:"sessionId"`
+	ExternalID string `json:"externalId"`
 }
 
 type ConfirmCheckoutSessionResponse struct {
@@ -119,7 +120,7 @@ type CreateAddressResponse struct {
 }
 
 type CreateOrderFromSessionInput struct {
-	SessionID string `json:"sessionId"`
+	ExternalID string `json:"externalId"`
 }
 
 type CreateOrderResponse struct {
@@ -361,9 +362,9 @@ type SessionCheckoutItemInput struct {
 }
 
 type SessionCheckoutResponse struct {
-	SessionID string                `json:"sessionId"`
-	Status    CheckoutSessionStatus `json:"status"`
-	ExpiresAt time.Time             `json:"expiresAt"`
+	ExternalID string                `json:"externalId"`
+	Status     CheckoutSessionStatus `json:"status"`
+	ExpiresAt  time.Time             `json:"expiresAt"`
 }
 
 type Subcategory struct {
@@ -403,9 +404,9 @@ type UpdateProduct struct {
 }
 
 type UpdateSessionAddressInput struct {
-	SessionID string  `json:"sessionId"`
-	AddressID string  `json:"addressId"`
-	GuestID   *string `json:"guestId,omitempty"`
+	ExternalID string  `json:"externalId"`
+	AddressID  string  `json:"addressId"`
+	GuestID    *string `json:"guestId,omitempty"`
 }
 
 type UpdateSessionAddressResponse struct {

@@ -58,6 +58,35 @@ func (ec *executionContext) fieldContext_CheckoutSession_id(_ context.Context, f
 	return fc, nil
 }
 
+func (ec *executionContext) _CheckoutSession_externalId(ctx context.Context, field graphql.CollectedField, obj *model.CheckoutSession) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CheckoutSession_externalId,
+		func(ctx context.Context) (any, error) {
+			return obj.ExternalID, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CheckoutSession_externalId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CheckoutSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _CheckoutSession_status(ctx context.Context, field graphql.CollectedField, obj *model.CheckoutSession) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -145,52 +174,30 @@ func (ec *executionContext) fieldContext_CheckoutSession_createdAt(_ context.Con
 	return fc, nil
 }
 
-func (ec *executionContext) _CheckoutSession_address(ctx context.Context, field graphql.CollectedField, obj *model.CheckoutSession) (ret graphql.Marshaler) {
+func (ec *executionContext) _CheckoutSession_addressId(ctx context.Context, field graphql.CollectedField, obj *model.CheckoutSession) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_CheckoutSession_address,
+		ec.fieldContext_CheckoutSession_addressId,
 		func(ctx context.Context) (any, error) {
-			return obj.Address, nil
+			return obj.AddressID, nil
 		},
 		nil,
-		ec.marshalOAddress2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐAddress,
+		ec.marshalOID2ᚖstring,
 		true,
 		false,
 	)
 }
 
-func (ec *executionContext) fieldContext_CheckoutSession_address(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_CheckoutSession_addressId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "CheckoutSession",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Address_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Address_name(ctx, field)
-			case "phone":
-				return ec.fieldContext_Address_phone(ctx, field)
-			case "addressLine1":
-				return ec.fieldContext_Address_addressLine1(ctx, field)
-			case "addressLine2":
-				return ec.fieldContext_Address_addressLine2(ctx, field)
-			case "city":
-				return ec.fieldContext_Address_city(ctx, field)
-			case "province":
-				return ec.fieldContext_Address_province(ctx, field)
-			case "postalCode":
-				return ec.fieldContext_Address_postalCode(ctx, field)
-			case "country":
-				return ec.fieldContext_Address_country(ctx, field)
-			case "isDefault":
-				return ec.fieldContext_Address_isDefault(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Address", field.Name)
+			return nil, errors.New("field of type ID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -704,14 +711,16 @@ func (ec *executionContext) fieldContext_ConfirmCheckoutSessionResponse_session(
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_CheckoutSession_id(ctx, field)
+			case "externalId":
+				return ec.fieldContext_CheckoutSession_externalId(ctx, field)
 			case "status":
 				return ec.fieldContext_CheckoutSession_status(ctx, field)
 			case "expiresAt":
 				return ec.fieldContext_CheckoutSession_expiresAt(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_CheckoutSession_createdAt(ctx, field)
-			case "address":
-				return ec.fieldContext_CheckoutSession_address(ctx, field)
+			case "addressId":
+				return ec.fieldContext_CheckoutSession_addressId(ctx, field)
 			case "items":
 				return ec.fieldContext_CheckoutSession_items(ctx, field)
 			case "subtotal":
@@ -1739,14 +1748,14 @@ func (ec *executionContext) fieldContext_Payment_provider(_ context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _SessionCheckoutResponse_sessionId(ctx context.Context, field graphql.CollectedField, obj *model.SessionCheckoutResponse) (ret graphql.Marshaler) {
+func (ec *executionContext) _SessionCheckoutResponse_externalId(ctx context.Context, field graphql.CollectedField, obj *model.SessionCheckoutResponse) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_SessionCheckoutResponse_sessionId,
+		ec.fieldContext_SessionCheckoutResponse_externalId,
 		func(ctx context.Context) (any, error) {
-			return obj.SessionID, nil
+			return obj.ExternalID, nil
 		},
 		nil,
 		ec.marshalNID2string,
@@ -1755,7 +1764,7 @@ func (ec *executionContext) _SessionCheckoutResponse_sessionId(ctx context.Conte
 	)
 }
 
-func (ec *executionContext) fieldContext_SessionCheckoutResponse_sessionId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SessionCheckoutResponse_externalId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "SessionCheckoutResponse",
 		Field:      field,
@@ -1866,20 +1875,20 @@ func (ec *executionContext) unmarshalInputConfirmCheckoutSessionInput(ctx contex
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"sessionId"}
+	fieldsInOrder := [...]string{"externalId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "sessionId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionId"))
+		case "externalId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("externalId"))
 			data, err := ec.unmarshalNID2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.SessionID = data
+			it.ExternalID = data
 		}
 	}
 
@@ -1893,20 +1902,20 @@ func (ec *executionContext) unmarshalInputCreateOrderFromSessionInput(ctx contex
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"sessionId"}
+	fieldsInOrder := [...]string{"externalId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "sessionId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionId"))
+		case "externalId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("externalId"))
 			data, err := ec.unmarshalNID2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.SessionID = data
+			it.ExternalID = data
 		}
 	}
 
@@ -2101,20 +2110,20 @@ func (ec *executionContext) unmarshalInputUpdateSessionAddressInput(ctx context.
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"sessionId", "addressId", "guestId"}
+	fieldsInOrder := [...]string{"externalId", "addressId", "guestId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "sessionId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sessionId"))
+		case "externalId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("externalId"))
 			data, err := ec.unmarshalNID2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.SessionID = data
+			it.ExternalID = data
 		case "addressId":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("addressId"))
 			data, err := ec.unmarshalNID2string(ctx, v)
@@ -2159,6 +2168,11 @@ func (ec *executionContext) _CheckoutSession(ctx context.Context, sel ast.Select
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "externalId":
+			out.Values[i] = ec._CheckoutSession_externalId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "status":
 			out.Values[i] = ec._CheckoutSession_status(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -2174,8 +2188,8 @@ func (ec *executionContext) _CheckoutSession(ctx context.Context, sel ast.Select
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "address":
-			out.Values[i] = ec._CheckoutSession_address(ctx, field, obj)
+		case "addressId":
+			out.Values[i] = ec._CheckoutSession_addressId(ctx, field, obj)
 		case "items":
 			out.Values[i] = ec._CheckoutSession_items(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -2663,8 +2677,8 @@ func (ec *executionContext) _SessionCheckoutResponse(ctx context.Context, sel as
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("SessionCheckoutResponse")
-		case "sessionId":
-			out.Values[i] = ec._SessionCheckoutResponse_sessionId(ctx, field, obj)
+		case "externalId":
+			out.Values[i] = ec._SessionCheckoutResponse_externalId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

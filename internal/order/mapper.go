@@ -71,12 +71,14 @@ func MapCheckoutSessionToGraphQL(
 		})
 	}
 
+	addressID := s.AddressID.String()
 	return &model.CheckoutSession{
 		ID:          s.ID.String(),
+		ExternalID:  s.ExternalID,
 		Status:      model.CheckoutSessionStatus(s.Status),
 		ExpiresAt:   s.ExpiresAt,
 		CreatedAt:   s.CreatedAt,
-		Address:     nil, // resolve via field resolver if needed
+		AddressID:   &addressID,
 		Items:       items,
 		Subtotal:    int32(s.Subtotal),
 		Tax:         int32(s.Tax),
