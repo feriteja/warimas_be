@@ -93,6 +93,7 @@ type CheckoutSessionItem struct {
 	ID           string  `json:"id"`
 	VariantID    string  `json:"variantId"`
 	VariantName  string  `json:"variantName"`
+	ProductName  string  `json:"productName"`
 	ImageURL     *string `json:"imageUrl,omitempty"`
 	Quantity     int32   `json:"quantity"`
 	QuantityType string  `json:"quantityType"`
@@ -207,13 +208,15 @@ type OrderFilterInput struct {
 }
 
 type OrderItem struct {
-	ID          int32  `json:"id"`
-	VariantID   string `json:"variantId"`
-	VariantName string `json:"variantName"`
-	ProductName string `json:"productName"`
-	Subtotal    int32  `json:"subtotal"`
-	Quantity    int32  `json:"quantity"`
-	Price       int32  `json:"price"`
+	ID           int32   `json:"id"`
+	VariantID    string  `json:"variantId"`
+	VariantName  string  `json:"variantName"`
+	ProductName  string  `json:"productName"`
+	ImageURL     *string `json:"imageUrl,omitempty"`
+	Quantity     int32   `json:"quantity"`
+	QuantityType string  `json:"quantityType"`
+	Price        int32   `json:"price"`
+	Subtotal     int32   `json:"subtotal"`
 }
 
 type OrderListResponse struct {

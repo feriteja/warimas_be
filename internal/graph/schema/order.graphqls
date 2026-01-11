@@ -88,12 +88,17 @@ type Order {
 
 type OrderItem {
   id: Int!
+
   variantId: ID!
   variantName: String!
   productName: String!
-  subtotal: Int!
+  imageUrl: String
+
   quantity: Int!
+  quantityType: String!
+
   price: Int!
+  subtotal: Int!
 }
 
 type CheckoutSession {
@@ -118,6 +123,7 @@ type CheckoutSessionItem {
 
   variantId: ID!
   variantName: String!
+  productName: String!
   imageUrl: String
 
   quantity: Int!

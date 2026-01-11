@@ -68,17 +68,22 @@ func MapCheckoutSessionToGraphQL(
 			QuantityType: item.QuantityType,
 			Price:        int32(item.Price),
 			Subtotal:     int32(item.Subtotal),
+			ProductName:  item.ProductName,
 		})
 	}
 
-	addressID := s.AddressID.String()
+	var addressID *string
+	if s.AddressID != nil {
+		id := s.AddressID.String()
+		addressID = &id
+	}
 	return &model.CheckoutSession{
 		ID:          s.ID.String(),
 		ExternalID:  s.ExternalID,
 		Status:      model.CheckoutSessionStatus(s.Status),
 		ExpiresAt:   s.ExpiresAt,
 		CreatedAt:   s.CreatedAt,
-		AddressID:   &addressID,
+		AddressID:   addressID, //field AddressID *string `json:"addressId,omitempty"`
 		Items:       items,
 		Subtotal:    int32(s.Subtotal),
 		Tax:         int32(s.Tax),

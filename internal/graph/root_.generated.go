@@ -101,6 +101,7 @@ type ComplexityRoot struct {
 		ID           func(childComplexity int) int
 		ImageURL     func(childComplexity int) int
 		Price        func(childComplexity int) int
+		ProductName  func(childComplexity int) int
 		Quantity     func(childComplexity int) int
 		QuantityType func(childComplexity int) int
 		Subtotal     func(childComplexity int) int
@@ -176,13 +177,15 @@ type ComplexityRoot struct {
 	}
 
 	OrderItem struct {
-		ID          func(childComplexity int) int
-		Price       func(childComplexity int) int
-		ProductName func(childComplexity int) int
-		Quantity    func(childComplexity int) int
-		Subtotal    func(childComplexity int) int
-		VariantID   func(childComplexity int) int
-		VariantName func(childComplexity int) int
+		ID           func(childComplexity int) int
+		ImageURL     func(childComplexity int) int
+		Price        func(childComplexity int) int
+		ProductName  func(childComplexity int) int
+		Quantity     func(childComplexity int) int
+		QuantityType func(childComplexity int) int
+		Subtotal     func(childComplexity int) int
+		VariantID    func(childComplexity int) int
+		VariantName  func(childComplexity int) int
 	}
 
 	OrderListResponse struct {
@@ -632,6 +635,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.CheckoutSessionItem.Price(childComplexity), true
+
+	case "CheckoutSessionItem.productName":
+		if e.complexity.CheckoutSessionItem.ProductName == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSessionItem.ProductName(childComplexity), true
 
 	case "CheckoutSessionItem.quantity":
 		if e.complexity.CheckoutSessionItem.Quantity == nil {
@@ -1097,6 +1107,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.OrderItem.ID(childComplexity), true
 
+	case "OrderItem.imageUrl":
+		if e.complexity.OrderItem.ImageURL == nil {
+			break
+		}
+
+		return e.complexity.OrderItem.ImageURL(childComplexity), true
+
 	case "OrderItem.price":
 		if e.complexity.OrderItem.Price == nil {
 			break
@@ -1117,6 +1134,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.OrderItem.Quantity(childComplexity), true
+
+	case "OrderItem.quantityType":
+		if e.complexity.OrderItem.QuantityType == nil {
+			break
+		}
+
+		return e.complexity.OrderItem.QuantityType(childComplexity), true
 
 	case "OrderItem.subtotal":
 		if e.complexity.OrderItem.Subtotal == nil {

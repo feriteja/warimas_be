@@ -233,6 +233,8 @@ func (ec *executionContext) fieldContext_CheckoutSession_items(_ context.Context
 				return ec.fieldContext_CheckoutSessionItem_variantId(ctx, field)
 			case "variantName":
 				return ec.fieldContext_CheckoutSessionItem_variantName(ctx, field)
+			case "productName":
+				return ec.fieldContext_CheckoutSessionItem_productName(ctx, field)
 			case "imageUrl":
 				return ec.fieldContext_CheckoutSessionItem_imageUrl(ctx, field)
 			case "quantity":
@@ -470,6 +472,35 @@ func (ec *executionContext) _CheckoutSessionItem_variantName(ctx context.Context
 }
 
 func (ec *executionContext) fieldContext_CheckoutSessionItem_variantName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CheckoutSessionItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CheckoutSessionItem_productName(ctx context.Context, field graphql.CollectedField, obj *model.CheckoutSessionItem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CheckoutSessionItem_productName,
+		func(ctx context.Context) (any, error) {
+			return obj.ProductName, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CheckoutSessionItem_productName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "CheckoutSessionItem",
 		Field:      field,
@@ -1388,12 +1419,16 @@ func (ec *executionContext) fieldContext_Order_items(_ context.Context, field gr
 				return ec.fieldContext_OrderItem_variantName(ctx, field)
 			case "productName":
 				return ec.fieldContext_OrderItem_productName(ctx, field)
-			case "subtotal":
-				return ec.fieldContext_OrderItem_subtotal(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_OrderItem_imageUrl(ctx, field)
 			case "quantity":
 				return ec.fieldContext_OrderItem_quantity(ctx, field)
+			case "quantityType":
+				return ec.fieldContext_OrderItem_quantityType(ctx, field)
 			case "price":
 				return ec.fieldContext_OrderItem_price(ctx, field)
+			case "subtotal":
+				return ec.fieldContext_OrderItem_subtotal(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type OrderItem", field.Name)
 		},
@@ -1517,30 +1552,30 @@ func (ec *executionContext) fieldContext_OrderItem_productName(_ context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _OrderItem_subtotal(ctx context.Context, field graphql.CollectedField, obj *model.OrderItem) (ret graphql.Marshaler) {
+func (ec *executionContext) _OrderItem_imageUrl(ctx context.Context, field graphql.CollectedField, obj *model.OrderItem) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_OrderItem_subtotal,
+		ec.fieldContext_OrderItem_imageUrl,
 		func(ctx context.Context) (any, error) {
-			return obj.Subtotal, nil
+			return obj.ImageURL, nil
 		},
 		nil,
-		ec.marshalNInt2int32,
+		ec.marshalOString2ᚖstring,
 		true,
-		true,
+		false,
 	)
 }
 
-func (ec *executionContext) fieldContext_OrderItem_subtotal(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_OrderItem_imageUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "OrderItem",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1575,6 +1610,35 @@ func (ec *executionContext) fieldContext_OrderItem_quantity(_ context.Context, f
 	return fc, nil
 }
 
+func (ec *executionContext) _OrderItem_quantityType(ctx context.Context, field graphql.CollectedField, obj *model.OrderItem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_OrderItem_quantityType,
+		func(ctx context.Context) (any, error) {
+			return obj.QuantityType, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_OrderItem_quantityType(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OrderItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _OrderItem_price(ctx context.Context, field graphql.CollectedField, obj *model.OrderItem) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1592,6 +1656,35 @@ func (ec *executionContext) _OrderItem_price(ctx context.Context, field graphql.
 }
 
 func (ec *executionContext) fieldContext_OrderItem_price(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OrderItem",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _OrderItem_subtotal(ctx context.Context, field graphql.CollectedField, obj *model.OrderItem) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_OrderItem_subtotal,
+		func(ctx context.Context) (any, error) {
+			return obj.Subtotal, nil
+		},
+		nil,
+		ec.marshalNInt2int32,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_OrderItem_subtotal(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "OrderItem",
 		Field:      field,
@@ -2269,6 +2362,11 @@ func (ec *executionContext) _CheckoutSessionItem(ctx context.Context, sel ast.Se
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "productName":
+			out.Values[i] = ec._CheckoutSessionItem_productName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "imageUrl":
 			out.Values[i] = ec._CheckoutSessionItem_imageUrl(ctx, field, obj)
 		case "quantity":
@@ -2580,18 +2678,25 @@ func (ec *executionContext) _OrderItem(ctx context.Context, sel ast.SelectionSet
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "subtotal":
-			out.Values[i] = ec._OrderItem_subtotal(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
+		case "imageUrl":
+			out.Values[i] = ec._OrderItem_imageUrl(ctx, field, obj)
 		case "quantity":
 			out.Values[i] = ec._OrderItem_quantity(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "quantityType":
+			out.Values[i] = ec._OrderItem_quantityType(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "price":
 			out.Values[i] = ec._OrderItem_price(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "subtotal":
+			out.Values[i] = ec._OrderItem_subtotal(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
