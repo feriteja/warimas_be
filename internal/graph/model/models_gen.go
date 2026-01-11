@@ -117,9 +117,9 @@ type ConfirmCheckoutSessionInput struct {
 }
 
 type ConfirmCheckoutSessionResponse struct {
-	Success bool             `json:"success"`
-	Message *string          `json:"message,omitempty"`
-	Session *CheckoutSession `json:"session,omitempty"`
+	Success         bool    `json:"success"`
+	Message         *string `json:"message,omitempty"`
+	OrderExternalID string  `json:"order_external_id"`
 }
 
 type CreateAddressInput struct {
@@ -280,6 +280,23 @@ type Payment struct {
 	Provider *string       `json:"provider,omitempty"`
 }
 
+type PaymentDetail struct {
+	Method       string   `json:"method"`
+	Bank         *string  `json:"bank,omitempty"`
+	PaymentCode  *string  `json:"paymentCode,omitempty"`
+	ReferenceID  string   `json:"referenceId"`
+	Instructions []string `json:"instructions"`
+}
+
+type PaymentOrderInfoResponse struct {
+	Status          PaymentStatus    `json:"status"`
+	ExpiresAt       time.Time        `json:"expiresAt"`
+	TotalAmount     int32            `json:"totalAmount"`
+	Currency        string           `json:"currency"`
+	ShippingAddress *ShippingAddress `json:"shippingAddress"`
+	Payment         *PaymentDetail   `json:"payment"`
+}
+
 type Product struct {
 	ID              string     `json:"id"`
 	Name            string     `json:"name"`
@@ -368,6 +385,15 @@ type RegisterInput struct {
 type Response struct {
 	Success bool    `json:"success"`
 	Message *string `json:"message,omitempty"`
+}
+
+type ShippingAddress struct {
+	Name       string `json:"name"`
+	Phone      string `json:"phone"`
+	Address    string `json:"address"`
+	City       string `json:"city"`
+	Province   string `json:"province"`
+	PostalCode string `json:"postalCode"`
 }
 
 type Subcategory struct {

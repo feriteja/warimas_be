@@ -803,56 +803,30 @@ func (ec *executionContext) fieldContext_ConfirmCheckoutSessionResponse_message(
 	return fc, nil
 }
 
-func (ec *executionContext) _ConfirmCheckoutSessionResponse_session(ctx context.Context, field graphql.CollectedField, obj *model.ConfirmCheckoutSessionResponse) (ret graphql.Marshaler) {
+func (ec *executionContext) _ConfirmCheckoutSessionResponse_order_external_id(ctx context.Context, field graphql.CollectedField, obj *model.ConfirmCheckoutSessionResponse) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_ConfirmCheckoutSessionResponse_session,
+		ec.fieldContext_ConfirmCheckoutSessionResponse_order_external_id,
 		func(ctx context.Context) (any, error) {
-			return obj.Session, nil
+			return obj.OrderExternalID, nil
 		},
 		nil,
-		ec.marshalOCheckoutSession2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSession,
+		ec.marshalNString2string,
 		true,
-		false,
+		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_ConfirmCheckoutSessionResponse_session(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_ConfirmCheckoutSessionResponse_order_external_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ConfirmCheckoutSessionResponse",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_CheckoutSession_id(ctx, field)
-			case "externalId":
-				return ec.fieldContext_CheckoutSession_externalId(ctx, field)
-			case "status":
-				return ec.fieldContext_CheckoutSession_status(ctx, field)
-			case "expiresAt":
-				return ec.fieldContext_CheckoutSession_expiresAt(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_CheckoutSession_createdAt(ctx, field)
-			case "addressId":
-				return ec.fieldContext_CheckoutSession_addressId(ctx, field)
-			case "items":
-				return ec.fieldContext_CheckoutSession_items(ctx, field)
-			case "subtotal":
-				return ec.fieldContext_CheckoutSession_subtotal(ctx, field)
-			case "tax":
-				return ec.fieldContext_CheckoutSession_tax(ctx, field)
-			case "shippingFee":
-				return ec.fieldContext_CheckoutSession_shippingFee(ctx, field)
-			case "discount":
-				return ec.fieldContext_CheckoutSession_discount(ctx, field)
-			case "totalPrice":
-				return ec.fieldContext_CheckoutSession_totalPrice(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type CheckoutSession", field.Name)
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1928,6 +1902,525 @@ func (ec *executionContext) fieldContext_Payment_provider(_ context.Context, fie
 	return fc, nil
 }
 
+func (ec *executionContext) _PaymentDetail_method(ctx context.Context, field graphql.CollectedField, obj *model.PaymentDetail) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PaymentDetail_method,
+		func(ctx context.Context) (any, error) {
+			return obj.Method, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PaymentDetail_method(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaymentDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PaymentDetail_bank(ctx context.Context, field graphql.CollectedField, obj *model.PaymentDetail) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PaymentDetail_bank,
+		func(ctx context.Context) (any, error) {
+			return obj.Bank, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_PaymentDetail_bank(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaymentDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PaymentDetail_paymentCode(ctx context.Context, field graphql.CollectedField, obj *model.PaymentDetail) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PaymentDetail_paymentCode,
+		func(ctx context.Context) (any, error) {
+			return obj.PaymentCode, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_PaymentDetail_paymentCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaymentDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PaymentDetail_referenceId(ctx context.Context, field graphql.CollectedField, obj *model.PaymentDetail) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PaymentDetail_referenceId,
+		func(ctx context.Context) (any, error) {
+			return obj.ReferenceID, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PaymentDetail_referenceId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaymentDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PaymentDetail_instructions(ctx context.Context, field graphql.CollectedField, obj *model.PaymentDetail) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PaymentDetail_instructions,
+		func(ctx context.Context) (any, error) {
+			return obj.Instructions, nil
+		},
+		nil,
+		ec.marshalNString2ᚕstringᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PaymentDetail_instructions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaymentDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PaymentOrderInfoResponse_status(ctx context.Context, field graphql.CollectedField, obj *model.PaymentOrderInfoResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PaymentOrderInfoResponse_status,
+		func(ctx context.Context) (any, error) {
+			return obj.Status, nil
+		},
+		nil,
+		ec.marshalNPaymentStatus2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPaymentStatus,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PaymentOrderInfoResponse_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaymentOrderInfoResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type PaymentStatus does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PaymentOrderInfoResponse_expiresAt(ctx context.Context, field graphql.CollectedField, obj *model.PaymentOrderInfoResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PaymentOrderInfoResponse_expiresAt,
+		func(ctx context.Context) (any, error) {
+			return obj.ExpiresAt, nil
+		},
+		nil,
+		ec.marshalNTime2timeᚐTime,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PaymentOrderInfoResponse_expiresAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaymentOrderInfoResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PaymentOrderInfoResponse_totalAmount(ctx context.Context, field graphql.CollectedField, obj *model.PaymentOrderInfoResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PaymentOrderInfoResponse_totalAmount,
+		func(ctx context.Context) (any, error) {
+			return obj.TotalAmount, nil
+		},
+		nil,
+		ec.marshalNInt2int32,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PaymentOrderInfoResponse_totalAmount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaymentOrderInfoResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PaymentOrderInfoResponse_currency(ctx context.Context, field graphql.CollectedField, obj *model.PaymentOrderInfoResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PaymentOrderInfoResponse_currency,
+		func(ctx context.Context) (any, error) {
+			return obj.Currency, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PaymentOrderInfoResponse_currency(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaymentOrderInfoResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PaymentOrderInfoResponse_shippingAddress(ctx context.Context, field graphql.CollectedField, obj *model.PaymentOrderInfoResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PaymentOrderInfoResponse_shippingAddress,
+		func(ctx context.Context) (any, error) {
+			return obj.ShippingAddress, nil
+		},
+		nil,
+		ec.marshalNShippingAddress2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐShippingAddress,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PaymentOrderInfoResponse_shippingAddress(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaymentOrderInfoResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_ShippingAddress_name(ctx, field)
+			case "phone":
+				return ec.fieldContext_ShippingAddress_phone(ctx, field)
+			case "address":
+				return ec.fieldContext_ShippingAddress_address(ctx, field)
+			case "city":
+				return ec.fieldContext_ShippingAddress_city(ctx, field)
+			case "province":
+				return ec.fieldContext_ShippingAddress_province(ctx, field)
+			case "postalCode":
+				return ec.fieldContext_ShippingAddress_postalCode(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ShippingAddress", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PaymentOrderInfoResponse_payment(ctx context.Context, field graphql.CollectedField, obj *model.PaymentOrderInfoResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PaymentOrderInfoResponse_payment,
+		func(ctx context.Context) (any, error) {
+			return obj.Payment, nil
+		},
+		nil,
+		ec.marshalNPaymentDetail2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPaymentDetail,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PaymentOrderInfoResponse_payment(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaymentOrderInfoResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "method":
+				return ec.fieldContext_PaymentDetail_method(ctx, field)
+			case "bank":
+				return ec.fieldContext_PaymentDetail_bank(ctx, field)
+			case "paymentCode":
+				return ec.fieldContext_PaymentDetail_paymentCode(ctx, field)
+			case "referenceId":
+				return ec.fieldContext_PaymentDetail_referenceId(ctx, field)
+			case "instructions":
+				return ec.fieldContext_PaymentDetail_instructions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PaymentDetail", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ShippingAddress_name(ctx context.Context, field graphql.CollectedField, obj *model.ShippingAddress) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ShippingAddress_name,
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ShippingAddress_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ShippingAddress",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ShippingAddress_phone(ctx context.Context, field graphql.CollectedField, obj *model.ShippingAddress) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ShippingAddress_phone,
+		func(ctx context.Context) (any, error) {
+			return obj.Phone, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ShippingAddress_phone(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ShippingAddress",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ShippingAddress_address(ctx context.Context, field graphql.CollectedField, obj *model.ShippingAddress) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ShippingAddress_address,
+		func(ctx context.Context) (any, error) {
+			return obj.Address, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ShippingAddress_address(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ShippingAddress",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ShippingAddress_city(ctx context.Context, field graphql.CollectedField, obj *model.ShippingAddress) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ShippingAddress_city,
+		func(ctx context.Context) (any, error) {
+			return obj.City, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ShippingAddress_city(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ShippingAddress",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ShippingAddress_province(ctx context.Context, field graphql.CollectedField, obj *model.ShippingAddress) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ShippingAddress_province,
+		func(ctx context.Context) (any, error) {
+			return obj.Province, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ShippingAddress_province(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ShippingAddress",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ShippingAddress_postalCode(ctx context.Context, field graphql.CollectedField, obj *model.ShippingAddress) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ShippingAddress_postalCode,
+		func(ctx context.Context) (any, error) {
+			return obj.PostalCode, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ShippingAddress_postalCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ShippingAddress",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _UpdateSessionAddressResponse_success(ctx context.Context, field graphql.CollectedField, obj *model.UpdateSessionAddressResponse) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2479,8 +2972,11 @@ func (ec *executionContext) _ConfirmCheckoutSessionResponse(ctx context.Context,
 			}
 		case "message":
 			out.Values[i] = ec._ConfirmCheckoutSessionResponse_message(ctx, field, obj)
-		case "session":
-			out.Values[i] = ec._ConfirmCheckoutSessionResponse_session(ctx, field, obj)
+		case "order_external_id":
+			out.Values[i] = ec._ConfirmCheckoutSessionResponse_order_external_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2820,6 +3316,187 @@ func (ec *executionContext) _Payment(ctx context.Context, sel ast.SelectionSet, 
 	return out
 }
 
+var paymentDetailImplementors = []string{"PaymentDetail"}
+
+func (ec *executionContext) _PaymentDetail(ctx context.Context, sel ast.SelectionSet, obj *model.PaymentDetail) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, paymentDetailImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PaymentDetail")
+		case "method":
+			out.Values[i] = ec._PaymentDetail_method(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "bank":
+			out.Values[i] = ec._PaymentDetail_bank(ctx, field, obj)
+		case "paymentCode":
+			out.Values[i] = ec._PaymentDetail_paymentCode(ctx, field, obj)
+		case "referenceId":
+			out.Values[i] = ec._PaymentDetail_referenceId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "instructions":
+			out.Values[i] = ec._PaymentDetail_instructions(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var paymentOrderInfoResponseImplementors = []string{"PaymentOrderInfoResponse"}
+
+func (ec *executionContext) _PaymentOrderInfoResponse(ctx context.Context, sel ast.SelectionSet, obj *model.PaymentOrderInfoResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, paymentOrderInfoResponseImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PaymentOrderInfoResponse")
+		case "status":
+			out.Values[i] = ec._PaymentOrderInfoResponse_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "expiresAt":
+			out.Values[i] = ec._PaymentOrderInfoResponse_expiresAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalAmount":
+			out.Values[i] = ec._PaymentOrderInfoResponse_totalAmount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "currency":
+			out.Values[i] = ec._PaymentOrderInfoResponse_currency(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "shippingAddress":
+			out.Values[i] = ec._PaymentOrderInfoResponse_shippingAddress(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "payment":
+			out.Values[i] = ec._PaymentOrderInfoResponse_payment(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var shippingAddressImplementors = []string{"ShippingAddress"}
+
+func (ec *executionContext) _ShippingAddress(ctx context.Context, sel ast.SelectionSet, obj *model.ShippingAddress) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, shippingAddressImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ShippingAddress")
+		case "name":
+			out.Values[i] = ec._ShippingAddress_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "phone":
+			out.Values[i] = ec._ShippingAddress_phone(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "address":
+			out.Values[i] = ec._ShippingAddress_address(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "city":
+			out.Values[i] = ec._ShippingAddress_city(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "province":
+			out.Values[i] = ec._ShippingAddress_province(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "postalCode":
+			out.Values[i] = ec._ShippingAddress_postalCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var updateSessionAddressResponseImplementors = []string{"UpdateSessionAddressResponse"}
 
 func (ec *executionContext) _UpdateSessionAddressResponse(ctx context.Context, sel ast.SelectionSet, obj *model.UpdateSessionAddressResponse) graphql.Marshaler {
@@ -3136,6 +3813,30 @@ func (ec *executionContext) marshalNOrderStatus2warimasᚑbeᚋinternalᚋgraph�
 	return v
 }
 
+func (ec *executionContext) marshalNPaymentDetail2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPaymentDetail(ctx context.Context, sel ast.SelectionSet, v *model.PaymentDetail) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PaymentDetail(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNPaymentOrderInfoResponse2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPaymentOrderInfoResponse(ctx context.Context, sel ast.SelectionSet, v model.PaymentOrderInfoResponse) graphql.Marshaler {
+	return ec._PaymentOrderInfoResponse(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPaymentOrderInfoResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPaymentOrderInfoResponse(ctx context.Context, sel ast.SelectionSet, v *model.PaymentOrderInfoResponse) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PaymentOrderInfoResponse(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNPaymentStatus2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPaymentStatus(ctx context.Context, v any) (model.PaymentStatus, error) {
 	var res model.PaymentStatus
 	err := res.UnmarshalGQL(v)
@@ -3144,6 +3845,16 @@ func (ec *executionContext) unmarshalNPaymentStatus2warimasᚑbeᚋinternalᚋgr
 
 func (ec *executionContext) marshalNPaymentStatus2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPaymentStatus(ctx context.Context, sel ast.SelectionSet, v model.PaymentStatus) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) marshalNShippingAddress2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐShippingAddress(ctx context.Context, sel ast.SelectionSet, v *model.ShippingAddress) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ShippingAddress(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNUpdateOrderStatusInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐUpdateOrderStatusInput(ctx context.Context, v any) (model.UpdateOrderStatusInput, error) {

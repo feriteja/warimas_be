@@ -116,9 +116,9 @@ type ComplexityRoot struct {
 	}
 
 	ConfirmCheckoutSessionResponse struct {
-		Message func(childComplexity int) int
-		Session func(childComplexity int) int
-		Success func(childComplexity int) int
+		Message         func(childComplexity int) int
+		OrderExternalID func(childComplexity int) int
+		Success         func(childComplexity int) int
 	}
 
 	CreateAddressResponse struct {
@@ -234,6 +234,23 @@ type ComplexityRoot struct {
 		URL      func(childComplexity int) int
 	}
 
+	PaymentDetail struct {
+		Bank         func(childComplexity int) int
+		Instructions func(childComplexity int) int
+		Method       func(childComplexity int) int
+		PaymentCode  func(childComplexity int) int
+		ReferenceID  func(childComplexity int) int
+	}
+
+	PaymentOrderInfoResponse struct {
+		Currency        func(childComplexity int) int
+		ExpiresAt       func(childComplexity int) int
+		Payment         func(childComplexity int) int
+		ShippingAddress func(childComplexity int) int
+		Status          func(childComplexity int) int
+		TotalAmount     func(childComplexity int) int
+	}
+
 	Product struct {
 		CategoryID      func(childComplexity int) int
 		CategoryName    func(childComplexity int) int
@@ -305,6 +322,7 @@ type ComplexityRoot struct {
 		OrderDetail            func(childComplexity int, orderID string) int
 		OrderList              func(childComplexity int, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, page *int32) int
 		PackageRecomamendation func(childComplexity int, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) int
+		PaymentOrderInfo       func(childComplexity int, externalID string) int
 		ProductDetail          func(childComplexity int, productID string) int
 		ProductList            func(childComplexity int, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) int
 		ProductsHome           func(childComplexity int, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) int
@@ -314,6 +332,15 @@ type ComplexityRoot struct {
 	Response struct {
 		Message func(childComplexity int) int
 		Success func(childComplexity int) int
+	}
+
+	ShippingAddress struct {
+		Address    func(childComplexity int) int
+		City       func(childComplexity int) int
+		Name       func(childComplexity int) int
+		Phone      func(childComplexity int) int
+		PostalCode func(childComplexity int) int
+		Province   func(childComplexity int) int
 	}
 
 	Subcategory struct {
@@ -706,12 +733,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ConfirmCheckoutSessionResponse.Message(childComplexity), true
 
-	case "ConfirmCheckoutSessionResponse.session":
-		if e.complexity.ConfirmCheckoutSessionResponse.Session == nil {
+	case "ConfirmCheckoutSessionResponse.order_external_id":
+		if e.complexity.ConfirmCheckoutSessionResponse.OrderExternalID == nil {
 			break
 		}
 
-		return e.complexity.ConfirmCheckoutSessionResponse.Session(childComplexity), true
+		return e.complexity.ConfirmCheckoutSessionResponse.OrderExternalID(childComplexity), true
 
 	case "ConfirmCheckoutSessionResponse.success":
 		if e.complexity.ConfirmCheckoutSessionResponse.Success == nil {
@@ -1359,6 +1386,83 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Payment.URL(childComplexity), true
 
+	case "PaymentDetail.bank":
+		if e.complexity.PaymentDetail.Bank == nil {
+			break
+		}
+
+		return e.complexity.PaymentDetail.Bank(childComplexity), true
+
+	case "PaymentDetail.instructions":
+		if e.complexity.PaymentDetail.Instructions == nil {
+			break
+		}
+
+		return e.complexity.PaymentDetail.Instructions(childComplexity), true
+
+	case "PaymentDetail.method":
+		if e.complexity.PaymentDetail.Method == nil {
+			break
+		}
+
+		return e.complexity.PaymentDetail.Method(childComplexity), true
+
+	case "PaymentDetail.paymentCode":
+		if e.complexity.PaymentDetail.PaymentCode == nil {
+			break
+		}
+
+		return e.complexity.PaymentDetail.PaymentCode(childComplexity), true
+
+	case "PaymentDetail.referenceId":
+		if e.complexity.PaymentDetail.ReferenceID == nil {
+			break
+		}
+
+		return e.complexity.PaymentDetail.ReferenceID(childComplexity), true
+
+	case "PaymentOrderInfoResponse.currency":
+		if e.complexity.PaymentOrderInfoResponse.Currency == nil {
+			break
+		}
+
+		return e.complexity.PaymentOrderInfoResponse.Currency(childComplexity), true
+
+	case "PaymentOrderInfoResponse.expiresAt":
+		if e.complexity.PaymentOrderInfoResponse.ExpiresAt == nil {
+			break
+		}
+
+		return e.complexity.PaymentOrderInfoResponse.ExpiresAt(childComplexity), true
+
+	case "PaymentOrderInfoResponse.payment":
+		if e.complexity.PaymentOrderInfoResponse.Payment == nil {
+			break
+		}
+
+		return e.complexity.PaymentOrderInfoResponse.Payment(childComplexity), true
+
+	case "PaymentOrderInfoResponse.shippingAddress":
+		if e.complexity.PaymentOrderInfoResponse.ShippingAddress == nil {
+			break
+		}
+
+		return e.complexity.PaymentOrderInfoResponse.ShippingAddress(childComplexity), true
+
+	case "PaymentOrderInfoResponse.status":
+		if e.complexity.PaymentOrderInfoResponse.Status == nil {
+			break
+		}
+
+		return e.complexity.PaymentOrderInfoResponse.Status(childComplexity), true
+
+	case "PaymentOrderInfoResponse.totalAmount":
+		if e.complexity.PaymentOrderInfoResponse.TotalAmount == nil {
+			break
+		}
+
+		return e.complexity.PaymentOrderInfoResponse.TotalAmount(childComplexity), true
+
 	case "Product.categoryID":
 		if e.complexity.Product.CategoryID == nil {
 			break
@@ -1758,6 +1862,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.PackageRecomamendation(childComplexity, args["filter"].(*model.PackageFilterInput), args["sort"].(*model.PackageSortInput), args["limit"].(*int32), args["page"].(*int32)), true
 
+	case "Query.paymentOrderInfo":
+		if e.complexity.Query.PaymentOrderInfo == nil {
+			break
+		}
+
+		args, err := ec.field_Query_paymentOrderInfo_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.PaymentOrderInfo(childComplexity, args["externalId"].(string)), true
+
 	case "Query.productDetail":
 		if e.complexity.Query.ProductDetail == nil {
 			break
@@ -1819,6 +1935,48 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Response.Success(childComplexity), true
+
+	case "ShippingAddress.address":
+		if e.complexity.ShippingAddress.Address == nil {
+			break
+		}
+
+		return e.complexity.ShippingAddress.Address(childComplexity), true
+
+	case "ShippingAddress.city":
+		if e.complexity.ShippingAddress.City == nil {
+			break
+		}
+
+		return e.complexity.ShippingAddress.City(childComplexity), true
+
+	case "ShippingAddress.name":
+		if e.complexity.ShippingAddress.Name == nil {
+			break
+		}
+
+		return e.complexity.ShippingAddress.Name(childComplexity), true
+
+	case "ShippingAddress.phone":
+		if e.complexity.ShippingAddress.Phone == nil {
+			break
+		}
+
+		return e.complexity.ShippingAddress.Phone(childComplexity), true
+
+	case "ShippingAddress.postalCode":
+		if e.complexity.ShippingAddress.PostalCode == nil {
+			break
+		}
+
+		return e.complexity.ShippingAddress.PostalCode(childComplexity), true
+
+	case "ShippingAddress.province":
+		if e.complexity.ShippingAddress.Province == nil {
+			break
+		}
+
+		return e.complexity.ShippingAddress.Province(childComplexity), true
 
 	case "Subcategory.categoryID":
 		if e.complexity.Subcategory.CategoryID == nil {

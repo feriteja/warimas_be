@@ -167,7 +167,33 @@ type UpdateSessionAddressResponse {
 type ConfirmCheckoutSessionResponse {
   success: Boolean!
   message: String
-  session: CheckoutSession
+  order_external_id: String!
+}
+
+type PaymentOrderInfoResponse {
+  status: PaymentStatus!
+  expiresAt: Time!
+  totalAmount: Int!
+  currency: String!
+  shippingAddress: ShippingAddress!
+  payment: PaymentDetail!
+}
+
+type ShippingAddress {
+  name: String!
+  phone: String!
+  address: String!
+  city: String!
+  province: String!
+  postalCode: String!
+}
+
+type PaymentDetail {
+  method: String!
+  bank: String
+  paymentCode: String
+  referenceId: String!
+  instructions: [String!]!
 }
 
 extend type Query {
@@ -181,6 +207,8 @@ extend type Query {
   orderDetail(orderId: ID!): Order! @auth(role: USER)
 
   checkoutSession(externalId: String!): CheckoutSession
+
+  paymentOrderInfo(externalId: String!): PaymentOrderInfoResponse!
 }
 
 extend type Mutation {

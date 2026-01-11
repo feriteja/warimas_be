@@ -19,6 +19,7 @@ type Payment struct {
 	Currency          string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
+	ExpireAt          time.Time
 }
 
 type OrderItem struct {
@@ -93,4 +94,37 @@ type XenditPaymentResponse struct {
 	Metadata struct {
 		Items []XenditItem `json:"items,omitempty"`
 	} `json:"metadata,omitempty"`
+}
+
+type WebhookPayload struct {
+	Created    time.Time `json:"created"`
+	BusinessID string    `json:"business_id"`
+	Event      string    `json:"event"`
+	APIVersion string    `json:"api_version"`
+	Data       struct {
+		Type             string    `json:"type"`
+		Status           string    `json:"status"`
+		Country          string    `json:"country"`
+		Created          string    `json:"created"`
+		Updated          time.Time `json:"updated"`
+		Currency         string    `json:"currency"`
+		PaymentID        string    `json:"payment_id"`
+		BusinessID       string    `json:"business_id"`
+		CustomerID       string    `json:"customer_id"`
+		ChannelCode      string    `json:"channel_code"`
+		ReferenceID      string    `json:"reference_id"`
+		CaptureMethod    string    `json:"capture_method"`
+		RequestAmount    int64     `json:"request_amount"`
+		PaymentRequestID string    `json:"payment_request_id"`
+
+		Captures []struct {
+			CaptureID        string `json:"capture_id"`
+			CaptureAmount    int64  `json:"capture_amount"`
+			CaptureTimestamp string `json:"capture_timestamp"`
+		} `json:"captures"`
+
+		Metadata struct {
+			Items []XenditItem `json:"items"`
+		} `json:"metadata"`
+	} `json:"data"`
 }

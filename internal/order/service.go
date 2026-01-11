@@ -28,8 +28,8 @@ type Service interface {
 		page *int32) ([]*Order, int64, error)
 	GetOrderDetail(userID, orderID uint, isAdmin bool) (*Order, error)
 	UpdateOrderStatus(orderID uint, status OrderStatus) error
-	MarkAsPaid(ctx context.Context, referenceID, paymentRequestID string) error
-	MarkAsFailed(ctx context.Context, referenceID, paymentRequestID string) error
+	MarkAsPaid(ctx context.Context, referenceID, paymentRequestID, paymentProviderID string) error
+	MarkAsFailed(ctx context.Context, referenceID, paymentRequestID, paymentProviderID string) error
 	CreateSession(
 		ctx context.Context,
 		input model.CreateCheckoutSessionInput,
@@ -44,24 +44,30 @@ type Service interface {
 	ConfirmSession(
 		ctx context.Context,
 		sessionID string,
-	) (*CheckoutSession, error)
+	) (*string, error)
 	GetSession(
 		ctx context.Context,
 		externalID string,
 	) (*CheckoutSession, error)
+	GetPaymentOrderInfo(
+		ctx context.Context,
+		externalID string,
+	) (*PaymentOrderInfoResponse, error)
 }
 
 type service struct {
 	repo        Repository
 	paymentRepo payment.Repository
 	paymentGate payment.Gateway
+	addressRepo address.Repository
 }
 
-func NewService(repo Repository, payRepo payment.Repository, payGate payment.Gateway) Service {
+func NewService(repo Repository, payRepo payment.Repository, payGate payment.Gateway, addressRepo address.Repository) Service {
 	return &service{
 		repo:        repo,
 		paymentRepo: payRepo,
 		paymentGate: payGate,
+		addressRepo: addressRepo,
 	}
 }
 
@@ -150,6 +156,7 @@ func (s *service) OrderToPaymentProcess(ctx context.Context, sessionExternalID s
 		PaymentMethod:     payResp.PaymentMethod,
 		ChannelCode:       payResp.ChannelCode,
 		PaymentCode:       payResp.PaymentCode,
+		ExpireAt:          payResp.ExpirationTime,
 	}
 
 	err = s.paymentRepo.SavePayment(p)
@@ -261,6 +268,7 @@ func (s *service) MarkAsPaid(
 	ctx context.Context,
 	referenceID string,
 	paymentRequestID string,
+	paymentProviderID string,
 ) error {
 
 	log := logger.FromCtx(ctx).With(
@@ -294,6 +302,7 @@ func (s *service) MarkAsPaid(
 		ctx,
 		referenceID,
 		paymentRequestID,
+		paymentProviderID,
 		"PAID",
 	)
 	if err != nil {
@@ -309,6 +318,7 @@ func (s *service) MarkAsFailed(
 	ctx context.Context,
 	referenceID string,
 	paymentRequestID string,
+	paymentProviderID string,
 ) error {
 
 	log := logger.FromCtx(ctx).With(
@@ -342,6 +352,7 @@ func (s *service) MarkAsFailed(
 		ctx,
 		referenceID,
 		paymentRequestID,
+		paymentProviderID,
 		"FAILED",
 	)
 	if err != nil {
@@ -539,7 +550,7 @@ func (s *service) calculateTax(
 func (s *service) ConfirmSession(
 	ctx context.Context,
 	externalID string,
-) (*CheckoutSession, error) {
+) (*string, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "service"),
@@ -649,13 +660,13 @@ func (s *service) ConfirmSession(
 		return nil, err
 	}
 
-	_, err = s.OrderToPaymentProcess(ctx, session.ExternalID, externalID, order.ID)
+	_, err = s.OrderToPaymentProcess(ctx, session.ExternalID, externalOrderID, order.ID)
 
 	log.Info("checkout session confirmed successfully",
 		zap.String("final_status", string(session.Status)),
 	)
 
-	return session, nil
+	return &externalOrderID, nil
 }
 
 func (s *service) GetSession(
@@ -688,4 +699,52 @@ func (s *service) GetSession(
 	return session, nil
 }
 
-func (s *service) CreatePaymentIntent() {}
+func (s *service) GetPaymentOrderInfo(
+	ctx context.Context,
+	externalID string,
+) (*PaymentOrderInfoResponse, error) {
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	order, err := s.repo.GetOrderByExternalID(ctx, externalID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ownership check (if order is tied to a user)
+	if order.UserID != nil && ok {
+		if *order.UserID != userID {
+			return nil, errors.New("forbidden")
+		}
+	}
+
+	payment, err := s.paymentRepo.GetPaymentByOrder(order.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	address, err := s.addressRepo.GetByID(ctx, order.AddressID)
+	if err != nil {
+		return nil, err
+	}
+
+	paymentInfo := &PaymentOrderInfoResponse{
+		OrderExternalID: externalID,
+		Status:          PaymentStatus(payment.Status),
+		TotalAmount:     int(order.TotalAmount),
+		Currency:        order.Currency,
+		ShippingAddress: ShippingAddress{
+			Name:       address.Name,
+			Phone:      address.Phone,
+			Address1:   address.Address1,
+			Address2:   address.Address2,
+			City:       address.City,
+			Province:   address.Province,
+			PostalCode: address.Postal,
+		},
+		Payment: PaymentDetail{
+			Method: payment.PaymentMethod,
+		},
+	}
+
+	return paymentInfo, nil
+
+}

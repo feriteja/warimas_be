@@ -3,6 +3,7 @@ package webhook
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -14,140 +15,204 @@ import (
 	"go.uber.org/zap"
 )
 
-type WebhookPayload struct {
-	Created    string `json:"created"`
-	BusinessID string `json:"business_id"`
-	Event      string `json:"event"`
-	APIVersion string `json:"api_version"`
-	Data       struct {
-		Type             string `json:"type"`
-		Status           string `json:"status"`
-		Country          string `json:"country"`
-		Created          string `json:"created"`
-		Updated          string `json:"updated"`
-		Currency         string `json:"currency"`
-		PaymentID        string `json:"payment_id"`
-		BusinessID       string `json:"business_id"`
-		CustomerID       string `json:"customer_id"`
-		ChannelCode      string `json:"channel_code"`
-		ReferenceID      string `json:"reference_id"`
-		CaptureMethod    string `json:"capture_method"`
-		RequestAmount    int64  `json:"request_amount"`
-		PaymentRequestID string `json:"payment_request_id"`
-
-		Captures []struct {
-			CaptureID        string  `json:"capture_id"`
-			CaptureAmount    float64 `json:"capture_amount"`
-			CaptureTimestamp string  `json:"capture_timestamp"`
-		} `json:"captures"`
-
-		Metadata struct {
-			Items []payment.XenditItem `json:"items"`
-		} `json:"metadata"`
-	} `json:"data"`
-}
-
 type Handler struct {
-	OrderSvc order.Service
-	Gateway  payment.Gateway
+	OrderSvc    order.Service
+	Gateway     payment.Gateway
+	PaymentRepo payment.Repository
 }
 
-func NewWebhookHandler(orderSvc order.Service, gateway payment.Gateway) *Handler {
+func NewWebhookHandler(orderSvc order.Service, gateway payment.Gateway, paymentRepo payment.Repository) *Handler {
 	return &Handler{
-		OrderSvc: orderSvc,
-		Gateway:  gateway,
+		OrderSvc:    orderSvc,
+		Gateway:     gateway,
+		PaymentRepo: paymentRepo,
 	}
 }
 
-// -------------------------- MAIN WEBHOOK HANDLER --------------------------
 func (h *Handler) PaymentWebhookHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := logger.FromCtx(ctx)
 
+	// 1. Verify callback token
 	callbackToken := r.Header.Get("x-callback-token")
-	expectedToken := os.Getenv("XENDIT_WEBHOOK_TOKEN")
-
-	if callbackToken != expectedToken {
-		log.Warn("Webhook token mismatch")
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	if callbackToken != os.Getenv("XENDIT_WEBHOOK_TOKEN") {
+		log.Warn("Invalid webhook token")
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
+	// 2. Read body
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Error("Failed reading webhook body", zap.Error(err))
-		http.Error(w, "Invalid body", http.StatusBadRequest)
+		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
 
-	raw := json.RawMessage(body)
+	rawPayload := json.RawMessage(body)
 
-	log.Info("raw body WebhookPayload",
-		zap.Any("raw", raw),
-	)
-
-	var payload WebhookPayload
+	// 3. Parse payload
+	var payload payment.WebhookPayload
 	if err := json.Unmarshal(body, &payload); err != nil {
-		log.Error("Failed to parse webhook JSON", zap.Error(err))
-		http.Error(w, "Bad JSON", http.StatusBadRequest)
+		log.Error("Invalid webhook JSON", zap.Error(err))
+		http.Error(w, "bad json", http.StatusBadRequest)
 		return
 	}
 
-	// Core log for tracking payment events
-	log.Info("Webhook received",
+	// 4. Derive event ID (Xendit sometimes lacks one)
+	eventID := payload.Event + ":" + payload.Data.PaymentID + ":" + payload.Data.Created
+
+	// 5. Save webhook FIRST (idempotency happens here)
+	webhookID, isDuplicate, err := h.PaymentRepo.SavePaymentWebhook(
+		ctx,
+		"XENDIT",
+		eventID,
+		payload.Event,
+		payload.Data.ReferenceID,
+		rawPayload,
+		true,
+	)
+	if err != nil {
+		log.Error("Failed saving webhook", zap.Error(err))
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if isDuplicate {
+		log.Info("Duplicate webhook ignored", zap.String("event_id", eventID))
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// 6. Process webhook safely
+	if err := h.processPaymentEvent(ctx, payload); err != nil {
+		log.Error("Webhook processing failed", zap.Error(err))
+
+		_ = h.PaymentRepo.MarkWebhookFailed(ctx, webhookID, err.Error())
+		http.Error(w, "processing failed", http.StatusBadRequest)
+		return
+	}
+
+	// 7. Mark webhook processed
+	_ = h.PaymentRepo.MarkWebhookProcessed(ctx, webhookID)
+
+	log.Info("Webhook processed successfully",
 		zap.String("event", payload.Event),
-		zap.String("status", payload.Data.Status),
-		zap.String("payment_id", payload.Data.PaymentID),
 		zap.String("reference_id", payload.Data.ReferenceID),
 	)
 
-	// Process event
-	h.handleEvent(ctx, payload)
-
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Webhook received"))
 }
 
-// -------------------------- EVENT HANDLER --------------------------
-func (h *Handler) handleEvent(ctx context.Context, payload WebhookPayload) {
+func (h *Handler) processPaymentEvent(
+	ctx context.Context,
+	payload payment.WebhookPayload,
+) error {
+
 	log := logger.FromCtx(ctx)
 
-	event := payload.Event
 	ref := payload.Data.ReferenceID
 
-	log = log.With(
-		zap.String("event", event),
+	log.Info("processing payment webhook",
+		zap.String("event", payload.Event),
 		zap.String("reference_id", ref),
+		zap.String("payment_request_id", payload.Data.PaymentRequestID),
+		zap.Int64("amount", payload.Data.RequestAmount),
+		zap.String("currency", payload.Data.Currency),
 		zap.String("status", payload.Data.Status),
 	)
 
-	switch event {
+	// Lock payment/order row
+	order, err := h.OrderSvc.GetPaymentOrderInfo(ctx, ref)
+	if err != nil {
+		log.Error("failed to fetch order payment info",
+			zap.String("reference_id", ref),
+			zap.Error(err),
+		)
+		return err
+	}
+
+	// Validate money
+	if payload.Data.RequestAmount != int64(order.TotalAmount) {
+		log.Error("payment amount mismatch",
+			zap.String("reference_id", ref),
+			zap.Int64("webhook_amount", payload.Data.RequestAmount),
+			zap.Int("db_amount", order.TotalAmount),
+		)
+		return fmt.Errorf(
+			"amount mismatch: webhook=%d db=%d",
+			payload.Data.RequestAmount,
+			order.TotalAmount,
+		)
+	}
+
+	if payload.Data.Currency != order.Currency {
+		log.Error("payment currency mismatch",
+			zap.String("reference_id", ref),
+			zap.String("webhook_currency", payload.Data.Currency),
+			zap.String("db_currency", order.Currency),
+		)
+		return fmt.Errorf("currency mismatch")
+	}
+
+	switch payload.Event {
 
 	case "payment.capture":
-		log.Info("Processing capture event")
-
-		if payload.Data.Status == "SUCCEEDED" {
-			if err := h.OrderSvc.MarkAsPaid(ctx, ref, payload.Data.PaymentRequestID); err != nil {
-				log.Error("Failed to mark order as PAID", zap.Error(err))
-				return
-			}
-			log.Info("Order marked as PAID")
+		if payload.Data.Status != "SUCCEEDED" {
+			log.Info("payment capture not succeeded, ignoring",
+				zap.String("reference_id", ref),
+				zap.String("status", payload.Data.Status),
+			)
+			return nil
 		}
 
-	case "payment.authorization":
-		log.Info("Payment authorized")
+		if order.Status == "PAID" {
+			log.Info("order already paid, skipping",
+				zap.String("reference_id", ref),
+				zap.String("OrderExternalID", order.OrderExternalID),
+			)
+			return nil
+		}
+
+		log.Info("marking order as PAID",
+			zap.String("reference_id", ref),
+			zap.String("order_id", order.OrderExternalID),
+		)
+
+		return h.OrderSvc.MarkAsPaid(
+			ctx,
+			ref,
+			payload.Data.PaymentRequestID,
+			payload.Data.PaymentID,
+		)
 
 	case "payment.failed", "payment.failure":
-		log.Warn("Payment failed")
-
-		if err := h.OrderSvc.MarkAsFailed(ctx, ref, payload.Data.PaymentRequestID); err != nil {
-			log.Error("Failed to mark order as FAILED", zap.Error(err))
-			return
+		if order.Status == "PAID" {
+			log.Error("invalid payment state transition PAID -> FAILED",
+				zap.String("reference_id", ref),
+				zap.String("order_id", order.OrderExternalID),
+			)
+			return fmt.Errorf("invalid transition PAID -> FAILED")
 		}
-		log.Info("Order marked as FAILED")
+
+		log.Info("marking order as FAILED",
+			zap.String("reference_id", ref),
+			zap.String("order_id", order.OrderExternalID),
+		)
+
+		return h.OrderSvc.MarkAsFailed(
+			ctx,
+			ref,
+			payload.Data.PaymentRequestID,
+			payload.Data.PaymentID,
+		)
 
 	default:
-		log.Warn("Unhandled webhook event")
+		log.Warn("unhandled payment webhook event",
+			zap.String("event", payload.Event),
+			zap.String("reference_id", ref),
+		)
 	}
+
+	return nil
 }

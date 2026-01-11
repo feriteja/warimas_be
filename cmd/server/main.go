@@ -56,8 +56,8 @@ func main() {
 	addressSvc := address.NewService(addressRepo)
 
 	paymentGateway := payment.NewXenditGateway(cfg.XenditSecretKey)
-	orderSvc := order.NewService(orderRepo, paymentRepo, paymentGateway)
-	webhookHandler := webhook.NewWebhookHandler(orderSvc, paymentGateway)
+	orderSvc := order.NewService(orderRepo, paymentRepo, paymentGateway, addressRepo)
+	webhookHandler := webhook.NewWebhookHandler(orderSvc, paymentGateway, paymentRepo)
 
 	// GraphQL resolver
 	resolver := &graph.Resolver{

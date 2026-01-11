@@ -34,11 +34,16 @@ type Repository interface {
 	) (int64, error)
 	GetOrderDetail(orderID uint) (*Order, error)
 	UpdateOrderStatus(orderID uint, status OrderStatus) error
-	UpdateStatusByReferenceID(ctx context.Context, referenceID, ExternalReference string, status string) error
+	UpdateStatusByReferenceID(ctx context.Context, referenceID, ExternalReference, paymentProviderID, status string) error
 	GetByReferenceID(ctx context.Context, referenceID string) (*Order, error)
 	GetOrderBySessionID(
 		ctx context.Context,
 		sessionID uuid.UUID,
+	) (*Order, error)
+
+	GetOrderByExternalID(
+		ctx context.Context,
+		externalID string,
 	) (*Order, error)
 
 	CreateOrderTx(
@@ -120,6 +125,57 @@ func (r *repository) GetOrderBySessionID(
 	if err != nil {
 		return nil, err
 	}
+
+	return &o, nil
+}
+
+func (r *repository) GetOrderByExternalID(
+	ctx context.Context,
+	externalID string,
+) (*Order, error) {
+
+	log := logger.FromCtx(ctx)
+
+	log.Debug("fetching order by external_id",
+		zap.String("external_id", externalID),
+	)
+
+	query := `
+		SELECT id, user_id, status, total_amount, currency, address_id
+		FROM orders
+		WHERE external_id = $1
+	`
+
+	var o Order
+	err := r.db.QueryRowContext(ctx, query, externalID).
+		Scan(
+			&o.ID,
+			&o.UserID,
+			&o.Status,
+			&o.TotalAmount,
+			&o.Currency,
+			&o.AddressID,
+		)
+
+	if err == sql.ErrNoRows {
+		log.Info("order not found",
+			zap.String("external_id", externalID),
+		)
+		return nil, nil
+	}
+
+	if err != nil {
+		log.Error("failed to fetch order by external_id",
+			zap.String("external_id", externalID),
+			zap.Error(err),
+		)
+		return nil, err
+	}
+
+	log.Info("order fetched successfully",
+		zap.String("external_id", externalID),
+		zap.Uint("order_id", o.ID),
+	)
 
 	return &o, nil
 }
@@ -396,8 +452,9 @@ func (r *repository) UpdateStatusByReferenceID(
 	ctx context.Context,
 	referenceID string,
 	paymentRequestID string,
+	paymentProviderID string,
 	status string,
-) error {
+) (err error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
@@ -415,16 +472,15 @@ func (r *repository) UpdateStatusByReferenceID(
 		return fmt.Errorf("begin transaction: %w", err)
 	}
 
-	// Ensure rollback on any failure
 	defer func() {
 		if err != nil {
 			_ = tx.Rollback()
-			log.Warn("transaction rolled back due to error")
+			log.Warn("transaction rolled back due to error", zap.Error(err))
 		}
 	}()
 
 	// --------------------------------------------------
-	// 1. Update order & get checkout_session_id
+	// 1. Update order (LOCK ROW) & get checkout_session_id
 	// --------------------------------------------------
 	var sessionID string
 	queryOrder := `
@@ -441,7 +497,9 @@ func (r *repository) UpdateStatusByReferenceID(
 		return fmt.Errorf("update orders by external_id: %w", err)
 	}
 
-	log.Info("order status updated", zap.String("checkout_session_id", sessionID))
+	log.Info("order status updated",
+		zap.String("checkout_session_id", sessionID),
+	)
 
 	// --------------------------------------------------
 	// 2. Update checkout session
@@ -460,8 +518,9 @@ func (r *repository) UpdateStatusByReferenceID(
 
 	rows, _ := res.RowsAffected()
 	if rows == 0 {
+		err = fmt.Errorf("checkout session not found: %s", sessionID)
 		log.Warn("checkout session not found", zap.String("session_id", sessionID))
-		return fmt.Errorf("checkout session not found: %s", sessionID)
+		return err
 	}
 
 	log.Info("checkout session status updated")
@@ -471,11 +530,23 @@ func (r *repository) UpdateStatusByReferenceID(
 	// --------------------------------------------------
 	queryPayment := `
 		UPDATE payments
-		SET status = $1
-		WHERE external_reference = $2
+		SET status = $1,
+		    provider_payment_id = $2
 	`
 
-	res, err = tx.ExecContext(ctx, queryPayment, status, paymentRequestID)
+	args := []any{status, paymentProviderID}
+
+	if status == string(StatusPaid) {
+		queryPayment += `, paid_at = now()`
+	}
+
+	queryPayment += `
+		WHERE external_reference = $3
+	`
+
+	args = append(args, paymentRequestID)
+
+	res, err = tx.ExecContext(ctx, queryPayment, args...)
 	if err != nil {
 		log.Error("failed to update payment status", zap.Error(err))
 		return fmt.Errorf("update payment: %w", err)
@@ -483,7 +554,9 @@ func (r *repository) UpdateStatusByReferenceID(
 
 	rows, _ = res.RowsAffected()
 	if rows == 0 {
-		log.Warn("payment not found", zap.String("external_reference", paymentRequestID))
+		log.Warn("payment not found",
+			zap.String("external_reference", paymentRequestID),
+		)
 	}
 
 	log.Info("payment status updated")

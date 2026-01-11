@@ -47,6 +47,7 @@ type QueryResolver interface {
 	OrderList(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, page *int32) (*model.OrderListResponse, error)
 	OrderDetail(ctx context.Context, orderID string) (*model.Order, error)
 	CheckoutSession(ctx context.Context, externalID string) (*model.CheckoutSession, error)
+	PaymentOrderInfo(ctx context.Context, externalID string) (*model.PaymentOrderInfoResponse, error)
 	PackageRecomamendation(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) (*model.PackageResponse, error)
 	ProductList(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) (*model.ProductPage, error)
 	ProductsHome(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) ([]*model.ProductByCategory, error)
@@ -422,6 +423,17 @@ func (ec *executionContext) field_Query_packageRecomamendation_args(ctx context.
 		return nil, err
 	}
 	args["page"] = arg3
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_paymentOrderInfo_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "externalId", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["externalId"] = arg0
 	return args, nil
 }
 
@@ -1292,8 +1304,8 @@ func (ec *executionContext) fieldContext_Mutation_confirmCheckoutSession(ctx con
 				return ec.fieldContext_ConfirmCheckoutSessionResponse_success(ctx, field)
 			case "message":
 				return ec.fieldContext_ConfirmCheckoutSessionResponse_message(ctx, field)
-			case "session":
-				return ec.fieldContext_ConfirmCheckoutSessionResponse_session(ctx, field)
+			case "order_external_id":
+				return ec.fieldContext_ConfirmCheckoutSessionResponse_order_external_id(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ConfirmCheckoutSessionResponse", field.Name)
 		},
@@ -2242,6 +2254,61 @@ func (ec *executionContext) fieldContext_Query_checkoutSession(ctx context.Conte
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_paymentOrderInfo(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_paymentOrderInfo,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().PaymentOrderInfo(ctx, fc.Args["externalId"].(string))
+		},
+		nil,
+		ec.marshalNPaymentOrderInfoResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPaymentOrderInfoResponse,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_paymentOrderInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "status":
+				return ec.fieldContext_PaymentOrderInfoResponse_status(ctx, field)
+			case "expiresAt":
+				return ec.fieldContext_PaymentOrderInfoResponse_expiresAt(ctx, field)
+			case "totalAmount":
+				return ec.fieldContext_PaymentOrderInfoResponse_totalAmount(ctx, field)
+			case "currency":
+				return ec.fieldContext_PaymentOrderInfoResponse_currency(ctx, field)
+			case "shippingAddress":
+				return ec.fieldContext_PaymentOrderInfoResponse_shippingAddress(ctx, field)
+			case "payment":
+				return ec.fieldContext_PaymentOrderInfoResponse_payment(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PaymentOrderInfoResponse", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_paymentOrderInfo_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_packageRecomamendation(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2938,6 +3005,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_checkoutSession(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "paymentOrderInfo":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_paymentOrderInfo(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
 				return res
 			}
 

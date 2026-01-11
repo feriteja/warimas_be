@@ -142,7 +142,7 @@ func (r *mutationResolver) ConfirmCheckoutSession(ctx context.Context, input mod
 		zap.String("external_id", input.ExternalID),
 	)
 
-	session, err := r.OrderSvc.ConfirmSession(
+	orderExternalID, err := r.OrderSvc.ConfirmSession(
 		ctx,
 		input.ExternalID,
 	)
@@ -154,9 +154,9 @@ func (r *mutationResolver) ConfirmCheckoutSession(ctx context.Context, input mod
 	msg := "checkout session confirmed"
 
 	return &model.ConfirmCheckoutSessionResponse{
-		Success: true,
-		Message: &msg,
-		Session: order.MapCheckoutSessionToGraphQL(session),
+		Success:         true,
+		Message:         &msg,
+		OrderExternalID: *orderExternalID,
 	}, nil
 }
 
@@ -260,4 +260,29 @@ func (r *queryResolver) CheckoutSession(ctx context.Context, externalID string) 
 	}
 
 	return order.MapCheckoutSessionToGraphQL(session), nil
+}
+
+// PaymentOrderInfo is the resolver for the paymentOrderInfo field.
+func (r *queryResolver) PaymentOrderInfo(ctx context.Context, externalID string) (*model.PaymentOrderInfoResponse, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "PaymentOrderInfo"),
+		zap.String("external_id", externalID),
+	)
+
+	paymentInfo, err := r.OrderSvc.GetPaymentOrderInfo(
+		ctx,
+		externalID,
+	)
+	if err != nil {
+		log.Error("failed to get checkout session", zap.Error(err))
+		return nil, err
+	}
+
+	paymentInfoMap := &model.PaymentOrderInfoResponse{
+		Status: model.PaymentStatus(paymentInfo.Status),
+	}
+
+	return paymentInfoMap, nil
 }

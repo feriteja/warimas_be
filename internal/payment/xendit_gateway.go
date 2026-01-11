@@ -54,7 +54,8 @@ func (x *xenditGateway) CreateInvoice(
 		zap.String("channel", string(channelCode)),
 	)
 
-	expiry := time.Now().Add(24 * time.Hour).Format(time.RFC3339)
+	loc, _ := time.LoadLocation("Asia/Jakarta")
+	expiry := time.Now().In(loc).Add(24 * time.Hour).Format(time.RFC3339)
 
 	body := map[string]interface{}{
 		"reference_id":   externalID,
