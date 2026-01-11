@@ -32,7 +32,7 @@ type Service interface {
 	MarkAsFailed(ctx context.Context, referenceID, paymentRequestID string) error
 	CreateSession(
 		ctx context.Context,
-		input model.CreateSessionCheckoutInput,
+		input model.CreateCheckoutSessionInput,
 	) (*CheckoutSession, error)
 
 	UpdateSessionAddress(
@@ -355,7 +355,7 @@ func (s *service) MarkAsFailed(
 
 func (s *service) CreateSession(
 	ctx context.Context,
-	input model.CreateSessionCheckoutInput,
+	input model.CreateCheckoutSessionInput,
 ) (*CheckoutSession, error) {
 
 	log := logger.FromCtx(ctx).With(

@@ -108,6 +108,12 @@ type ComplexityRoot struct {
 		VariantName  func(childComplexity int) int
 	}
 
+	CheckoutSessionResponse struct {
+		ExpiresAt  func(childComplexity int) int
+		ExternalID func(childComplexity int) int
+		Status     func(childComplexity int) int
+	}
+
 	ConfirmCheckoutSessionResponse struct {
 		Message func(childComplexity int) int
 		Session func(childComplexity int) int
@@ -136,9 +142,9 @@ type ComplexityRoot struct {
 		AddToCart              func(childComplexity int, input model.AddToCartInput) int
 		ConfirmCheckoutSession func(childComplexity int, input model.ConfirmCheckoutSessionInput) int
 		CreateAddress          func(childComplexity int, input model.CreateAddressInput) int
+		CreateCheckoutSession  func(childComplexity int, input model.CreateCheckoutSessionInput) int
 		CreateOrderFromSession func(childComplexity int, input model.CreateOrderFromSessionInput) int
 		CreateProduct          func(childComplexity int, input model.NewProduct) int
-		CreateSessionCheckout  func(childComplexity int, input model.CreateSessionCheckoutInput) int
 		CreateVariants         func(childComplexity int, input []*model.NewVariant) int
 		DeleteAddress          func(childComplexity int, input model.DeleteAddressInput) int
 		Login                  func(childComplexity int, input model.LoginInput) int
@@ -305,12 +311,6 @@ type ComplexityRoot struct {
 	Response struct {
 		Message func(childComplexity int) int
 		Success func(childComplexity int) int
-	}
-
-	SessionCheckoutResponse struct {
-		ExpiresAt  func(childComplexity int) int
-		ExternalID func(childComplexity int) int
-		Status     func(childComplexity int) int
 	}
 
 	Subcategory struct {
@@ -668,6 +668,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.CheckoutSessionItem.VariantName(childComplexity), true
 
+	case "CheckoutSessionResponse.expiresAt":
+		if e.complexity.CheckoutSessionResponse.ExpiresAt == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSessionResponse.ExpiresAt(childComplexity), true
+
+	case "CheckoutSessionResponse.externalId":
+		if e.complexity.CheckoutSessionResponse.ExternalID == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSessionResponse.ExternalID(childComplexity), true
+
+	case "CheckoutSessionResponse.status":
+		if e.complexity.CheckoutSessionResponse.Status == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSessionResponse.Status(childComplexity), true
+
 	case "ConfirmCheckoutSessionResponse.message":
 		if e.complexity.ConfirmCheckoutSessionResponse.Message == nil {
 			break
@@ -798,6 +819,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.CreateAddress(childComplexity, args["input"].(model.CreateAddressInput)), true
 
+	case "Mutation.createCheckoutSession":
+		if e.complexity.Mutation.CreateCheckoutSession == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createCheckoutSession_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateCheckoutSession(childComplexity, args["input"].(model.CreateCheckoutSessionInput)), true
+
 	case "Mutation.createOrderFromSession":
 		if e.complexity.Mutation.CreateOrderFromSession == nil {
 			break
@@ -821,18 +854,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.CreateProduct(childComplexity, args["input"].(model.NewProduct)), true
-
-	case "Mutation.createSessionCheckout":
-		if e.complexity.Mutation.CreateSessionCheckout == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_createSessionCheckout_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.CreateSessionCheckout(childComplexity, args["input"].(model.CreateSessionCheckoutInput)), true
 
 	case "Mutation.createVariants":
 		if e.complexity.Mutation.CreateVariants == nil {
@@ -1775,27 +1796,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Response.Success(childComplexity), true
 
-	case "SessionCheckoutResponse.expiresAt":
-		if e.complexity.SessionCheckoutResponse.ExpiresAt == nil {
-			break
-		}
-
-		return e.complexity.SessionCheckoutResponse.ExpiresAt(childComplexity), true
-
-	case "SessionCheckoutResponse.externalId":
-		if e.complexity.SessionCheckoutResponse.ExternalID == nil {
-			break
-		}
-
-		return e.complexity.SessionCheckoutResponse.ExternalID(childComplexity), true
-
-	case "SessionCheckoutResponse.status":
-		if e.complexity.SessionCheckoutResponse.Status == nil {
-			break
-		}
-
-		return e.complexity.SessionCheckoutResponse.Status(childComplexity), true
-
 	case "Subcategory.categoryID":
 		if e.complexity.Subcategory.CategoryID == nil {
 			break
@@ -1941,10 +1941,11 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputAddressInput,
 		ec.unmarshalInputCartFilterInput,
 		ec.unmarshalInputCartSortInput,
+		ec.unmarshalInputCheckoutSessionItemInput,
 		ec.unmarshalInputConfirmCheckoutSessionInput,
 		ec.unmarshalInputCreateAddressInput,
+		ec.unmarshalInputCreateCheckoutSessionInput,
 		ec.unmarshalInputCreateOrderFromSessionInput,
-		ec.unmarshalInputCreateSessionCheckoutInput,
 		ec.unmarshalInputDeleteAddressInput,
 		ec.unmarshalInputLoginInput,
 		ec.unmarshalInputNewProduct,
@@ -1956,7 +1957,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputProductFilterInput,
 		ec.unmarshalInputProductSortInput,
 		ec.unmarshalInputRegisterInput,
-		ec.unmarshalInputSessionCheckoutItemInput,
 		ec.unmarshalInputUpdateAddressInput,
 		ec.unmarshalInputUpdateCartInput,
 		ec.unmarshalInputUpdateOrderStatusInput,

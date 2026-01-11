@@ -42,11 +42,11 @@ input OrderSortInput {
   direction: SortDirection! = ASC
 }
 
-input CreateSessionCheckoutInput {
-  items: [SessionCheckoutItemInput!]!
+input CreateCheckoutSessionInput {
+  items: [CheckoutSessionItemInput!]!
 }
 
-input SessionCheckoutItemInput {
+input CheckoutSessionItemInput {
   variantId: ID!
   quantity: Int!
 }
@@ -148,7 +148,7 @@ type CreateOrderResponse {
   payment: Payment
 }
 
-type SessionCheckoutResponse {
+type CheckoutSessionResponse {
   externalId: ID!
   status: CheckoutSessionStatus!
   expiresAt: Time!
@@ -185,9 +185,9 @@ extend type Mutation {
   updateOrderStatus(input: UpdateOrderStatusInput!): CreateOrderResponse!
     @auth(role: ADMIN)
 
-  createSessionCheckout(
-    input: CreateSessionCheckoutInput!
-  ): SessionCheckoutResponse!
+  createCheckoutSession(
+    input: CreateCheckoutSessionInput!
+  ): CheckoutSessionResponse!
 
   updateSessionAddress(
     input: UpdateSessionAddressInput!

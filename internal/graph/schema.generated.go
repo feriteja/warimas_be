@@ -28,7 +28,7 @@ type MutationResolver interface {
 	AddSubcategory(ctx context.Context, categoryID string, name string) (*model.Subcategory, error)
 	CreateOrderFromSession(ctx context.Context, input model.CreateOrderFromSessionInput) (*model.CreateOrderResponse, error)
 	UpdateOrderStatus(ctx context.Context, input model.UpdateOrderStatusInput) (*model.CreateOrderResponse, error)
-	CreateSessionCheckout(ctx context.Context, input model.CreateSessionCheckoutInput) (*model.SessionCheckoutResponse, error)
+	CreateCheckoutSession(ctx context.Context, input model.CreateCheckoutSessionInput) (*model.CheckoutSessionResponse, error)
 	UpdateSessionAddress(ctx context.Context, input model.UpdateSessionAddressInput) (*model.UpdateSessionAddressResponse, error)
 	ConfirmCheckoutSession(ctx context.Context, input model.ConfirmCheckoutSessionInput) (*model.ConfirmCheckoutSessionResponse, error)
 	CreateProduct(ctx context.Context, input model.NewProduct) (*model.Product, error)
@@ -117,6 +117,17 @@ func (ec *executionContext) field_Mutation_createAddress_args(ctx context.Contex
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_createCheckoutSession_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNCreateCheckoutSessionInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCreateCheckoutSessionInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_createOrderFromSession_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -132,17 +143,6 @@ func (ec *executionContext) field_Mutation_createProduct_args(ctx context.Contex
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNNewProduct2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐNewProduct)
-	if err != nil {
-		return nil, err
-	}
-	args["input"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_createSessionCheckout_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNCreateSessionCheckoutInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCreateSessionCheckoutInput)
 	if err != nil {
 		return nil, err
 	}
@@ -1169,24 +1169,24 @@ func (ec *executionContext) fieldContext_Mutation_updateOrderStatus(ctx context.
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_createSessionCheckout(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Mutation_createCheckoutSession(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Mutation_createSessionCheckout,
+		ec.fieldContext_Mutation_createCheckoutSession,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().CreateSessionCheckout(ctx, fc.Args["input"].(model.CreateSessionCheckoutInput))
+			return ec.resolvers.Mutation().CreateCheckoutSession(ctx, fc.Args["input"].(model.CreateCheckoutSessionInput))
 		},
 		nil,
-		ec.marshalNSessionCheckoutResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionCheckoutResponse,
+		ec.marshalNCheckoutSessionResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSessionResponse,
 		true,
 		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_Mutation_createSessionCheckout(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_createCheckoutSession(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -1195,13 +1195,13 @@ func (ec *executionContext) fieldContext_Mutation_createSessionCheckout(ctx cont
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "externalId":
-				return ec.fieldContext_SessionCheckoutResponse_externalId(ctx, field)
+				return ec.fieldContext_CheckoutSessionResponse_externalId(ctx, field)
 			case "status":
-				return ec.fieldContext_SessionCheckoutResponse_status(ctx, field)
+				return ec.fieldContext_CheckoutSessionResponse_status(ctx, field)
 			case "expiresAt":
-				return ec.fieldContext_SessionCheckoutResponse_expiresAt(ctx, field)
+				return ec.fieldContext_CheckoutSessionResponse_expiresAt(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type SessionCheckoutResponse", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type CheckoutSessionResponse", field.Name)
 		},
 	}
 	defer func() {
@@ -1211,7 +1211,7 @@ func (ec *executionContext) fieldContext_Mutation_createSessionCheckout(ctx cont
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_createSessionCheckout_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_createCheckoutSession_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -2678,9 +2678,9 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "createSessionCheckout":
+		case "createCheckoutSession":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_createSessionCheckout(ctx, field)
+				return ec._Mutation_createCheckoutSession(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

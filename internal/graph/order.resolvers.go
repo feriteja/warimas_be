@@ -72,11 +72,11 @@ func (r *mutationResolver) UpdateOrderStatus(ctx context.Context, input model.Up
 	}, nil
 }
 
-// CreateSessionCheckout is the resolver for the createSessionCheckout field.
-func (r *mutationResolver) CreateSessionCheckout(ctx context.Context, input model.CreateSessionCheckoutInput) (*model.SessionCheckoutResponse, error) {
+// CreateCheckoutSession is the resolver for the CreateCheckoutSession field.
+func (r *mutationResolver) CreateCheckoutSession(ctx context.Context, input model.CreateCheckoutSessionInput) (*model.CheckoutSessionResponse, error) {
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "resolver"),
-		zap.String("method", "CreateSessionCheckout"),
+		zap.String("method", "CreateCheckoutSession"),
 		zap.Int("item_count", len(input.Items)),
 	)
 
@@ -103,7 +103,7 @@ func (r *mutationResolver) CreateSessionCheckout(ctx context.Context, input mode
 		zap.Time("expires_at", session.ExpiresAt),
 	)
 
-	return &model.SessionCheckoutResponse{
+	return &model.CheckoutSessionResponse{
 		ExternalID: session.ExternalID,
 		Status:     model.CheckoutSessionStatus(session.Status),
 		ExpiresAt:  session.ExpiresAt,

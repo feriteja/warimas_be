@@ -627,6 +627,93 @@ func (ec *executionContext) fieldContext_CheckoutSessionItem_subtotal(_ context.
 	return fc, nil
 }
 
+func (ec *executionContext) _CheckoutSessionResponse_externalId(ctx context.Context, field graphql.CollectedField, obj *model.CheckoutSessionResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CheckoutSessionResponse_externalId,
+		func(ctx context.Context) (any, error) {
+			return obj.ExternalID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CheckoutSessionResponse_externalId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CheckoutSessionResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CheckoutSessionResponse_status(ctx context.Context, field graphql.CollectedField, obj *model.CheckoutSessionResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CheckoutSessionResponse_status,
+		func(ctx context.Context) (any, error) {
+			return obj.Status, nil
+		},
+		nil,
+		ec.marshalNCheckoutSessionStatus2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSessionStatus,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CheckoutSessionResponse_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CheckoutSessionResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type CheckoutSessionStatus does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CheckoutSessionResponse_expiresAt(ctx context.Context, field graphql.CollectedField, obj *model.CheckoutSessionResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CheckoutSessionResponse_expiresAt,
+		func(ctx context.Context) (any, error) {
+			return obj.ExpiresAt, nil
+		},
+		nil,
+		ec.marshalNTime2timeᚐTime,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CheckoutSessionResponse_expiresAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CheckoutSessionResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ConfirmCheckoutSessionResponse_success(ctx context.Context, field graphql.CollectedField, obj *model.ConfirmCheckoutSessionResponse) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1748,93 +1835,6 @@ func (ec *executionContext) fieldContext_Payment_provider(_ context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _SessionCheckoutResponse_externalId(ctx context.Context, field graphql.CollectedField, obj *model.SessionCheckoutResponse) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_SessionCheckoutResponse_externalId,
-		func(ctx context.Context) (any, error) {
-			return obj.ExternalID, nil
-		},
-		nil,
-		ec.marshalNID2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_SessionCheckoutResponse_externalId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "SessionCheckoutResponse",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _SessionCheckoutResponse_status(ctx context.Context, field graphql.CollectedField, obj *model.SessionCheckoutResponse) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_SessionCheckoutResponse_status,
-		func(ctx context.Context) (any, error) {
-			return obj.Status, nil
-		},
-		nil,
-		ec.marshalNCheckoutSessionStatus2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSessionStatus,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_SessionCheckoutResponse_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "SessionCheckoutResponse",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type CheckoutSessionStatus does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _SessionCheckoutResponse_expiresAt(ctx context.Context, field graphql.CollectedField, obj *model.SessionCheckoutResponse) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_SessionCheckoutResponse_expiresAt,
-		func(ctx context.Context) (any, error) {
-			return obj.ExpiresAt, nil
-		},
-		nil,
-		ec.marshalNTime2timeᚐTime,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_SessionCheckoutResponse_expiresAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "SessionCheckoutResponse",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _UpdateSessionAddressResponse_success(ctx context.Context, field graphql.CollectedField, obj *model.UpdateSessionAddressResponse) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1868,6 +1868,40 @@ func (ec *executionContext) fieldContext_UpdateSessionAddressResponse_success(_ 
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputCheckoutSessionItemInput(ctx context.Context, obj any) (model.CheckoutSessionItemInput, error) {
+	var it model.CheckoutSessionItemInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"variantId", "quantity"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "variantId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("variantId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.VariantID = data
+		case "quantity":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quantity"))
+			data, err := ec.unmarshalNInt2int32(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Quantity = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputConfirmCheckoutSessionInput(ctx context.Context, obj any) (model.ConfirmCheckoutSessionInput, error) {
 	var it model.ConfirmCheckoutSessionInput
 	asMap := map[string]any{}
@@ -1895,6 +1929,33 @@ func (ec *executionContext) unmarshalInputConfirmCheckoutSessionInput(ctx contex
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputCreateCheckoutSessionInput(ctx context.Context, obj any) (model.CreateCheckoutSessionInput, error) {
+	var it model.CreateCheckoutSessionInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"items"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "items":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("items"))
+			data, err := ec.unmarshalNCheckoutSessionItemInput2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSessionItemInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Items = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputCreateOrderFromSessionInput(ctx context.Context, obj any) (model.CreateOrderFromSessionInput, error) {
 	var it model.CreateOrderFromSessionInput
 	asMap := map[string]any{}
@@ -1916,33 +1977,6 @@ func (ec *executionContext) unmarshalInputCreateOrderFromSessionInput(ctx contex
 				return it, err
 			}
 			it.ExternalID = data
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputCreateSessionCheckoutInput(ctx context.Context, obj any) (model.CreateSessionCheckoutInput, error) {
-	var it model.CreateSessionCheckoutInput
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"items"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "items":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("items"))
-			data, err := ec.unmarshalNSessionCheckoutItemInput2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionCheckoutItemInputᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Items = data
 		}
 	}
 
@@ -2029,40 +2063,6 @@ func (ec *executionContext) unmarshalInputOrderSortInput(ctx context.Context, ob
 				return it, err
 			}
 			it.Direction = data
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputSessionCheckoutItemInput(ctx context.Context, obj any) (model.SessionCheckoutItemInput, error) {
-	var it model.SessionCheckoutItemInput
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"variantId", "quantity"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "variantId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("variantId"))
-			data, err := ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.VariantID = data
-		case "quantity":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quantity"))
-			data, err := ec.unmarshalNInt2int32(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Quantity = data
 		}
 	}
 
@@ -2288,6 +2288,55 @@ func (ec *executionContext) _CheckoutSessionItem(ctx context.Context, sel ast.Se
 			}
 		case "subtotal":
 			out.Values[i] = ec._CheckoutSessionItem_subtotal(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var checkoutSessionResponseImplementors = []string{"CheckoutSessionResponse"}
+
+func (ec *executionContext) _CheckoutSessionResponse(ctx context.Context, sel ast.SelectionSet, obj *model.CheckoutSessionResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, checkoutSessionResponseImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("CheckoutSessionResponse")
+		case "externalId":
+			out.Values[i] = ec._CheckoutSessionResponse_externalId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "status":
+			out.Values[i] = ec._CheckoutSessionResponse_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "expiresAt":
+			out.Values[i] = ec._CheckoutSessionResponse_expiresAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -2666,55 +2715,6 @@ func (ec *executionContext) _Payment(ctx context.Context, sel ast.SelectionSet, 
 	return out
 }
 
-var sessionCheckoutResponseImplementors = []string{"SessionCheckoutResponse"}
-
-func (ec *executionContext) _SessionCheckoutResponse(ctx context.Context, sel ast.SelectionSet, obj *model.SessionCheckoutResponse) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, sessionCheckoutResponseImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("SessionCheckoutResponse")
-		case "externalId":
-			out.Values[i] = ec._SessionCheckoutResponse_externalId(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "status":
-			out.Values[i] = ec._SessionCheckoutResponse_status(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "expiresAt":
-			out.Values[i] = ec._SessionCheckoutResponse_expiresAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
 var updateSessionAddressResponseImplementors = []string{"UpdateSessionAddressResponse"}
 
 func (ec *executionContext) _UpdateSessionAddressResponse(ctx context.Context, sel ast.SelectionSet, obj *model.UpdateSessionAddressResponse) graphql.Marshaler {
@@ -2812,6 +2812,40 @@ func (ec *executionContext) marshalNCheckoutSessionItem2ᚖwarimasᚑbeᚋintern
 	return ec._CheckoutSessionItem(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNCheckoutSessionItemInput2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSessionItemInputᚄ(ctx context.Context, v any) ([]*model.CheckoutSessionItemInput, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]*model.CheckoutSessionItemInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNCheckoutSessionItemInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSessionItemInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) unmarshalNCheckoutSessionItemInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSessionItemInput(ctx context.Context, v any) (*model.CheckoutSessionItemInput, error) {
+	res, err := ec.unmarshalInputCheckoutSessionItemInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNCheckoutSessionResponse2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSessionResponse(ctx context.Context, sel ast.SelectionSet, v model.CheckoutSessionResponse) graphql.Marshaler {
+	return ec._CheckoutSessionResponse(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNCheckoutSessionResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSessionResponse(ctx context.Context, sel ast.SelectionSet, v *model.CheckoutSessionResponse) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._CheckoutSessionResponse(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNCheckoutSessionStatus2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCheckoutSessionStatus(ctx context.Context, v any) (model.CheckoutSessionStatus, error) {
 	var res model.CheckoutSessionStatus
 	err := res.UnmarshalGQL(v)
@@ -2841,6 +2875,11 @@ func (ec *executionContext) marshalNConfirmCheckoutSessionResponse2ᚖwarimasᚑ
 	return ec._ConfirmCheckoutSessionResponse(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNCreateCheckoutSessionInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCreateCheckoutSessionInput(ctx context.Context, v any) (model.CreateCheckoutSessionInput, error) {
+	res, err := ec.unmarshalInputCreateCheckoutSessionInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNCreateOrderFromSessionInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCreateOrderFromSessionInput(ctx context.Context, v any) (model.CreateOrderFromSessionInput, error) {
 	res, err := ec.unmarshalInputCreateOrderFromSessionInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -2858,11 +2897,6 @@ func (ec *executionContext) marshalNCreateOrderResponse2ᚖwarimasᚑbeᚋintern
 		return graphql.Null
 	}
 	return ec._CreateOrderResponse(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalNCreateSessionCheckoutInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCreateSessionCheckoutInput(ctx context.Context, v any) (model.CreateSessionCheckoutInput, error) {
-	res, err := ec.unmarshalInputCreateSessionCheckoutInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNOrder2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrder(ctx context.Context, sel ast.SelectionSet, v model.Order) graphql.Marshaler {
@@ -3005,40 +3039,6 @@ func (ec *executionContext) unmarshalNPaymentStatus2warimasᚑbeᚋinternalᚋgr
 
 func (ec *executionContext) marshalNPaymentStatus2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPaymentStatus(ctx context.Context, sel ast.SelectionSet, v model.PaymentStatus) graphql.Marshaler {
 	return v
-}
-
-func (ec *executionContext) unmarshalNSessionCheckoutItemInput2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionCheckoutItemInputᚄ(ctx context.Context, v any) ([]*model.SessionCheckoutItemInput, error) {
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
-	var err error
-	res := make([]*model.SessionCheckoutItemInput, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNSessionCheckoutItemInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionCheckoutItemInput(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) unmarshalNSessionCheckoutItemInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionCheckoutItemInput(ctx context.Context, v any) (*model.SessionCheckoutItemInput, error) {
-	res, err := ec.unmarshalInputSessionCheckoutItemInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNSessionCheckoutResponse2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionCheckoutResponse(ctx context.Context, sel ast.SelectionSet, v model.SessionCheckoutResponse) graphql.Marshaler {
-	return ec._SessionCheckoutResponse(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNSessionCheckoutResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSessionCheckoutResponse(ctx context.Context, sel ast.SelectionSet, v *model.SessionCheckoutResponse) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._SessionCheckoutResponse(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNUpdateOrderStatusInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐUpdateOrderStatusInput(ctx context.Context, v any) (model.UpdateOrderStatusInput, error) {
