@@ -741,6 +741,7 @@ func (s *service) GetPaymentOrderInfo(
 		Status:          PaymentStatus(paymentData.Status),
 		TotalAmount:     int(order.TotalAmount),
 		Currency:        order.Currency,
+		ExpiresAt:       paymentData.ExpireAt,
 		ShippingAddress: ShippingAddress{
 			Name:         address.Name,
 			ReceiverName: address.ReceiverName,

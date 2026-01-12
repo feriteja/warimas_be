@@ -283,6 +283,7 @@ func (r *queryResolver) PaymentOrderInfo(ctx context.Context, externalID string)
 		Status:      model.PaymentStatus(paymentInfo.Status),
 		TotalAmount: int32(paymentInfo.TotalAmount),
 		Currency:    paymentInfo.Currency,
+		ExpiresAt:   paymentInfo.ExpiresAt,
 		ShippingAddress: &model.ShippingAddress{
 			Name:         paymentInfo.ShippingAddress.Name,
 			ReceiverName: paymentInfo.ShippingAddress.ReceiverName,
