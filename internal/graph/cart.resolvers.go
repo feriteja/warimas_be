@@ -53,7 +53,6 @@ func (r *mutationResolver) AddToCart(ctx context.Context, input model.AddToCartI
 
 	// 3️⃣ Service
 	cartItem, err := r.CartSvc.AddToCart(ctx, cart.AddToCartParams{
-		UserID:    userID,
 		VariantID: input.VariantID,
 		Quantity:  uint32(input.Quantity),
 	})
@@ -84,28 +83,43 @@ func (r *mutationResolver) AddToCart(ctx context.Context, input model.AddToCartI
 }
 
 // Update cart quantity
-func (r *mutationResolver) UpdateCart(ctx context.Context, input model.UpdateCartInput) (*model.Response, error) {
-	userID, ok := utils.GetUserIDFromContext(ctx)
-	if !ok {
-		return &model.Response{
-			Success: false,
-			Message: utils.StrPtr("Unauthorized"),
-		}, nil
-	}
+func (r *mutationResolver) UpdateCart(
+	ctx context.Context,
+	input model.UpdateCartInput,
+) (*model.Response, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "graphql.resolver"),
+		zap.String("resolver", "UpdateCart"),
+		zap.String("variant_id", input.VariantID),
+		zap.Int32("quantity", input.Quantity),
+	)
 
+	log.Info("update cart request received")
+
+	// ------------------------------------------------------------------
+	// Service Call
+	// ------------------------------------------------------------------
 	err := r.CartSvc.UpdateCartQuantity(ctx, cart.UpdateToCartParams{
-		UserID:    uint32(userID),
 		VariantID: input.VariantID,
 		Quantity:  uint32(input.Quantity),
 	})
 
 	if err != nil {
+		log.Error("failed to update cart",
+			zap.Error(err),
+		)
+
 		return &model.Response{
 			Success: false,
-			Message: utils.StrPtr(err.Error()),
+			Message: utils.StrPtr("Failed to update cart"),
 		}, nil
 	}
 
+	log.Info("cart updated successfully")
+
+	// ------------------------------------------------------------------
+	// Response
+	// ------------------------------------------------------------------
 	return &model.Response{
 		Success: true,
 		Message: utils.StrPtr("Cart updated"),

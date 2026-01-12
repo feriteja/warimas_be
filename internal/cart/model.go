@@ -40,7 +40,6 @@ type ProductCart struct {
 }
 
 type AddToCartParams struct {
-	UserID    uint
 	VariantID string
 	Quantity  uint32
 }
