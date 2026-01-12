@@ -63,14 +63,14 @@ func (r *repository) UpdatePaymentStatus(externalID, status string) error {
 
 func (r *repository) GetPaymentByOrder(orderID uint) (*Payment, error) {
 	row := r.db.QueryRow(`
-		SELECT id, order_id, external_reference, invoice_url, amount, status, payment_method, created_at, updated_at
+		SELECT id, order_id, external_reference, invoice_url, amount, status, payment_method, created_at, updated_at, payment_code
 		FROM payments WHERE order_id = $1
 	`, orderID)
 
 	var p Payment
 	err := row.Scan(
 		&p.ID, &p.OrderID, &p.ExternalReference, &p.InvoiceURL,
-		&p.Amount, &p.Status, &p.PaymentMethod, &p.CreatedAt, &p.UpdatedAt,
+		&p.Amount, &p.Status, &p.PaymentMethod, &p.CreatedAt, &p.UpdatedAt, &p.PaymentCode,
 	)
 	if err != nil {
 		return nil, err

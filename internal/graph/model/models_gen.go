@@ -24,6 +24,7 @@ type AddToCartResponse struct {
 type Address struct {
 	ID           string  `json:"id"`
 	Name         string  `json:"name"`
+	ReceiverName string  `json:"receiverName"`
 	Phone        string  `json:"phone"`
 	AddressLine1 string  `json:"addressLine1"`
 	AddressLine2 *string `json:"addressLine2,omitempty"`
@@ -388,12 +389,14 @@ type Response struct {
 }
 
 type ShippingAddress struct {
-	Name       string `json:"name"`
-	Phone      string `json:"phone"`
-	Address    string `json:"address"`
-	City       string `json:"city"`
-	Province   string `json:"province"`
-	PostalCode string `json:"postalCode"`
+	Name         string  `json:"name"`
+	ReceiverName string  `json:"receiverName"`
+	Phone        string  `json:"phone"`
+	Address1     string  `json:"address1"`
+	Address2     *string `json:"address2,omitempty"`
+	City         string  `json:"city"`
+	Province     string  `json:"province"`
+	PostalCode   string  `json:"postalCode"`
 }
 
 type Subcategory struct {

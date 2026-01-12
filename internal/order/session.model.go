@@ -75,13 +75,14 @@ type PaymentOrderInfoResponse struct {
 }
 
 type ShippingAddress struct {
-	Name       string  `json:"name"`
-	Phone      string  `json:"phone"`
-	Address1   string  `json:"address2"`
-	Address2   *string `json:"address1"`
-	City       string  `json:"city"`
-	Province   string  `json:"province"`
-	PostalCode string  `json:"postalCode"`
+	Name         string  `json:"name"`
+	ReceiverName string  `json:"receiver_name"`
+	Phone        string  `json:"phone"`
+	Address1     string  `json:"address2"`
+	Address2     *string `json:"address1"`
+	City         string  `json:"city"`
+	Province     string  `json:"province"`
+	PostalCode   string  `json:"postalCode"`
 }
 
 type PaymentDetail struct {

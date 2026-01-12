@@ -716,7 +716,7 @@ func (s *service) GetPaymentOrderInfo(
 		}
 	}
 
-	payment, err := s.paymentRepo.GetPaymentByOrder(order.ID)
+	paymentData, err := s.paymentRepo.GetPaymentByOrder(order.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -726,22 +726,36 @@ func (s *service) GetPaymentOrderInfo(
 		return nil, err
 	}
 
+	instructions := payment.GetInstructions(paymentData.PaymentMethod)
+
+	instructions = payment.InjectVariables(
+		instructions,
+		payment.InstructionVars{
+			"amount":       utils.FormatIDR(int64(order.TotalAmount)),
+			"payment_code": paymentData.PaymentCode,
+		},
+	)
+
 	paymentInfo := &PaymentOrderInfoResponse{
 		OrderExternalID: externalID,
-		Status:          PaymentStatus(payment.Status),
+		Status:          PaymentStatus(paymentData.Status),
 		TotalAmount:     int(order.TotalAmount),
 		Currency:        order.Currency,
 		ShippingAddress: ShippingAddress{
-			Name:       address.Name,
-			Phone:      address.Phone,
-			Address1:   address.Address1,
-			Address2:   address.Address2,
-			City:       address.City,
-			Province:   address.Province,
-			PostalCode: address.Postal,
+			Name:         address.Name,
+			ReceiverName: address.ReceiverName,
+			Phone:        address.Phone,
+			Address1:     address.Address1,
+			Address2:     address.Address2,
+			City:         address.City,
+			Province:     address.Province,
+			PostalCode:   address.Postal,
 		},
 		Payment: PaymentDetail{
-			Method: payment.PaymentMethod,
+			Method:       paymentData.PaymentMethod,
+			PaymentCode:  &paymentData.PaymentCode,
+			ReferenceID:  paymentData.ExternalReference,
+			Instructions: instructions,
 		},
 	}
 

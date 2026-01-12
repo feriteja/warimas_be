@@ -137,3 +137,21 @@ func ExternalIDFromSession(prefix, sessionID string) string {
 		hex.EncodeToString(h[:6]), // short but safe
 	)
 }
+
+func FormatIDR(amount int64) string {
+	if amount == 0 {
+		return "Rp 0"
+	}
+
+	s := strconv.FormatInt(amount, 10)
+	n := len(s)
+
+	var parts []string
+	for n > 3 {
+		parts = append([]string{s[n-3 : n]}, parts...)
+		n -= 3
+	}
+	parts = append([]string{s[:n]}, parts...)
+
+	return "Rp " + strings.Join(parts, ".")
+}

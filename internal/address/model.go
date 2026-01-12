@@ -8,8 +8,9 @@ type Address struct {
 	ID     uuid.UUID
 	UserID uint
 
-	Name  string
-	Phone string
+	Name         string
+	ReceiverName string
+	Phone        string
 
 	Address1 string
 	Address2 *string

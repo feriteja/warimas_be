@@ -2189,10 +2189,14 @@ func (ec *executionContext) fieldContext_PaymentOrderInfoResponse_shippingAddres
 			switch field.Name {
 			case "name":
 				return ec.fieldContext_ShippingAddress_name(ctx, field)
+			case "receiverName":
+				return ec.fieldContext_ShippingAddress_receiverName(ctx, field)
 			case "phone":
 				return ec.fieldContext_ShippingAddress_phone(ctx, field)
-			case "address":
-				return ec.fieldContext_ShippingAddress_address(ctx, field)
+			case "address1":
+				return ec.fieldContext_ShippingAddress_address1(ctx, field)
+			case "address2":
+				return ec.fieldContext_ShippingAddress_address2(ctx, field)
 			case "city":
 				return ec.fieldContext_ShippingAddress_city(ctx, field)
 			case "province":
@@ -2276,6 +2280,35 @@ func (ec *executionContext) fieldContext_ShippingAddress_name(_ context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _ShippingAddress_receiverName(ctx context.Context, field graphql.CollectedField, obj *model.ShippingAddress) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ShippingAddress_receiverName,
+		func(ctx context.Context) (any, error) {
+			return obj.ReceiverName, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ShippingAddress_receiverName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ShippingAddress",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ShippingAddress_phone(ctx context.Context, field graphql.CollectedField, obj *model.ShippingAddress) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2305,14 +2338,14 @@ func (ec *executionContext) fieldContext_ShippingAddress_phone(_ context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _ShippingAddress_address(ctx context.Context, field graphql.CollectedField, obj *model.ShippingAddress) (ret graphql.Marshaler) {
+func (ec *executionContext) _ShippingAddress_address1(ctx context.Context, field graphql.CollectedField, obj *model.ShippingAddress) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_ShippingAddress_address,
+		ec.fieldContext_ShippingAddress_address1,
 		func(ctx context.Context) (any, error) {
-			return obj.Address, nil
+			return obj.Address1, nil
 		},
 		nil,
 		ec.marshalNString2string,
@@ -2321,7 +2354,36 @@ func (ec *executionContext) _ShippingAddress_address(ctx context.Context, field 
 	)
 }
 
-func (ec *executionContext) fieldContext_ShippingAddress_address(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_ShippingAddress_address1(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ShippingAddress",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ShippingAddress_address2(ctx context.Context, field graphql.CollectedField, obj *model.ShippingAddress) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ShippingAddress_address2,
+		func(ctx context.Context) (any, error) {
+			return obj.Address2, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ShippingAddress_address2(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ShippingAddress",
 		Field:      field,
@@ -3449,16 +3511,23 @@ func (ec *executionContext) _ShippingAddress(ctx context.Context, sel ast.Select
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "receiverName":
+			out.Values[i] = ec._ShippingAddress_receiverName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "phone":
 			out.Values[i] = ec._ShippingAddress_phone(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "address":
-			out.Values[i] = ec._ShippingAddress_address(ctx, field, obj)
+		case "address1":
+			out.Values[i] = ec._ShippingAddress_address1(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "address2":
+			out.Values[i] = ec._ShippingAddress_address2(ctx, field, obj)
 		case "city":
 			out.Values[i] = ec._ShippingAddress_city(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

@@ -46,7 +46,7 @@ func (r *repository) GetByUserID(
 			name, phone,
 			address_line1, address_line2,
 			city, province, postal_code, country,
-			is_default, is_active
+			is_default, is_active, receiver_name
 		FROM addresses
 		WHERE user_id = $1
 		  AND is_active = true
@@ -69,7 +69,7 @@ func (r *repository) GetByUserID(
 			&a.Name, &a.Phone,
 			&a.Address1, &a.Address2,
 			&a.City, &a.Province, &a.Postal, &a.Country,
-			&a.IsDefault, &a.IsActive,
+			&a.IsDefault, &a.IsActive, &a.ReceiverName,
 		); err != nil {
 			log.Error("scan failed", zap.Error(err))
 			return nil, err
@@ -97,7 +97,7 @@ func (r *repository) GetByID(
 			name, phone,
 			address_line1, address_line2,
 			city, province, postal_code, country,
-			is_default, is_active
+			is_default, is_active, receiver_name
 		FROM addresses
 		WHERE id = $1 AND is_active = true
 		LIMIT 1
@@ -109,7 +109,7 @@ func (r *repository) GetByID(
 		&a.Name, &a.Phone,
 		&a.Address1, &a.Address2,
 		&a.City, &a.Province, &a.Postal, &a.Country,
-		&a.IsDefault, &a.IsActive,
+		&a.IsDefault, &a.IsActive, &a.ReceiverName,
 	)
 
 	if err == sql.ErrNoRows {

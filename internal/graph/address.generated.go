@@ -87,6 +87,35 @@ func (ec *executionContext) fieldContext_Address_name(_ context.Context, field g
 	return fc, nil
 }
 
+func (ec *executionContext) _Address_receiverName(ctx context.Context, field graphql.CollectedField, obj *model.Address) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Address_receiverName,
+		func(ctx context.Context) (any, error) {
+			return obj.ReceiverName, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Address_receiverName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Address",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Address_phone(ctx context.Context, field graphql.CollectedField, obj *model.Address) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -347,6 +376,8 @@ func (ec *executionContext) fieldContext_CreateAddressResponse_address(_ context
 				return ec.fieldContext_Address_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Address_name(ctx, field)
+			case "receiverName":
+				return ec.fieldContext_Address_receiverName(ctx, field)
 			case "phone":
 				return ec.fieldContext_Address_phone(ctx, field)
 			case "addressLine1":
@@ -427,6 +458,8 @@ func (ec *executionContext) fieldContext_UpdateAddressResponse_address(_ context
 				return ec.fieldContext_Address_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Address_name(ctx, field)
+			case "receiverName":
+				return ec.fieldContext_Address_receiverName(ctx, field)
 			case "phone":
 				return ec.fieldContext_Address_phone(ctx, field)
 			case "addressLine1":
@@ -666,6 +699,11 @@ func (ec *executionContext) _Address(ctx context.Context, sel ast.SelectionSet, 
 			}
 		case "name":
 			out.Values[i] = ec._Address_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "receiverName":
+			out.Values[i] = ec._Address_receiverName(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

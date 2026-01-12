@@ -61,6 +61,7 @@ type ComplexityRoot struct {
 		Phone        func(childComplexity int) int
 		PostalCode   func(childComplexity int) int
 		Province     func(childComplexity int) int
+		ReceiverName func(childComplexity int) int
 	}
 
 	AuthResponse struct {
@@ -335,12 +336,14 @@ type ComplexityRoot struct {
 	}
 
 	ShippingAddress struct {
-		Address    func(childComplexity int) int
-		City       func(childComplexity int) int
-		Name       func(childComplexity int) int
-		Phone      func(childComplexity int) int
-		PostalCode func(childComplexity int) int
-		Province   func(childComplexity int) int
+		Address1     func(childComplexity int) int
+		Address2     func(childComplexity int) int
+		City         func(childComplexity int) int
+		Name         func(childComplexity int) int
+		Phone        func(childComplexity int) int
+		PostalCode   func(childComplexity int) int
+		Province     func(childComplexity int) int
+		ReceiverName func(childComplexity int) int
 	}
 
 	Subcategory struct {
@@ -487,6 +490,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Address.Province(childComplexity), true
+
+	case "Address.receiverName":
+		if e.complexity.Address.ReceiverName == nil {
+			break
+		}
+
+		return e.complexity.Address.ReceiverName(childComplexity), true
 
 	case "AuthResponse.token":
 		if e.complexity.AuthResponse.Token == nil {
@@ -1936,12 +1946,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Response.Success(childComplexity), true
 
-	case "ShippingAddress.address":
-		if e.complexity.ShippingAddress.Address == nil {
+	case "ShippingAddress.address1":
+		if e.complexity.ShippingAddress.Address1 == nil {
 			break
 		}
 
-		return e.complexity.ShippingAddress.Address(childComplexity), true
+		return e.complexity.ShippingAddress.Address1(childComplexity), true
+
+	case "ShippingAddress.address2":
+		if e.complexity.ShippingAddress.Address2 == nil {
+			break
+		}
+
+		return e.complexity.ShippingAddress.Address2(childComplexity), true
 
 	case "ShippingAddress.city":
 		if e.complexity.ShippingAddress.City == nil {
@@ -1977,6 +1994,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ShippingAddress.Province(childComplexity), true
+
+	case "ShippingAddress.receiverName":
+		if e.complexity.ShippingAddress.ReceiverName == nil {
+			break
+		}
+
+		return e.complexity.ShippingAddress.ReceiverName(childComplexity), true
 
 	case "Subcategory.categoryID":
 		if e.complexity.Subcategory.CategoryID == nil {

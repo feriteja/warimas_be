@@ -8,7 +8,7 @@ import (
 type Payment struct {
 	ID                uint
 	OrderID           uint
-	ExternalReference string
+	ExternalReference string //PaymentRequestID from xendit
 	ProviderPaymentID string
 	InvoiceURL        string
 	Amount            int64
@@ -17,6 +17,9 @@ type Payment struct {
 	ChannelCode       string
 	PaymentCode       string
 	Currency          string
+	Provider          string
+	PaidAt            time.Time
+	failure_reason    string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 	ExpireAt          time.Time

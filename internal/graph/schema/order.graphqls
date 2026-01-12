@@ -181,8 +181,10 @@ type PaymentOrderInfoResponse {
 
 type ShippingAddress {
   name: String!
+  receiverName: String!
   phone: String!
-  address: String!
+  address1: String!
+  address2: String
   city: String!
   province: String!
   postalCode: String!

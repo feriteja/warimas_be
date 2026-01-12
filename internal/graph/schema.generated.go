@@ -1794,6 +1794,8 @@ func (ec *executionContext) fieldContext_Query_addresses(_ context.Context, fiel
 				return ec.fieldContext_Address_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Address_name(ctx, field)
+			case "receiverName":
+				return ec.fieldContext_Address_receiverName(ctx, field)
 			case "phone":
 				return ec.fieldContext_Address_phone(ctx, field)
 			case "addressLine1":
@@ -1846,6 +1848,8 @@ func (ec *executionContext) fieldContext_Query_address(ctx context.Context, fiel
 				return ec.fieldContext_Address_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Address_name(ctx, field)
+			case "receiverName":
+				return ec.fieldContext_Address_receiverName(ctx, field)
 			case "phone":
 				return ec.fieldContext_Address_phone(ctx, field)
 			case "addressLine1":

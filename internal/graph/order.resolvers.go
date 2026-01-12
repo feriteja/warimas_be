@@ -264,7 +264,6 @@ func (r *queryResolver) CheckoutSession(ctx context.Context, externalID string) 
 
 // PaymentOrderInfo is the resolver for the paymentOrderInfo field.
 func (r *queryResolver) PaymentOrderInfo(ctx context.Context, externalID string) (*model.PaymentOrderInfoResponse, error) {
-
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "resolver"),
 		zap.String("method", "PaymentOrderInfo"),
@@ -281,8 +280,25 @@ func (r *queryResolver) PaymentOrderInfo(ctx context.Context, externalID string)
 	}
 
 	paymentInfoMap := &model.PaymentOrderInfoResponse{
-		Status: model.PaymentStatus(paymentInfo.Status),
-	}
+		Status:      model.PaymentStatus(paymentInfo.Status),
+		TotalAmount: int32(paymentInfo.TotalAmount),
+		Currency:    paymentInfo.Currency,
+		ShippingAddress: &model.ShippingAddress{
+			Name:         paymentInfo.ShippingAddress.Name,
+			ReceiverName: paymentInfo.ShippingAddress.ReceiverName,
+			Phone:        paymentInfo.ShippingAddress.Phone,
+			Address1:     paymentInfo.ShippingAddress.Address1,
+			Address2:     paymentInfo.ShippingAddress.Address2,
+			City:         paymentInfo.ShippingAddress.City,
+			Province:     paymentInfo.ShippingAddress.Province,
+			PostalCode:   paymentInfo.ShippingAddress.PostalCode,
+		},
+		Payment: &model.PaymentDetail{
+			Method:       paymentInfo.Payment.Method,
+			PaymentCode:  paymentInfo.Payment.PaymentCode,
+			ReferenceID:  paymentInfo.Payment.ReferenceID,
+			Instructions: paymentInfo.Payment.Instructions,
+		}}
 
 	return paymentInfoMap, nil
 }
