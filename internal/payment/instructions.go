@@ -10,6 +10,7 @@ const (
 
 	// QRIS
 	MethodQRIS = "QRIS"
+	MethodCOD  = "COD"
 
 	// E-Wallet
 	MethodOVO     = "OVO"
@@ -26,6 +27,14 @@ const (
 )
 
 var InstructionMap = map[string][]string{
+	MethodCOD: {
+		"Pesanan akan dikirim ke alamat tujuan",
+		"Siapkan uang tunai sebesar {{amount}} saat kurir tiba",
+		"Pastikan nominal pembayaran sesuai dengan total pesanan",
+		"Lakukan pembayaran langsung kepada kurir",
+		"Simpan bukti pembayaran dari kurir",
+		"Jika tidak tersedia uang pas, siapkan nominal mendekati jumlah pembayaran",
+	},
 
 	// ========================
 	// VIRTUAL ACCOUNT
