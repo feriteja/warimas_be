@@ -3,7 +3,6 @@ package cart
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -11,13 +10,14 @@ import (
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
 
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
 type Repository interface {
 	UpdateCartQuantity(ctx context.Context, params UpdateToCartParams) error
 	RemoveFromCart(ctx context.Context, params DeleteFromCartParams) error
-	ClearCart(userId uint) error
+	ClearCart(ctx context.Context, userId uint) error
 	GetCartItemByUserAndVariant(
 		ctx context.Context,
 		userID uint,
@@ -49,69 +49,123 @@ func NewRepository(db *sql.DB) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) UpdateCartQuantity(ctx context.Context, updateParams UpdateToCartParams) error {
-	// Validate that quantity is positive
+func (r *repository) UpdateCartQuantity(
+	ctx context.Context,
+	updateParams UpdateToCartParams,
+) error {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "UpdateCartQuantity"),
+		zap.Uint32("user_id", updateParams.UserID),
+		zap.String("variant_id", updateParams.VariantID),
+		zap.Uint32("quantity", updateParams.Quantity),
+	)
+
+	// Validate quantity
 	if updateParams.Quantity <= 0 {
-		return errors.New("quantity must be greater than zero")
+		log.Warn("invalid quantity provided")
+		return ErrInvalidQuantity
 	}
 
-	// Update the cart item’s quantity
-	res, err := r.db.Exec(`
+	// Execute update
+	res, err := r.db.ExecContext(ctx, `
 		UPDATE carts
 		SET quantity = $1, updated_at = NOW()
 		WHERE user_id = $2 AND variant_id = $3
-	`, updateParams.Quantity, updateParams.UserID, updateParams.VariantID)
+	`,
+		updateParams.Quantity,
+		updateParams.UserID,
+		updateParams.VariantID,
+	)
 	if err != nil {
-		return err
+		log.Error("failed to execute update cart query", zap.Error(err))
+		return ErrFailedUpdateCart
 	}
 
-	// Check if any rows were actually updated
+	// Check affected rows
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return err
-	}
-	if rowsAffected == 0 {
-		return errors.New("no matching cart item found to update")
+		log.Error("failed to read rows affected", zap.Error(err))
+		return ErrFailedUpdateCart
 	}
 
+	if rowsAffected == 0 {
+		log.Info("no cart item found to update")
+		return ErrCartItemNotFound
+	}
+
+	log.Info("cart quantity updated successfully")
 	return nil
 }
+func (r *repository) RemoveFromCart(
+	ctx context.Context,
+	deleteParams DeleteFromCartParams,
+) error {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "RemoveFromCart"),
+		zap.Uint32("user_id", deleteParams.UserID),
+		zap.String("variant_id", deleteParams.VariantID),
+	)
 
-func (r *repository) RemoveFromCart(ctx context.Context, deleteParams DeleteFromCartParams) error {
-	res, err := r.db.Exec(`
+	res, err := r.db.ExecContext(ctx, `
 		DELETE FROM carts
 		WHERE user_id = $1 AND variant_id = $2
-	`, deleteParams.UserID, deleteParams.VariantID)
+	`,
+		deleteParams.UserID,
+		deleteParams.VariantID,
+	)
 	if err != nil {
-		return err
+		log.Error("failed to execute delete cart query", zap.Error(err))
+		return ErrFailedRemoveCart
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return err
-	}
-	if rowsAffected == 0 {
-		return errors.New("no matching cart item found to delete")
+		log.Error("failed to read rows affected", zap.Error(err))
+		return ErrFailedRemoveCart
 	}
 
+	if rowsAffected == 0 {
+		log.Info("no cart item found to delete")
+		return ErrCartItemNotFound
+	}
+
+	log.Info("cart item removed successfully")
 	return nil
 }
 
-func (r *repository) ClearCart(userID uint) error {
-	res, err := r.db.Exec(`DELETE FROM carts
-	 WHERE user_id=$1`, userID)
+func (r *repository) ClearCart(
+	ctx context.Context,
+	userID uint,
+) error {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "ClearCart"),
+		zap.Uint("user_id", userID),
+	)
+
+	res, err := r.db.ExecContext(ctx, `
+		DELETE FROM carts
+		WHERE user_id = $1
+	`, userID)
 	if err != nil {
-		return nil
+		log.Error("failed to execute clear cart query", zap.Error(err))
+		return ErrFailedClearCart
 	}
+
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		return err
+		log.Error("failed to read rows affected", zap.Error(err))
+		return ErrFailedClearCart
 	}
 
 	if rowsAffected == 0 {
-		return errors.New("no matching cart item found to delete")
+		log.Info("cart already empty")
+		return ErrCartEmpty
 	}
 
+	log.Info("cart cleared successfully", zap.Int64("items_removed", rowsAffected))
 	return nil
 }
 
@@ -120,17 +174,23 @@ func (r *repository) GetCartItemByUserAndVariant(
 	userID uint,
 	variantID string,
 ) (*CartItem, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "GetCartItemByUserAndVariant"),
+		zap.Uint("user_id", userID),
+		zap.String("variant_id", variantID),
+	)
 
 	query := `
-	SELECT
-		id,
-		user_id,
-		variant_id,
-		quantity,
-		created_at,
-		updated_at
-	FROM carts
-	WHERE user_id = $1 AND variant_id = $2
+		SELECT
+			id,
+			user_id,
+			variant_id,
+			quantity,
+			created_at,
+			updated_at
+		FROM carts
+		WHERE user_id = $1 AND variant_id = $2
 	`
 
 	item := &CartItem{
@@ -150,33 +210,48 @@ func (r *repository) GetCartItemByUserAndVariant(
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
+		log.Info("cart item not found")
+		return nil, ErrCartItemNotFound
 	}
 
+	if err != nil {
+		log.Error("failed to scan cart item", zap.Error(err))
+		return nil, ErrFailedGetCartItem
+	}
+
+	log.Debug("cart item fetched successfully")
 	return item, nil
 }
-
 func (r *repository) UpdateCartItemQuantity(
 	ctx context.Context,
 	cartItemID string,
 	quantity uint32,
 ) (*CartItem, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "UpdateCartItemQuantity"),
+		zap.String("cart_item_id", cartItemID),
+		zap.Uint32("quantity", quantity),
+	)
+
+	// Validate quantity
+	if quantity == 0 {
+		log.Warn("invalid quantity provided")
+		return nil, ErrInvalidQuantity
+	}
 
 	query := `
-	UPDATE carts
-	SET quantity = $1,
-	    updated_at = NOW()
-	WHERE id = $2
-	RETURNING
-		id,
-		user_id,
-		variant_id,
-		quantity,
-		created_at,
-		updated_at
+		UPDATE carts
+		SET quantity = $1,
+		    updated_at = NOW()
+		WHERE id = $2
+		RETURNING
+			id,
+			user_id,
+			variant_id,
+			quantity,
+			created_at,
+			updated_at
 	`
 
 	item := &CartItem{
@@ -184,6 +259,7 @@ func (r *repository) UpdateCartItemQuantity(
 			Variant: VariantCart{},
 		},
 	}
+
 	row := r.db.QueryRowContext(ctx, query, quantity, cartItemID)
 	err := row.Scan(
 		&item.ID,
@@ -194,10 +270,17 @@ func (r *repository) UpdateCartItemQuantity(
 		&item.UpdatedAt,
 	)
 
-	if err != nil {
-		return nil, err
+	if err == sql.ErrNoRows {
+		log.Info("cart item not found for update")
+		return nil, ErrCartItemNotFound
 	}
 
+	if err != nil {
+		log.Error("failed to update cart item quantity", zap.Error(err))
+		return nil, ErrFailedUpdateCartItem
+	}
+
+	log.Info("cart item quantity updated successfully")
 	return item, nil
 }
 
@@ -205,30 +288,33 @@ func (r *repository) CreateCartItem(
 	ctx context.Context,
 	params CreateCartItemParams,
 ) (*CartItem, error) {
-
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
 		zap.String("method", "CreateCartItem"),
 		zap.Uint("user_id", params.UserID),
 		zap.String("variant_id", params.VariantID),
+		zap.Uint32("quantity", params.Quantity),
 	)
 
-	log.Debug("start create cart item")
+	if params.Quantity == 0 {
+		log.Warn("invalid quantity provided")
+		return nil, ErrInvalidQuantity
+	}
 
 	query := `
-	INSERT INTO carts (
-		user_id,
-		variant_id,
-		quantity
-	)
-	VALUES ($1, $2, $3)
-	RETURNING
-		id,
-		user_id,
-		variant_id,
-		quantity,
-		created_at,
-		updated_at
+		INSERT INTO carts (
+			user_id,
+			variant_id,
+			quantity
+		)
+		VALUES ($1, $2, $3)
+		RETURNING
+			id,
+			user_id,
+			variant_id,
+			quantity,
+			created_at,
+			updated_at
 	`
 
 	item := &CartItem{
@@ -254,11 +340,18 @@ func (r *repository) CreateCartItem(
 		&item.UpdatedAt,
 	)
 	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == pq.ErrorCode(PgUniqueViolation) {
+			log.Info("cart item already exists",
+				zap.String("constraint", pqErr.Constraint),
+			)
+			return nil, ErrCartItemAlreadyExist
+		}
+
 		log.Error("failed to create cart item", zap.Error(err))
-		return nil, err
+		return nil, ErrFailedCreateCartItem
 	}
 
-	log.Info("success create cart item",
+	log.Info("cart item created successfully",
 		zap.String("cart_item_id", item.ID),
 	)
 
@@ -280,8 +373,14 @@ func (r *repository) GetCartRows(
 		zap.Uint("user_id", userID),
 	)
 
+	// Validate input
+	if userID == 0 {
+		log.Warn("invalid user_id provided")
+		return nil, ErrFailedGetCartRows
+	}
+
 	start := time.Now()
-	log.Info("query started")
+	log.Debug("cart query started")
 
 	// ---------- pagination ----------
 	finalLimit := uint16(20)
@@ -322,7 +421,8 @@ func (r *repository) GetCartRows(
 
 		if filter.Search != nil && *filter.Search != "" {
 			log = log.With(zap.String("filter_search", *filter.Search))
-			where = append(where,
+			where = append(
+				where,
 				fmt.Sprintf(
 					"(p.name ILIKE $%d OR v.name ILIKE $%d)",
 					len(args)+1,
@@ -396,17 +496,17 @@ func (r *repository) GetCartRows(
 
 	args = append(args, finalLimit, offset)
 
-	log.Debug("executing query",
+	log.Debug("executing cart query",
 		zap.Int("args_count", len(args)),
 	)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		log.Error("query failed",
+		log.Error("cart query execution failed",
 			zap.Error(err),
 			zap.Duration("duration", time.Since(start)),
 		)
-		return nil, err
+		return nil, ErrFailedGetCartRows
 	}
 	defer rows.Close()
 
@@ -439,25 +539,25 @@ func (r *repository) GetCartRows(
 			&row.Stock,
 			&row.VariantImageURL,
 		); err != nil {
-			log.Error("row scan failed",
+			log.Error("cart row scan failed",
 				zap.Error(err),
 				zap.Duration("duration", time.Since(start)),
 			)
-			return nil, err
+			return nil, ErrFailedGetCartRows
 		}
 
 		result = append(result, row)
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Error("rows iteration failed",
+		log.Error("cart rows iteration failed",
 			zap.Error(err),
 			zap.Duration("duration", time.Since(start)),
 		)
-		return nil, err
+		return nil, ErrFailedGetCartRows
 	}
 
-	log.Info("query success",
+	log.Info("cart query success",
 		zap.Int("rows", len(result)),
 		zap.Duration("duration", time.Since(start)),
 	)

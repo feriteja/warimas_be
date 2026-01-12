@@ -26,7 +26,7 @@ type Service interface {
 		limit, page *uint16) ([]*model.CartItem, error)
 	UpdateCartQuantity(ctx context.Context, params UpdateToCartParams) error
 	RemoveFromCart(ctx context.Context, param DeleteFromCartParams) error
-	ClearCart(userID uint) error
+	ClearCart(ctx context.Context, userID uint) error
 }
 
 // service implements the Service interface
@@ -156,7 +156,7 @@ func (s *service) AddToCart(
 }
 
 // service/cart_service.go
-// service/cart_service.go
+
 func (s *service) GetCart(
 	ctx context.Context,
 	userID uint,
@@ -165,14 +165,28 @@ func (s *service) GetCart(
 	limit, page *uint16,
 ) ([]*model.CartItem, error) {
 
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "GetCart"),
+		zap.Uint("user_id", userID),
+	)
+
+	log.Debug("get cart started")
+
 	rows, err := s.repo.GetCartRows(ctx, userID, filter, sort, limit, page)
 	if err != nil {
-		return nil, err
+		log.Error("failed to get cart rows", zap.Error(err))
+		return nil, ErrFailedGetCartRows
 	}
 
 	items := make([]*model.CartItem, 0, len(rows))
 
 	for _, r := range rows {
+		var variantImageURL string
+		if r.VariantImageURL != nil {
+			variantImageURL = *r.VariantImageURL
+		}
+
 		item := &model.CartItem{
 			ID:        r.CartID,
 			UserID:    r.UserID,
@@ -196,7 +210,7 @@ func (s *service) GetCart(
 					QuantityType: r.QuantityType,
 					Price:        r.Price,
 					Stock:        int32(r.Stock),
-					ImageURL:     *r.VariantImageURL,
+					ImageURL:     variantImageURL,
 				},
 			},
 		}
@@ -204,112 +218,9 @@ func (s *service) GetCart(
 		items = append(items, item)
 	}
 
+	log.Info("get cart success",
+		zap.Int("items", len(items)),
+	)
+
 	return items, nil
-}
-
-// UpdateCartQuantity updates the quantity of a specific product in the user's cart
-func (s *service) UpdateCartQuantity(
-	ctx context.Context,
-	updateParams UpdateToCartParams,
-) error {
-
-	log := logger.FromCtx(ctx).With(
-		zap.String("layer", "service"),
-		zap.String("method", "UpdateCartQuantity"),
-		zap.String("variant_id", updateParams.VariantID),
-		zap.Uint32("quantity", updateParams.Quantity),
-	)
-
-	userID, ok := utils.GetUserIDFromContext(ctx)
-	if !ok {
-		log.Warn("missing user id in context")
-		return errors.New("user ID is required")
-	}
-
-	log = log.With(zap.Uint("user_id", userID))
-
-	if updateParams.VariantID == "" {
-		log.Warn("variant id is empty")
-		return errors.New("variant ID is required")
-	}
-
-	// Quantity <= 0 means remove item from cart
-	if updateParams.Quantity <= 0 {
-		log.Info("quantity <= 0, removing item from cart")
-
-		err := s.repo.RemoveFromCart(ctx, DeleteFromCartParams{
-			UserID:    uint32(userID),
-			VariantID: updateParams.VariantID,
-		})
-		if err != nil {
-			log.Error("failed to remove item from cart", zap.Error(err))
-			return err
-		}
-
-		log.Info("item successfully removed from cart")
-		return nil
-	}
-
-	log.Info("updating cart quantity")
-	updateParams.UserID = uint32(userID)
-
-	err := s.repo.UpdateCartQuantity(ctx, updateParams)
-	if err != nil {
-		log.Error("failed to update cart quantity", zap.Error(err))
-		return err
-	}
-
-	log.Info("cart quantity updated successfully")
-	return nil
-}
-
-// RemoveFromCart deletes a product from the user's cart
-func (s *service) RemoveFromCart(
-	ctx context.Context,
-	param DeleteFromCartParams,
-) error {
-
-	log := logger.FromCtx(ctx).With(
-		zap.String("layer", "service"),
-		zap.String("method", "RemoveFromCart"),
-		zap.String("variant_id", param.VariantID),
-	)
-
-	userID, ok := utils.GetUserIDFromContext(ctx)
-	if !ok {
-		log.Warn("missing user id in context")
-		return errors.New("user ID is required")
-	}
-
-	log = log.With(zap.Uint("user_id", userID))
-
-	if param.VariantID == "" {
-		log.Warn("variant id is empty")
-		return errors.New("variant ID is required")
-	}
-
-	param.UserID = uint32(userID)
-
-	log.Info("removing item from cart")
-
-	if err := s.repo.RemoveFromCart(ctx, param); err != nil {
-		log.Error("failed to remove item from cart", zap.Error(err))
-		return err
-	}
-
-	log.Info("item successfully removed from cart")
-	return nil
-}
-
-// ClearCart removes all items for a given user (optional utility)
-func (s *service) ClearCart(userID uint) error {
-	if userID == 0 {
-		return errors.New("user ID is required")
-	}
-
-	if err := s.repo.ClearCart(userID); err != nil {
-		return err
-	}
-
-	return nil
 }
