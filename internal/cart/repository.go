@@ -211,7 +211,7 @@ func (r *repository) GetCartItemByUserAndVariant(
 
 	if err == sql.ErrNoRows {
 		log.Info("cart item not found")
-		return nil, ErrCartItemNotFound
+		return nil, nil
 	}
 
 	if err != nil {
@@ -277,7 +277,7 @@ func (r *repository) UpdateCartItemQuantity(
 
 	if err != nil {
 		log.Error("failed to update cart item quantity", zap.Error(err))
-		return nil, ErrFailedUpdateCartItem
+		return nil, ErrFailedUpdateCart
 	}
 
 	log.Info("cart item quantity updated successfully")

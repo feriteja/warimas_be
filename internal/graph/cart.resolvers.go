@@ -128,15 +128,8 @@ func (r *mutationResolver) UpdateCart(
 
 // Remove item from cart
 func (r *mutationResolver) RemoveFromCart(ctx context.Context, variantID string) (*model.Response, error) {
-	userID, ok := utils.GetUserIDFromContext(ctx)
-	if !ok {
-		return &model.Response{
-			Success: false,
-			Message: utils.StrPtr("Unauthorized"),
-		}, nil
-	}
 
-	err := r.CartSvc.RemoveFromCart(ctx, cart.DeleteFromCartParams{UserID: uint32(userID)})
+	err := r.CartSvc.RemoveFromCart(ctx, cart.DeleteFromCartParams{VariantID: variantID})
 	if err != nil {
 		return &model.Response{
 			Success: false,

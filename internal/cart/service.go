@@ -26,7 +26,7 @@ type Service interface {
 		limit, page *uint16) ([]*model.CartItem, error)
 	UpdateCartQuantity(ctx context.Context, params UpdateToCartParams) error
 	RemoveFromCart(ctx context.Context, param DeleteFromCartParams) error
-	ClearCart(ctx context.Context, userID uint) error
+	ClearCart(ctx context.Context) error
 }
 
 // service implements the Service interface
@@ -223,4 +223,114 @@ func (s *service) GetCart(
 	)
 
 	return items, nil
+}
+
+// UpdateCartQuantity updates the quantity of a specific product in the user's cart
+func (s *service) UpdateCartQuantity(
+	ctx context.Context,
+	updateParams UpdateToCartParams,
+) error {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "UpdateCartQuantity"),
+		zap.String("variant_id", updateParams.VariantID),
+		zap.Uint32("quantity", updateParams.Quantity),
+	)
+
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		log.Warn("missing user id in context")
+		return errors.New("user ID is required")
+	}
+
+	log = log.With(zap.Uint("user_id", userID))
+
+	if updateParams.VariantID == "" {
+		log.Warn("variant id is empty")
+		return errors.New("variant ID is required")
+	}
+
+	// Quantity <= 0 means remove item from cart
+	if updateParams.Quantity <= 0 {
+		log.Info("quantity <= 0, removing item from cart")
+
+		err := s.repo.RemoveFromCart(ctx, DeleteFromCartParams{
+			UserID:    uint32(userID),
+			VariantID: updateParams.VariantID,
+		})
+		if err != nil {
+			log.Error("failed to remove item from cart", zap.Error(err))
+			return err
+		}
+
+		log.Info("item successfully removed from cart")
+		return nil
+	}
+
+	log.Info("updating cart quantity")
+	updateParams.UserID = uint32(userID)
+
+	err := s.repo.UpdateCartQuantity(ctx, updateParams)
+	if err != nil {
+		log.Error("failed to update cart quantity", zap.Error(err))
+		return err
+	}
+
+	log.Info("cart quantity updated successfully")
+	return nil
+}
+
+// RemoveFromCart deletes a product from the user's cart
+func (s *service) RemoveFromCart(
+	ctx context.Context,
+	param DeleteFromCartParams,
+) error {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "RemoveFromCart"),
+		zap.String("variant_id", param.VariantID),
+	)
+
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok || userID == 0 {
+		log.Warn("user not authenticated")
+		return ErrUserNotAuthenticated
+	}
+
+	log = log.With(zap.Uint("user_id", userID))
+	param.UserID = uint32(userID)
+
+	if err := s.repo.RemoveFromCart(ctx, param); err != nil {
+		log.Error("failed to remove cart item", zap.Error(err))
+		return ErrFailedRemoveCart
+	}
+
+	log.Info("cart item removed successfully")
+	return nil
+}
+
+func (s *service) ClearCart(ctx context.Context) error {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "ClearCart"),
+	)
+
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok || userID == 0 {
+		log.Warn("user not authenticated")
+		return ErrUserNotAuthenticated
+	}
+
+	log = log.With(zap.Uint("user_id", userID))
+
+	if err := s.repo.ClearCart(ctx, userID); err != nil {
+		log.Error("failed to clear cart", zap.Error(err))
+		return ErrFailedClearCart
+	}
+
+	log.Info("cart cleared successfully")
+	return nil
 }
