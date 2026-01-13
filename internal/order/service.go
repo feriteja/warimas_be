@@ -377,11 +377,20 @@ func (s *service) CreateSession(
 
 	log.Info("create checkout session started")
 
-	userId, _ := utils.GetUserIDFromContext(ctx)
+	if len(input.Items) == 0 {
+		log.Warn("checkout session creation with empty items")
+		return nil, errors.New("checkout session must contain at least one item")
+	}
 
-	// 1. Validate variants & calculate price
+	// 1. Resolve user (optional)
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		log.Debug("creating checkout session as guest")
+	}
+
+	// 2. Validate variants & calculate price
 	items := make([]CheckoutSessionItem, 0, len(input.Items))
-	subtotal := 0
+	var subtotal int64 = 0
 
 	for i, item := range input.Items {
 		logItem := log.With(
@@ -397,22 +406,27 @@ func (s *service) CreateSession(
 
 		variant, product, err := s.repo.GetVariantForCheckout(ctx, item.VariantID)
 		if err != nil {
-			logItem.Error(
-				"failed to get variant for checkout",
-				zap.Error(err),
-			)
+			logItem.Error("failed to get variant for checkout", zap.Error(err))
 			return nil, err
 		}
 
-		itemSubtotal := int32(variant.Price) * item.Quantity
-		subtotal += int(itemSubtotal)
+		if variant.Stock < item.Quantity {
+			logItem.Warn(
+				"insufficient stock",
+				zap.Int32("stock", variant.Stock),
+			)
+			return nil, errors.New("product stock is not enough")
+		}
+
+		itemSubtotal := int64(variant.Price) * int64(item.Quantity)
+		subtotal += itemSubtotal
 
 		logItem.Debug(
 			"item calculated",
 			zap.String("variant_name", variant.Name),
 			zap.String("product_name", product.Name),
-			zap.Int("price", int(variant.Price)),
-			zap.Int32("item_subtotal", itemSubtotal),
+			zap.Int64("price", int64(variant.Price)),
+			zap.Int64("item_subtotal", itemSubtotal),
 		)
 
 		items = append(items, CheckoutSessionItem{
@@ -422,54 +436,53 @@ func (s *service) CreateSession(
 			ProductName:  product.Name,
 			Quantity:     int(item.Quantity),
 			QuantityType: variant.QuantityType,
-			ImageURL:     &variant.ImageURL,
+			ImageURL:     &variant.ImageURL, // already *string
 			Price:        int(variant.Price),
 			Subtotal:     int(itemSubtotal),
 		})
 	}
 
-	// 2. Calculate fees
+	// 3. Calculate fees
 	tax := subtotal * 10 / 100
-	shippingFee := 0
-	discount := 0
+	var shippingFee int64 = 0
+	var discount int64 = 0
 	totalPrice := subtotal + tax + shippingFee - discount
 
 	log.Info(
 		"price calculated",
-		zap.Int("subtotal", subtotal),
-		zap.Int("tax", tax),
-		zap.Int("shipping_fee", shippingFee),
-		zap.Int("discount", discount),
-		zap.Int("total_price", totalPrice),
+		zap.Int64("subtotal", subtotal),
+		zap.Int64("tax", tax),
+		zap.Int64("shipping_fee", shippingFee),
+		zap.Int64("discount", discount),
+		zap.Int64("total_price", totalPrice),
 	)
 
+	// 4. Create session model
 	sessionID := uuid.New()
-	sessionExternalID := utils.ExternalIDFromSession("ck", sessionID.String())
-	// 3. Create session model
 	session := &CheckoutSession{
 		ID:          sessionID,
-		ExternalID:  sessionExternalID,
-		UserID:      &userId,
+		ExternalID:  utils.ExternalIDFromSession("ck", sessionID.String()),
 		Status:      CheckoutSessionStatusPending,
-		Subtotal:    subtotal,
-		Tax:         tax,
-		ShippingFee: shippingFee,
-		Discount:    discount,
-		TotalPrice:  totalPrice,
+		Subtotal:    int(subtotal),
+		Tax:         int(tax),
+		ShippingFee: int(shippingFee),
+		Discount:    int(discount),
+		TotalPrice:  int(totalPrice),
 		ExpiresAt:   time.Now().Add(30 * time.Minute),
 	}
 
+	if userID != 0 {
+		session.UserID = &userID
+	}
+
 	log = log.With(
-		zap.String("session_id", session.ID.String()),
+		zap.String("session_id", session.ExternalID),
 		zap.String("status", string(session.Status)),
 	)
 
-	// 4. Persist in transaction
+	// 5. Persist in transaction
 	if err := s.repo.CreateCheckoutSession(ctx, session, items); err != nil {
-		log.Error(
-			"failed to create checkout session",
-			zap.Error(err),
-		)
+		log.Error("failed to create checkout session", zap.Error(err))
 		return nil, err
 	}
 
@@ -485,38 +498,72 @@ func (s *service) UpdateSessionAddress(
 	guestID *string,
 ) error {
 
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "UpdateSessionAddress"),
+		zap.String("session_id", externalID),
+		zap.String("address_id", addressID),
+	)
+
+	// 1. Load checkout session
 	session, err := s.repo.GetCheckoutSession(ctx, externalID)
 	if err != nil {
+		log.Error("failed to fetch checkout session", zap.Error(err))
 		return err
 	}
 
-	userID, _ := utils.GetUserIDFromContext(ctx)
-
-	if guestID != nil {
-		guestUUID := uuid.MustParse(*guestID)
-		if session.GuestID == nil || *session.GuestID != guestUUID {
-			return errors.New("forbidden: guest ID mismatch")
-		}
-	} else {
-		if session.UserID == nil || *session.UserID != userID {
-			return errors.New("forbidden: cannot update others' sessions")
-		}
+	// 2. Authorization
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		log.Warn("failed to get user id from context", zap.Error(err))
 	}
 
+	if guestID != nil {
+		guestUUID, err := uuid.Parse(*guestID)
+		if err != nil {
+			log.Warn("invalid guest id format", zap.String("guest_id", *guestID))
+			return errors.New("invalid guest id")
+		}
+
+		if session.GuestID == nil || *session.GuestID != guestUUID {
+			log.Warn("guest id mismatch")
+			return errors.New("forbidden: guest ID mismatch")
+		}
+
+		log.Debug("authorized as guest", zap.String("guest_id", guestUUID.String()))
+
+	} else {
+		if session.UserID == nil || *session.UserID != userID {
+			log.Warn("user does not own checkout session", zap.Uint("user_id", userID))
+			return errors.New("forbidden: cannot update others' sessions")
+		}
+
+		log.Debug("authorized as user", zap.Uint("user_id", userID))
+	}
+
+	// 3. Session state validation
 	if session.Status != CheckoutSessionStatusPending {
+		log.Warn("checkout session is not editable",
+			zap.String("status", string(session.Status)),
+		)
 		return errors.New("checkout session is not editable")
 	}
 
 	if time.Now().After(session.ExpiresAt) {
+		log.Warn("checkout session expired",
+			zap.Time("expires_at", session.ExpiresAt),
+		)
 		return errors.New("checkout session expired")
 	}
 
+	// 4. Fetch user address
 	address, err := s.repo.GetUserAddress(ctx, addressID, userID)
 	if err != nil {
+		log.Error("failed to fetch user address", zap.Error(err))
 		return err
 	}
 
-	// 4. Recalculate pricing
+	// 5. Recalculate pricing
 	shippingFee := s.calculateShippingFee(address, session.Items)
 	tax := s.calculateTax(address, session.Subtotal)
 
@@ -525,8 +572,21 @@ func (s *service) UpdateSessionAddress(
 	session.Tax = tax
 	session.TotalPrice = session.Subtotal + tax + shippingFee - session.Discount
 
-	// 5. Persist changes
-	return s.repo.UpdateSessionAddressAndPricing(ctx, session)
+	log.Debug("pricing recalculated",
+		zap.Int("shipping_fee", shippingFee),
+		zap.Int("tax", tax),
+		zap.Int("total_price", session.TotalPrice),
+	)
+
+	// 6. Persist changes
+	if err := s.repo.UpdateSessionAddressAndPricing(ctx, session); err != nil {
+		log.Error("failed to update session address and pricing", zap.Error(err))
+		return err
+	}
+
+	log.Info("session address updated successfully")
+
+	return nil
 }
 
 func (s *service) calculateShippingFee(

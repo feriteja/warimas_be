@@ -111,12 +111,23 @@ func (r *mutationResolver) CreateCheckoutSession(ctx context.Context, input mode
 }
 
 // UpdateSessionAddress is the resolver for the updateSessionAddress field.
-func (r *mutationResolver) UpdateSessionAddress(ctx context.Context, input model.UpdateSessionAddressInput) (*model.UpdateSessionAddressResponse, error) {
-	log := logger.FromCtx(ctx).With(
+func (r *mutationResolver) UpdateSessionAddress(
+	ctx context.Context,
+	input model.UpdateSessionAddressInput,
+) (*model.UpdateSessionAddressResponse, error) {
+
+	logFields := []zap.Field{
 		zap.String("layer", "resolver"),
 		zap.String("method", "UpdateSessionAddress"),
 		zap.String("session_id", input.ExternalID),
-	)
+		zap.String("address_id", input.AddressID),
+	}
+
+	if input.GuestID != nil {
+		logFields = append(logFields, zap.String("guest_id", *input.GuestID))
+	}
+
+	log := logger.FromCtx(ctx).With(logFields...)
 
 	err := r.OrderSvc.UpdateSessionAddress(
 		ctx,
@@ -128,6 +139,8 @@ func (r *mutationResolver) UpdateSessionAddress(ctx context.Context, input model
 		log.Error("failed to update session address", zap.Error(err))
 		return nil, err
 	}
+
+	log.Info("session address updated successfully")
 
 	return &model.UpdateSessionAddressResponse{
 		Success: true,

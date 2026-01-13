@@ -638,6 +638,7 @@ func (r *repository) GetVariantForCheckout(
 			v.price,
 			v.quantity_type,
 			v.imageurl,
+			v.stock,
 			p.name
 		FROM variants v
 		LEFT JOIN products p ON p.id = v.product_id
@@ -648,7 +649,7 @@ func (r *repository) GetVariantForCheckout(
 	var p product.Product
 
 	err := r.db.QueryRowContext(ctx, query, variantID).
-		Scan(&v.ID, &v.Name, &v.Price, &v.QuantityType, &v.ImageURL, &p.Name)
+		Scan(&v.ID, &v.Name, &v.Price, &v.QuantityType, &v.ImageURL, &v.Stock, &p.Name)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -864,10 +865,19 @@ func (r *repository) GetUserAddress(
 	userID uint,
 ) (*address.Address, error) {
 
-	query := `
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "GetUserAddress"),
+		zap.String("address_id", addressID),
+		zap.Uint("user_id", userID),
+	)
+
+	const query = `
 		SELECT id, city
 		FROM addresses
-		WHERE id = $1 AND user_id = $2
+		WHERE id = $1
+		  AND user_id = $2
+		  AND is_active = true
 	`
 
 	var a address.Address
@@ -875,8 +885,16 @@ func (r *repository) GetUserAddress(
 		Scan(&a.ID, &a.City)
 
 	if err != nil {
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Warn("address not found or not owned by user")
+			return nil, ErrAddressNotFound
+		}
+
+		log.Error("failed to query user address", zap.Error(err))
+		return nil, ErrAddressNotFound
 	}
+
+	log.Debug("user address fetched successfully")
 
 	return &a, nil
 }
