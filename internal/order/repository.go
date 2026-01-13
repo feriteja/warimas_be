@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 	"warimas-be/internal/address"
 	"warimas-be/internal/logger"
 	"warimas-be/internal/product"
@@ -66,6 +67,7 @@ type Repository interface {
 	GetCheckoutSession(
 		ctx context.Context,
 		externalID string,
+
 	) (*CheckoutSession, error)
 
 	GetUserAddress(
@@ -791,21 +793,50 @@ func (r *repository) GetCheckoutSession(
 	externalID string,
 ) (*CheckoutSession, error) {
 
-	var s CheckoutSession
+	start := time.Now()
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "GetCheckoutSession"),
+		zap.String("external_id", externalID),
+	)
 
 	query := `
 		SELECT
-			id, status, expires_at, created_at,
-			user_id, address_id,
-			subtotal, tax, shipping_fee, discount, total_amount, currency, external_id,
-			confirmed_at
-		FROM checkout_sessions
-		WHERE external_id = $1
+			s.id, s.external_id, s.status, s.expires_at, s.created_at,
+			s.user_id, s.address_id,
+			s.subtotal, s.tax, s.shipping_fee, s.discount,
+			s.total_amount, s.currency, s.confirmed_at,
+
+			i.id, i.variant_id, i.variant_name, i.product_name,
+			i.imageurl, i.quantity, i.quantity_type,
+			i.unit_price, i.subtotal
+		FROM checkout_sessions s
+		LEFT JOIN checkout_session_items i
+			ON i.checkout_session_id = s.id
+		WHERE s.external_id = $1
 	`
 
-	err := r.db.QueryRowContext(ctx, query, externalID).
-		Scan(
+	rows, err := r.db.QueryContext(ctx, query, externalID)
+	if err != nil {
+		log.Error("failed to query checkout session", zap.Error(err))
+		return nil, errors.New("failed to load checkout session")
+	}
+	defer rows.Close()
+
+	var session *CheckoutSession
+	itemCount := 0
+
+	for rows.Next() {
+		var (
+			s      CheckoutSession
+			item   CheckoutSessionItem
+			itemID *uuid.UUID
+		)
+
+		err := rows.Scan(
 			&s.ID,
+			&s.ExternalID,
 			&s.Status,
 			&s.ExpiresAt,
 			&s.CreatedAt,
@@ -817,30 +848,9 @@ func (r *repository) GetCheckoutSession(
 			&s.Discount,
 			&s.TotalPrice,
 			&s.Currency,
-			&s.ExternalID,
 			&s.ConfirmedAt,
-		)
-	if err != nil {
-		return nil, err
-	}
 
-	// Load items
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT
-			id, variant_id, variant_name, product_name, imageurl,
-			quantity, quantity_type, unit_price, subtotal
-		FROM checkout_session_items
-		WHERE checkout_session_id = $1
-	`, s.ID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var item CheckoutSessionItem
-		err := rows.Scan(
-			&item.ID,
+			&itemID,
 			&item.VariantID,
 			&item.VariantName,
 			&item.ProductName,
@@ -851,12 +861,41 @@ func (r *repository) GetCheckoutSession(
 			&item.Subtotal,
 		)
 		if err != nil {
-			return nil, err
+			log.Error("failed to scan checkout session row", zap.Error(err))
+			return nil, errors.New("failed to load checkout session")
 		}
-		s.Items = append(s.Items, item)
+
+		// Initialize session once
+		if session == nil {
+			s.Items = make([]CheckoutSessionItem, 0, 4)
+			session = &s
+		}
+
+		// LEFT JOIN: item may be NULL
+		if itemID != nil {
+			item.ID = *itemID
+			session.Items = append(session.Items, item)
+			itemCount++
+		}
 	}
 
-	return &s, nil
+	if err := rows.Err(); err != nil {
+		log.Error("row iteration failed", zap.Error(err))
+		return nil, errors.New("failed to load checkout session")
+	}
+
+	if session == nil {
+		log.Warn("checkout session not found")
+		return nil, sql.ErrNoRows // or domain error
+	}
+
+	log.Debug(
+		"checkout session loaded",
+		zap.Int("item_count", itemCount),
+		zap.Duration("duration_ms", time.Since(start)),
+	)
+
+	return session, nil
 }
 
 func (r *repository) GetUserAddress(

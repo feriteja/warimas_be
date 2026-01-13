@@ -512,6 +512,10 @@ func (s *service) UpdateSessionAddress(
 		return err
 	}
 
+	if session.Status != "PENDING" {
+		return errors.New("session has expired")
+	}
+
 	// 2. Authorization
 	userID, ok := utils.GetUserIDFromContext(ctx)
 	if !ok {
@@ -734,27 +738,56 @@ func (s *service) GetSession(
 	externalID string,
 ) (*CheckoutSession, error) {
 
-	userID, ok := utils.GetUserIDFromContext(ctx)
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "GetSession"),
+		zap.String("session_id", externalID),
+	)
+
+	// 1. Resolve user (if any)
+	userID, userOK := utils.GetUserIDFromContext(ctx)
+
+	// 2. Load session
 	session, err := s.repo.GetCheckoutSession(ctx, externalID)
 	if err != nil {
+		log.Error("failed to fetch checkout session", zap.Error(err))
 		return nil, err
 	}
 
-	// Ownership check (if session is tied to a user)
-	if session.UserID != nil && ok {
-		if *session.UserID != userID {
+	// 3. Ownership check
+	if session.UserID != nil {
+		if !userOK || *session.UserID != userID {
+			log.Warn("forbidden access to user checkout session",
+				zap.Uint("user_id", userID),
+			)
 			return nil, errors.New("forbidden")
 		}
 	}
 
-	// Expiration handling (soft)
+	// Optional: guest ownership check (if you there is guest sessions)
+	// if session.GuestID != nil {
+	//     guestID := guestIDFromContext(ctx)
+	//     if guestID == nil || *guestID != *session.GuestID {
+	//         log.Warn("forbidden access to guest checkout session")
+	//         return nil, errors.New("forbidden")
+	//     }
+	// }
+
+	// 4. Lazy expiration handling
 	if time.Now().After(session.ExpiresAt) &&
 		session.Status == CheckoutSessionStatusPending {
 
-		// Optional: mark expired lazily
-		_ = s.repo.MarkSessionExpired(ctx, session.ID)
-		session.Status = CheckoutSessionStatusExpired
+		if err := s.repo.MarkSessionExpired(ctx, session.ID); err != nil {
+			log.Error("failed to mark session expired", zap.Error(err))
+		} else {
+			log.Info("checkout session marked as expired")
+			session.Status = CheckoutSessionStatusExpired
+		}
 	}
+
+	log.Debug("checkout session fetched successfully",
+		zap.String("status", string(session.Status)),
+	)
 
 	return session, nil
 }

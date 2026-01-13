@@ -99,7 +99,7 @@ func (r *repository) GetByID(
 			city, province, postal_code, country,
 			is_default, is_active, receiver_name
 		FROM addresses
-		WHERE id = $1 AND is_active = true
+		WHERE id = $1
 		LIMIT 1
 	`
 
