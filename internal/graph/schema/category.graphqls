@@ -1,6 +1,7 @@
 type Category {
   id: ID!
   name: String!
+  subcategories: [Subcategory!]!
 }
 
 type Subcategory {
@@ -9,14 +10,26 @@ type Subcategory {
   name: String!
 }
 
+type CategoryPage {
+  items: [Category!]!
+  pageInfo: PageInfo!
+}
+
+type SubcategoryPage {
+  items: [Subcategory!]!
+  pageInfo: PageInfo!
+}
+
+# This can be moved to a common schema file (e.g., common.graphqls)
+
 extend type Query {
-  category(filter: String, limit: Int = 20, page: Int = 1): [Category!]!
+  category(filter: String, limit: Int = 20, page: Int = 1): CategoryPage!
   subcategory(
     filter: String
     categoryID: ID!
     limit: Int = 20
     page: Int = 1
-  ): [Subcategory!]!
+  ): SubcategoryPage!
 }
 
 extend type Mutation {

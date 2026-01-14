@@ -42,8 +42,8 @@ type QueryResolver interface {
 	Addresses(ctx context.Context) ([]*model.Address, error)
 	Address(ctx context.Context, addressID string) (*model.Address, error)
 	MyCart(ctx context.Context, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) ([]*model.CartItem, error)
-	Category(ctx context.Context, filter *string, limit *int32, page *int32) ([]*model.Category, error)
-	Subcategory(ctx context.Context, filter *string, categoryID string, limit *int32, page *int32) ([]*model.Subcategory, error)
+	Category(ctx context.Context, filter *string, limit *int32, page *int32) (*model.CategoryPage, error)
+	Subcategory(ctx context.Context, filter *string, categoryID string, limit *int32, page *int32) (*model.SubcategoryPage, error)
 	OrderList(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, pagination *model.PaginationInput) (*model.OrderListResponse, error)
 	OrderDetail(ctx context.Context, orderID string) (*model.Order, error)
 	OrderDetailByExternalID(ctx context.Context, externalID string) (*model.Order, error)
@@ -961,6 +961,8 @@ func (ec *executionContext) fieldContext_Mutation_addCategory(ctx context.Contex
 				return ec.fieldContext_Category_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Category_name(ctx, field)
+			case "subcategories":
+				return ec.fieldContext_Category_subcategories(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Category", field.Name)
 		},
@@ -1975,7 +1977,7 @@ func (ec *executionContext) _Query_category(ctx context.Context, field graphql.C
 			return ec.resolvers.Query().Category(ctx, fc.Args["filter"].(*string), fc.Args["limit"].(*int32), fc.Args["page"].(*int32))
 		},
 		nil,
-		ec.marshalNCategory2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCategoryᚄ,
+		ec.marshalNCategoryPage2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCategoryPage,
 		true,
 		true,
 	)
@@ -1989,12 +1991,12 @@ func (ec *executionContext) fieldContext_Query_category(ctx context.Context, fie
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Category_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Category_name(ctx, field)
+			case "items":
+				return ec.fieldContext_CategoryPage_items(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_CategoryPage_pageInfo(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Category", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type CategoryPage", field.Name)
 		},
 	}
 	defer func() {
@@ -2022,7 +2024,7 @@ func (ec *executionContext) _Query_subcategory(ctx context.Context, field graphq
 			return ec.resolvers.Query().Subcategory(ctx, fc.Args["filter"].(*string), fc.Args["categoryID"].(string), fc.Args["limit"].(*int32), fc.Args["page"].(*int32))
 		},
 		nil,
-		ec.marshalNSubcategory2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSubcategoryᚄ,
+		ec.marshalNSubcategoryPage2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐSubcategoryPage,
 		true,
 		true,
 	)
@@ -2036,14 +2038,12 @@ func (ec *executionContext) fieldContext_Query_subcategory(ctx context.Context, 
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Subcategory_id(ctx, field)
-			case "categoryID":
-				return ec.fieldContext_Subcategory_categoryID(ctx, field)
-			case "name":
-				return ec.fieldContext_Subcategory_name(ctx, field)
+			case "items":
+				return ec.fieldContext_SubcategoryPage_items(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_SubcategoryPage_pageInfo(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Subcategory", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type SubcategoryPage", field.Name)
 		},
 	}
 	defer func() {

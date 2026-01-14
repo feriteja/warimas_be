@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
 	"warimas-be/internal/utils"
 
@@ -14,10 +13,11 @@ import (
 )
 
 type Repository interface {
-	GetCategories(ctx context.Context, filter *string, limit, page *int32) ([]*model.Category, error)
-	AddCategory(ctx context.Context, name string) (*model.Category, error)
-	GetSubcategories(ctx context.Context, categoryID string, filter *string, limit, page *int32) ([]*model.Subcategory, error)
-	AddSubcategory(ctx context.Context, categoryID string, name string) (*model.Subcategory, error)
+	GetCategories(ctx context.Context, filter *string, limit, page *int32) ([]*Category, int64, error)
+	AddCategory(ctx context.Context, name string) (*Category, error)
+	GetSubcategories(ctx context.Context, categoryID string, filter *string, limit, page *int32) ([]*Subcategory, int64, error)
+	GetSubcategoriesByIds(ctx context.Context, categoryID []string) (map[string][]*Subcategory, error)
+	AddSubcategory(ctx context.Context, categoryID string, name string) (*Subcategory, error)
 }
 
 type repository struct {
@@ -33,7 +33,7 @@ func (r *repository) GetCategories(
 	filter *string,
 	limit *int32,
 	page *int32,
-) ([]*model.Category, error) {
+) ([]*Category, int64, error) {
 
 	// ---------- DEFAULTS ----------
 	finalLimit := int32(20)
@@ -77,6 +77,16 @@ func (r *repository) GetCategories(
 		query += " WHERE " + strings.Join(where, " AND ")
 	}
 
+	// ---------- COUNT ----------
+	countQuery := `SELECT COUNT(*) FROM category c`
+	if len(where) > 0 {
+		countQuery += " WHERE " + strings.Join(where, " AND ")
+	}
+	var total int64
+	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count categories: %w", err)
+	}
+
 	// ---------- ORDER ----------
 	query += " ORDER BY c.name ASC"
 
@@ -93,27 +103,27 @@ func (r *repository) GetCategories(
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		log.Error("DB query failed GetCategories", zap.Error(err))
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
-	var categories []*model.Category
+	var categories []*Category
 
 	for rows.Next() {
-		var c model.Category
+		var c Category
 		if err := rows.Scan(&c.ID, &c.Name); err != nil {
 			log.Error("Row scan failed", zap.Error(err))
-			return nil, err
+			return nil, 0, err
 		}
 		categories = append(categories, &c)
 	}
 
 	if err := rows.Err(); err != nil {
 		log.Error("Rows iteration failed", zap.Error(err))
-		return nil, err
+		return nil, 0, err
 	}
 
-	return categories, nil
+	return categories, total, nil
 }
 
 func (r *repository) GetSubcategories(
@@ -122,10 +132,10 @@ func (r *repository) GetSubcategories(
 	filter *string,
 	limit *int32,
 	page *int32,
-) ([]*model.Subcategory, error) {
+) ([]*Subcategory, int64, error) {
 
 	if categoryID == "" {
-		return nil, errors.New("categoryID is required")
+		return nil, 0, errors.New("categoryID is required")
 	}
 
 	// Pagination Defaults
@@ -151,6 +161,13 @@ func (r *repository) GetSubcategories(
 		args = append(args, "%"+*filter+"%")
 	}
 
+	// Count
+	countQuery := `SELECT COUNT(*) FROM subcategories s WHERE ` + strings.Join(where, " AND ")
+	var total int64
+	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count subcategories: %w", err)
+	}
+
 	// Construct Final Query
 	query += " WHERE " + strings.Join(where, " AND ")
 	query += " ORDER BY s.name ASC"
@@ -159,28 +176,88 @@ func (r *repository) GetSubcategories(
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("query failed: %w", err)
+		return nil, 0, fmt.Errorf("query failed: %w", err)
 	}
 	defer rows.Close()
 
 	// Pre-allocate slice
-	subcategories := make([]*model.Subcategory, 0, finalLimit)
+	subcategories := make([]*Subcategory, 0, finalLimit)
 
 	for rows.Next() {
-		var s model.Subcategory
+		var s Subcategory
 		if err := rows.Scan(&s.ID, &s.CategoryID, &s.Name); err != nil {
-			return nil, fmt.Errorf("scan failed: %w", err)
+			return nil, 0, fmt.Errorf("scan failed: %w", err)
 		}
 		subcategories = append(subcategories, &s)
 	}
 
-	return subcategories, nil
+	return subcategories, total, nil
+}
+
+func (r *repository) GetSubcategoriesByIds(
+	ctx context.Context,
+	categoryID []string,
+) (map[string][]*Subcategory, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "GetSubcategoriesByIds"),
+		zap.Int("category_id_count", len(categoryID)),
+	)
+	log.Info("GetSubcategoriesByIds started")
+
+	if len(categoryID) == 0 {
+		log.Info("no category IDs provided, returning empty map")
+		return make(map[string][]*Subcategory), nil
+	}
+
+	placeholders := make([]string, len(categoryID))
+	args := make([]interface{}, len(categoryID))
+	for i, id := range categoryID {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, category_id, name
+		FROM subcategories
+		WHERE category_id IN (%s)
+		ORDER BY category_id, name ASC
+	`, strings.Join(placeholders, ","))
+
+	log.Debug("Executing GetSubcategoriesByIds query",
+		zap.String("query", query),
+	)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		log.Error("DB query failed for GetSubcategoriesByIds", zap.Error(err))
+		return nil, fmt.Errorf("failed to query subcategories: %w", err)
+	}
+	defer rows.Close()
+
+	subcategoriesMap := make(map[string][]*Subcategory)
+	for rows.Next() {
+		var s Subcategory
+		if err := rows.Scan(&s.ID, &s.CategoryID, &s.Name); err != nil {
+			log.Error("Row scan failed for subcategory", zap.Error(err))
+			return nil, fmt.Errorf("failed to scan subcategory: %w", err)
+		}
+		subcategoriesMap[s.CategoryID] = append(subcategoriesMap[s.CategoryID], &s)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Error("Rows iteration failed for subcategories", zap.Error(err))
+		return nil, fmt.Errorf("failed to iterate subcategory rows: %w", err)
+	}
+
+	log.Info("GetSubcategoriesByIds success", zap.Int("map_keys_count", len(subcategoriesMap)))
+	return subcategoriesMap, nil
 }
 
 func (r *repository) AddCategory(
 	ctx context.Context,
 	name string,
-) (*model.Category, error) {
+) (*Category, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("category_name", name),
@@ -202,7 +279,7 @@ func (r *repository) AddCategory(
 		zap.String("query", query),
 	)
 
-	var c model.Category
+	var c Category
 
 	err := r.db.QueryRowContext(ctx, query, name).
 		Scan(&c.ID, &c.Name)
@@ -222,7 +299,7 @@ func (r *repository) AddSubcategory(
 	ctx context.Context,
 	categoryID string,
 	name string,
-) (*model.Subcategory, error) {
+) (*Subcategory, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("category_id", categoryID),
@@ -250,7 +327,7 @@ func (r *repository) AddSubcategory(
 		zap.String("query", query),
 	)
 
-	var sc model.Subcategory
+	var sc Subcategory
 
 	err := r.db.QueryRowContext(ctx, query, categoryID, name).
 		Scan(&sc.ID, &sc.CategoryID, &sc.Name)

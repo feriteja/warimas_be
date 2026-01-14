@@ -29,12 +29,12 @@ import (
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _PageInfo_hasNextPage(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
+func (ec *executionContext) _PageInfoCursorStyle_hasNextPage(ctx context.Context, field graphql.CollectedField, obj *model.PageInfoCursorStyle) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_PageInfo_hasNextPage,
+		ec.fieldContext_PageInfoCursorStyle_hasNextPage,
 		func(ctx context.Context) (any, error) {
 			return obj.HasNextPage, nil
 		},
@@ -45,9 +45,9 @@ func (ec *executionContext) _PageInfo_hasNextPage(ctx context.Context, field gra
 	)
 }
 
-func (ec *executionContext) fieldContext_PageInfo_hasNextPage(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_PageInfoCursorStyle_hasNextPage(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "PageInfo",
+		Object:     "PageInfoCursorStyle",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -58,12 +58,12 @@ func (ec *executionContext) fieldContext_PageInfo_hasNextPage(_ context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _PageInfo_hasPreviousPage(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
+func (ec *executionContext) _PageInfoCursorStyle_hasPreviousPage(ctx context.Context, field graphql.CollectedField, obj *model.PageInfoCursorStyle) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_PageInfo_hasPreviousPage,
+		ec.fieldContext_PageInfoCursorStyle_hasPreviousPage,
 		func(ctx context.Context) (any, error) {
 			return obj.HasPreviousPage, nil
 		},
@@ -74,9 +74,9 @@ func (ec *executionContext) _PageInfo_hasPreviousPage(ctx context.Context, field
 	)
 }
 
-func (ec *executionContext) fieldContext_PageInfo_hasPreviousPage(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_PageInfoCursorStyle_hasPreviousPage(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "PageInfo",
+		Object:     "PageInfoCursorStyle",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -87,12 +87,12 @@ func (ec *executionContext) fieldContext_PageInfo_hasPreviousPage(_ context.Cont
 	return fc, nil
 }
 
-func (ec *executionContext) _PageInfo_startCursor(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
+func (ec *executionContext) _PageInfoCursorStyle_startCursor(ctx context.Context, field graphql.CollectedField, obj *model.PageInfoCursorStyle) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_PageInfo_startCursor,
+		ec.fieldContext_PageInfoCursorStyle_startCursor,
 		func(ctx context.Context) (any, error) {
 			return obj.StartCursor, nil
 		},
@@ -103,9 +103,9 @@ func (ec *executionContext) _PageInfo_startCursor(ctx context.Context, field gra
 	)
 }
 
-func (ec *executionContext) fieldContext_PageInfo_startCursor(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_PageInfoCursorStyle_startCursor(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "PageInfo",
+		Object:     "PageInfoCursorStyle",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -116,12 +116,12 @@ func (ec *executionContext) fieldContext_PageInfo_startCursor(_ context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _PageInfo_endCursor(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
+func (ec *executionContext) _PageInfoCursorStyle_endCursor(ctx context.Context, field graphql.CollectedField, obj *model.PageInfoCursorStyle) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_PageInfo_endCursor,
+		ec.fieldContext_PageInfoCursorStyle_endCursor,
 		func(ctx context.Context) (any, error) {
 			return obj.EndCursor, nil
 		},
@@ -132,9 +132,9 @@ func (ec *executionContext) _PageInfo_endCursor(ctx context.Context, field graph
 	)
 }
 
-func (ec *executionContext) fieldContext_PageInfo_endCursor(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_PageInfoCursorStyle_endCursor(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "PageInfo",
+		Object:     "PageInfoCursorStyle",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -204,14 +204,18 @@ func (ec *executionContext) fieldContext_ProductConnection_pageInfo(_ context.Co
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "totalItems":
+				return ec.fieldContext_PageInfo_totalItems(ctx, field)
+			case "totalPages":
+				return ec.fieldContext_PageInfo_totalPages(ctx, field)
+			case "page":
+				return ec.fieldContext_PageInfo_page(ctx, field)
+			case "limit":
+				return ec.fieldContext_PageInfo_limit(ctx, field)
 			case "hasNextPage":
 				return ec.fieldContext_PageInfo_hasNextPage(ctx, field)
 			case "hasPreviousPage":
 				return ec.fieldContext_PageInfo_hasPreviousPage(ctx, field)
-			case "startCursor":
-				return ec.fieldContext_PageInfo_startCursor(ctx, field)
-			case "endCursor":
-				return ec.fieldContext_PageInfo_endCursor(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
 		},
@@ -350,31 +354,31 @@ func (ec *executionContext) fieldContext_ProductEdge_cursor(_ context.Context, f
 
 // region    **************************** object.gotpl ****************************
 
-var pageInfoImplementors = []string{"PageInfo"}
+var pageInfoCursorStyleImplementors = []string{"PageInfoCursorStyle"}
 
-func (ec *executionContext) _PageInfo(ctx context.Context, sel ast.SelectionSet, obj *model.PageInfo) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, pageInfoImplementors)
+func (ec *executionContext) _PageInfoCursorStyle(ctx context.Context, sel ast.SelectionSet, obj *model.PageInfoCursorStyle) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, pageInfoCursorStyleImplementors)
 
 	out := graphql.NewFieldSet(fields)
 	deferred := make(map[string]*graphql.FieldSet)
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("PageInfo")
+			out.Values[i] = graphql.MarshalString("PageInfoCursorStyle")
 		case "hasNextPage":
-			out.Values[i] = ec._PageInfo_hasNextPage(ctx, field, obj)
+			out.Values[i] = ec._PageInfoCursorStyle_hasNextPage(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		case "hasPreviousPage":
-			out.Values[i] = ec._PageInfo_hasPreviousPage(ctx, field, obj)
+			out.Values[i] = ec._PageInfoCursorStyle_hasPreviousPage(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		case "startCursor":
-			out.Values[i] = ec._PageInfo_startCursor(ctx, field, obj)
+			out.Values[i] = ec._PageInfoCursorStyle_startCursor(ctx, field, obj)
 		case "endCursor":
-			out.Values[i] = ec._PageInfo_endCursor(ctx, field, obj)
+			out.Values[i] = ec._PageInfoCursorStyle_endCursor(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -494,16 +498,6 @@ func (ec *executionContext) _ProductEdge(ctx context.Context, sel ast.SelectionS
 // endregion **************************** object.gotpl ****************************
 
 // region    ***************************** type.gotpl *****************************
-
-func (ec *executionContext) marshalNPageInfo2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPageInfo(ctx context.Context, sel ast.SelectionSet, v *model.PageInfo) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._PageInfo(ctx, sel, v)
-}
 
 func (ec *executionContext) marshalNProductEdge2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐProductEdgeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.ProductEdge) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))

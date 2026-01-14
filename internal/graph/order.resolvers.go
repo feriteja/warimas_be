@@ -312,7 +312,6 @@ func (r *queryResolver) OrderDetail(ctx context.Context, orderID string) (*model
 
 // OrderDetailByExternalID is the resolver for the orderDetailByExternalId field.
 func (r *queryResolver) OrderDetailByExternalID(ctx context.Context, externalID string) (*model.Order, error) {
-
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "resolver"),
 		zap.String("method", "OrderDetailByExternalID"),

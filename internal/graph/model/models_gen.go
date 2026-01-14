@@ -71,8 +71,14 @@ type CartSortInput struct {
 }
 
 type Category struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID            string         `json:"id"`
+	Name          string         `json:"name"`
+	Subcategories []*Subcategory `json:"subcategories"`
+}
+
+type CategoryPage struct {
+	Items    []*Category `json:"items"`
+	PageInfo *PageInfo   `json:"pageInfo"`
 }
 
 type CheckoutSession struct {
@@ -282,6 +288,15 @@ type PackageSortInput struct {
 }
 
 type PageInfo struct {
+	TotalItems      int32 `json:"totalItems"`
+	TotalPages      int32 `json:"totalPages"`
+	Page            int32 `json:"page"`
+	Limit           int32 `json:"limit"`
+	HasNextPage     bool  `json:"hasNextPage"`
+	HasPreviousPage bool  `json:"hasPreviousPage"`
+}
+
+type PageInfoCursorStyle struct {
 	HasNextPage     bool    `json:"hasNextPage"`
 	HasPreviousPage bool    `json:"hasPreviousPage"`
 	StartCursor     *string `json:"startCursor,omitempty"`
@@ -430,6 +445,11 @@ type Subcategory struct {
 	ID         string `json:"id"`
 	CategoryID string `json:"categoryID"`
 	Name       string `json:"name"`
+}
+
+type SubcategoryPage struct {
+	Items    []*Subcategory `json:"items"`
+	PageInfo *PageInfo      `json:"pageInfo"`
 }
 
 type UpdateAddressInput struct {

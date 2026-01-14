@@ -6,45 +6,139 @@ package graph
 
 import (
 	"context"
+	"warimas-be/internal/category"
 	"warimas-be/internal/graph/model"
+	"warimas-be/internal/logger"
+
+	"go.uber.org/zap"
 )
 
 // AddCategory is the resolver for the addCategory field.
 func (r *mutationResolver) AddCategory(ctx context.Context, name string) (*model.Category, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "AddCategory"),
+		zap.String("name", name),
+	)
+	log.Info("resolver started")
+
 	c, err := r.CategorySvc.AddCategory(ctx, name)
 	if err != nil {
+		log.Error("failed to add category", zap.Error(err))
 		return nil, err
 	}
 
-	return c, nil
+	log.Info("resolver success")
+	return category.MapCategoryToGraphQL(c), nil
 }
 
 // AddSubcategory is the resolver for the addSubcategory field.
 func (r *mutationResolver) AddSubcategory(ctx context.Context, categoryID string, name string) (*model.Subcategory, error) {
-	c, err := r.CategorySvc.AddSubcategory(ctx, categoryID, name)
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "AddSubcategory"),
+		zap.String("category_id", categoryID),
+		zap.String("name", name),
+	)
+	log.Info("resolver started")
+
+	sc, err := r.CategorySvc.AddSubcategory(ctx, categoryID, name)
 	if err != nil {
+		log.Error("failed to add subcategory", zap.Error(err))
 		return nil, err
 	}
 
-	return c, nil
+	log.Info("resolver success")
+	return category.MapSubcategoriesToGraphQL(sc), nil
 }
 
 // Category is the resolver for the category field.
-func (r *queryResolver) Category(ctx context.Context, filter *string, limit *int32, page *int32) ([]*model.Category, error) {
-	c, err := r.CategorySvc.GetCategories(ctx, filter, limit, page)
+func (r *queryResolver) Category(ctx context.Context, filter *string, limit *int32, page *int32) (*model.CategoryPage, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "Category"),
+	)
+	log.Info("resolver started")
+
+	categories, total, err := r.CategorySvc.GetCategories(ctx, filter, limit, page)
 	if err != nil {
+		log.Error("failed to get categories", zap.Error(err))
 		return nil, err
 	}
 
-	return c, nil
+	// Map from internal model to GraphQL model
+	gqlCategories := make([]*model.Category, 0, len(categories))
+	for _, c := range categories {
+		gqlCategories = append(gqlCategories, category.MapCategoryToGraphQL(c))
+	}
+
+	// Pagination logic
+	var l int32 = 20
+	if limit != nil && *limit > 0 {
+		l = *limit
+	}
+	var p int32 = 1
+	if page != nil && *page > 0 {
+		p = *page
+	}
+	totalPages := int32((total + int64(l) - 1) / int64(l))
+
+	log.Info("resolver success", zap.Int("count", len(gqlCategories)))
+	return &model.CategoryPage{
+		Items: gqlCategories,
+		PageInfo: &model.PageInfo{
+			TotalItems:      int32(total),
+			TotalPages:      totalPages,
+			Page:            p,
+			Limit:           l,
+			HasNextPage:     p < totalPages,
+			HasPreviousPage: p > 1,
+		},
+	}, nil
 }
 
 // Subcategory is the resolver for the subcategory field.
-func (r *queryResolver) Subcategory(ctx context.Context, filter *string, categoryID string, limit *int32, page *int32) ([]*model.Subcategory, error) {
-	s, err := r.CategorySvc.GetSubcategories(ctx, categoryID, filter, limit, page)
+func (r *queryResolver) Subcategory(ctx context.Context, filter *string, categoryID string, limit *int32, page *int32) (*model.SubcategoryPage, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "Subcategory"),
+		zap.String("category_id", categoryID),
+	)
+	log.Info("resolver started")
+
+	subcategories, total, err := r.CategorySvc.GetSubcategories(ctx, categoryID, filter, limit, page)
 	if err != nil {
+		log.Error("failed to get subcategories", zap.Error(err))
 		return nil, err
 	}
 
-	return s, nil
+	// Map from internal model to GraphQL model
+	gqlSubcategories := make([]*model.Subcategory, 0, len(subcategories))
+	for _, s := range subcategories {
+		gqlSubcategories = append(gqlSubcategories, category.MapSubcategoriesToGraphQL(s))
+	}
+
+	// Pagination logic
+	var l int32 = 20
+	if limit != nil && *limit > 0 {
+		l = *limit
+	}
+	var p int32 = 1
+	if page != nil && *page > 0 {
+		p = *page
+	}
+	totalPages := int32((total + int64(l) - 1) / int64(l))
+
+	log.Info("resolver success", zap.Int("count", len(gqlSubcategories)))
+	return &model.SubcategoryPage{
+		Items: gqlSubcategories,
+		PageInfo: &model.PageInfo{
+			TotalItems:      int32(total),
+			TotalPages:      totalPages,
+			Page:            p,
+			Limit:           l,
+			HasNextPage:     p < totalPages,
+			HasPreviousPage: p > 1,
+		},
+	}, nil
 }

@@ -79,8 +79,14 @@ type ComplexityRoot struct {
 	}
 
 	Category struct {
-		ID   func(childComplexity int) int
-		Name func(childComplexity int) int
+		ID            func(childComplexity int) int
+		Name          func(childComplexity int) int
+		Subcategories func(childComplexity int) int
+	}
+
+	CategoryPage struct {
+		Items    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
 	}
 
 	CheckoutSession struct {
@@ -236,6 +242,15 @@ type ComplexityRoot struct {
 	}
 
 	PageInfo struct {
+		HasNextPage     func(childComplexity int) int
+		HasPreviousPage func(childComplexity int) int
+		Limit           func(childComplexity int) int
+		Page            func(childComplexity int) int
+		TotalItems      func(childComplexity int) int
+		TotalPages      func(childComplexity int) int
+	}
+
+	PageInfoCursorStyle struct {
 		EndCursor       func(childComplexity int) int
 		HasNextPage     func(childComplexity int) int
 		HasPreviousPage func(childComplexity int) int
@@ -373,6 +388,11 @@ type ComplexityRoot struct {
 		CategoryID func(childComplexity int) int
 		ID         func(childComplexity int) int
 		Name       func(childComplexity int) int
+	}
+
+	SubcategoryPage struct {
+		Items    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
 	}
 
 	UpdateAddressResponse struct {
@@ -601,6 +621,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Category.Name(childComplexity), true
+
+	case "Category.subcategories":
+		if e.complexity.Category.Subcategories == nil {
+			break
+		}
+
+		return e.complexity.Category.Subcategories(childComplexity), true
+
+	case "CategoryPage.items":
+		if e.complexity.CategoryPage.Items == nil {
+			break
+		}
+
+		return e.complexity.CategoryPage.Items(childComplexity), true
+
+	case "CategoryPage.pageInfo":
+		if e.complexity.CategoryPage.PageInfo == nil {
+			break
+		}
+
+		return e.complexity.CategoryPage.PageInfo(childComplexity), true
 
 	case "CheckoutSession.addressId":
 		if e.complexity.CheckoutSession.AddressID == nil {
@@ -1388,13 +1429,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.PackageResponse.Success(childComplexity), true
 
-	case "PageInfo.endCursor":
-		if e.complexity.PageInfo.EndCursor == nil {
-			break
-		}
-
-		return e.complexity.PageInfo.EndCursor(childComplexity), true
-
 	case "PageInfo.hasNextPage":
 		if e.complexity.PageInfo.HasNextPage == nil {
 			break
@@ -1409,12 +1443,61 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.PageInfo.HasPreviousPage(childComplexity), true
 
-	case "PageInfo.startCursor":
-		if e.complexity.PageInfo.StartCursor == nil {
+	case "PageInfo.limit":
+		if e.complexity.PageInfo.Limit == nil {
 			break
 		}
 
-		return e.complexity.PageInfo.StartCursor(childComplexity), true
+		return e.complexity.PageInfo.Limit(childComplexity), true
+
+	case "PageInfo.page":
+		if e.complexity.PageInfo.Page == nil {
+			break
+		}
+
+		return e.complexity.PageInfo.Page(childComplexity), true
+
+	case "PageInfo.totalItems":
+		if e.complexity.PageInfo.TotalItems == nil {
+			break
+		}
+
+		return e.complexity.PageInfo.TotalItems(childComplexity), true
+
+	case "PageInfo.totalPages":
+		if e.complexity.PageInfo.TotalPages == nil {
+			break
+		}
+
+		return e.complexity.PageInfo.TotalPages(childComplexity), true
+
+	case "PageInfoCursorStyle.endCursor":
+		if e.complexity.PageInfoCursorStyle.EndCursor == nil {
+			break
+		}
+
+		return e.complexity.PageInfoCursorStyle.EndCursor(childComplexity), true
+
+	case "PageInfoCursorStyle.hasNextPage":
+		if e.complexity.PageInfoCursorStyle.HasNextPage == nil {
+			break
+		}
+
+		return e.complexity.PageInfoCursorStyle.HasNextPage(childComplexity), true
+
+	case "PageInfoCursorStyle.hasPreviousPage":
+		if e.complexity.PageInfoCursorStyle.HasPreviousPage == nil {
+			break
+		}
+
+		return e.complexity.PageInfoCursorStyle.HasPreviousPage(childComplexity), true
+
+	case "PageInfoCursorStyle.startCursor":
+		if e.complexity.PageInfoCursorStyle.StartCursor == nil {
+			break
+		}
+
+		return e.complexity.PageInfoCursorStyle.StartCursor(childComplexity), true
 
 	case "PageInfoOrder.hasNextPage":
 		if e.complexity.PageInfoOrder.HasNextPage == nil {
@@ -2117,6 +2200,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Subcategory.Name(childComplexity), true
+
+	case "SubcategoryPage.items":
+		if e.complexity.SubcategoryPage.Items == nil {
+			break
+		}
+
+		return e.complexity.SubcategoryPage.Items(childComplexity), true
+
+	case "SubcategoryPage.pageInfo":
+		if e.complexity.SubcategoryPage.PageInfo == nil {
+			break
+		}
+
+		return e.complexity.SubcategoryPage.PageInfo(childComplexity), true
 
 	case "UpdateAddressResponse.address":
 		if e.complexity.UpdateAddressResponse.Address == nil {
