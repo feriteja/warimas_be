@@ -83,10 +83,7 @@ func (r *mutationResolver) AddToCart(ctx context.Context, input model.AddToCartI
 }
 
 // Update cart quantity
-func (r *mutationResolver) UpdateCart(
-	ctx context.Context,
-	input model.UpdateCartInput,
-) (*model.Response, error) {
+func (r *mutationResolver) UpdateCart(ctx context.Context, input model.UpdateCartInput) (*model.Response, error) {
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "graphql.resolver"),
 		zap.String("resolver", "UpdateCart"),
@@ -128,7 +125,6 @@ func (r *mutationResolver) UpdateCart(
 
 // Remove item from cart
 func (r *mutationResolver) RemoveFromCart(ctx context.Context, variantID string) (*model.Response, error) {
-
 	err := r.CartSvc.RemoveFromCart(ctx, cart.DeleteFromCartParams{VariantID: variantID})
 	if err != nil {
 		return &model.Response{

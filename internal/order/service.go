@@ -21,12 +21,15 @@ type Service interface {
 		externalID string,
 	) (*Order, error)
 	OrderToPaymentProcess(ctx context.Context, sessionExternalID, externalID string, orderId uint) (*payment.PaymentResponse, error)
-	GetOrders(ctx context.Context,
+	GetOrders(
+		ctx context.Context,
 		filter *OrderFilterInput,
 		sort *OrderSortInput,
-		limit *int32,
-		page *int32) ([]*Order, int64, error)
-	GetOrderDetail(userID, orderID uint, isAdmin bool) (*Order, error)
+		limit int32,
+		page int32,
+	) ([]*Order, int64, map[uuid.UUID][]address.Address, error)
+	GetOrderDetail(ctx context.Context, orderID uint) (*Order, *address.Address, error)
+	GetOrderDetailByExternalID(ctx context.Context, externalId string) (*Order, *address.Address, error)
 	UpdateOrderStatus(orderID uint, status OrderStatus) error
 	MarkAsPaid(ctx context.Context, referenceID, paymentRequestID, paymentProviderID string) error
 	MarkAsFailed(ctx context.Context, referenceID, paymentRequestID, paymentProviderID string) error
@@ -168,31 +171,31 @@ func (s *service) OrderToPaymentProcess(ctx context.Context, sessionExternalID s
 }
 
 // ✅ Get list of orders (user or admin)
-
 func (s *service) GetOrders(
 	ctx context.Context,
 	filter *OrderFilterInput,
 	sort *OrderSortInput,
-	limit *int32,
-	page *int32,
-) ([]*Order, int64, error) {
+	limit int32,
+	page int32,
+) ([]*Order, int64, map[uuid.UUID][]address.Address, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "service"),
 		zap.String("method", "GetOrders"),
 	)
 
-	l := defaultLimit
-	if limit != nil && *limit > 0 {
-		l = *limit
+	// Defaults
+	l := limit
+	if l <= 0 {
+		l = defaultLimit
 	}
 	if l > maxLimit {
 		l = maxLimit
 	}
 
-	p := defaultPage
-	if page != nil && *page > 0 {
-		p = *page
+	p := page
+	if p <= 0 {
+		p = defaultPage
 	}
 
 	offset := (p - 1) * l
@@ -203,58 +206,213 @@ func (s *service) GetOrders(
 		zap.Int32("offset", offset),
 	)
 
+	// Fetch orders
 	orders, err := s.repo.FetchOrders(ctx, filter, sort, l, offset)
-
 	if err != nil {
-		return nil, 0, err
+		log.Error("failed to fetch orders", zap.Error(err))
+		return nil, 0, nil, err
 	}
 
+	// Count total
 	total, err := s.repo.CountOrders(ctx, filter)
-
-	ids := make([]uint, 0, len(orders))
-	for _, o := range orders {
-		ids = append(ids, o.ID)
-	}
-
-	itemsMap, err := s.repo.FetchOrderItems(ctx, ids)
 	if err != nil {
-		return nil, 0, err
+		log.Error("failed to count orders", zap.Error(err))
+		return nil, 0, nil, err
 	}
 
+	if len(orders) == 0 {
+		return orders, total, map[uuid.UUID][]address.Address{}, nil
+	}
+
+	// Collect order IDs & address IDs
+	orderIDs := make([]int32, 0, len(orders))
+	addressIDs := make([]uuid.UUID, 0, len(orders))
+
+	for _, o := range orders {
+		orderIDs = append(orderIDs, o.ID)
+		addressIDs = append(addressIDs, o.AddressID)
+	}
+
+	// Fetch addresses in batch (IMPORTANT)
+	addresses, err := s.addressRepo.GetByIDs(ctx, addressIDs)
+	if err != nil {
+		log.Error("failed to fetch addresses", zap.Error(err))
+		return nil, 0, nil, err
+	}
+
+	// Map addressID -> []address.Address
+	addressMap := make(map[uuid.UUID][]address.Address, len(addresses))
+	for _, addr := range addresses {
+		addressMap[addr.ID] = append(addressMap[addr.ID], addr)
+	}
+
+	// Fetch order items
+	itemsMap, err := s.repo.FetchOrderItems(ctx, orderIDs)
+	if err != nil {
+		log.Error("failed to fetch order items", zap.Error(err))
+		return nil, 0, nil, err
+	}
+
+	// Attach items
 	for _, o := range orders {
 		o.Items = itemsMap[o.ID]
 	}
 
 	log.Info("orders fetched",
-		zap.Int("items_count", len(orders)),
+		zap.Int("orders_count", len(orders)),
 		zap.Int64("total", total),
 	)
 
-	return orders, total, nil
+	return orders, total, addressMap, nil
 }
 
-// ✅ Get order detail (user only sees their own order)
-func (s *service) GetOrderDetail(userID, orderID uint, isAdmin bool) (*Order, error) {
-	order, err := s.repo.GetOrderDetail(orderID)
+// ✅ Get order detail (user only sees their own order), but admin could see everything
+// GetOrderDetail returns order detail
+// - User can only access their own order
+// - Admin can access any order
+func (s *service) GetOrderDetail(
+	ctx context.Context,
+	orderID uint,
+) (*Order, *address.Address, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "GetOrderDetail"),
+		zap.Uint("order_id", orderID),
+	)
+
+	log.Info("fetching order detail")
+
+	// Fetch order
+	order, err := s.repo.GetOrderDetail(ctx, orderID)
 	if err != nil {
-		return nil, err
+		log.Error("failed to fetch order detail", zap.Error(err))
+		return nil, nil, err
 	}
 
-	if !isAdmin && order.UserID != &userID {
-		return nil, fmt.Errorf("unauthorized: cannot access others' orders")
+	if order == nil {
+		log.Warn("order not found")
+		return nil, nil, ErrOrderNotFound
 	}
 
-	return order, nil
+	// Get auth info
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		log.Error("failed to get user id from context", zap.Error(err))
+		return nil, nil, err
+	}
+
+	userRole := utils.GetUserRoleFromContext(ctx)
+	isAdmin := userRole == "ADMIN"
+
+	// Authorization check
+	if !isAdmin {
+		if order.UserID == nil {
+			log.Error("order user_id is nil")
+			return nil, nil, fmt.Errorf("invalid order data")
+		}
+
+		if int32(userID) != *order.UserID {
+			log.Warn("unauthorized order access attempt",
+				zap.Uint("request_user_id", userID),
+				zap.Int32("order_user_id", *order.UserID),
+				zap.String("user_role", userRole),
+			)
+			return nil, nil, ErrUnauthorized
+		}
+	}
+
+	// Fetch address
+	addr, err := s.addressRepo.GetByID(ctx, order.AddressID)
+	if err != nil {
+		log.Error("failed to fetch address",
+			zap.String("address_id", order.AddressID.String()),
+			zap.Error(err),
+		)
+		return nil, nil, err
+	}
+
+	log.Info("order detail fetched successfully")
+
+	return order, addr, nil
+}
+
+func (s *service) GetOrderDetailByExternalID(
+	ctx context.Context,
+	externalID string,
+) (*Order, *address.Address, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "GetOrderDetail"),
+		zap.String("external_id", externalID),
+	)
+
+	log.Info("fetching order detail")
+
+	// Fetch order
+	order, err := s.repo.GetOrderDetailByExternalID(ctx, externalID)
+	if err != nil {
+		log.Error("failed to fetch order detail", zap.Error(err))
+		return nil, nil, err
+	}
+
+	if order == nil {
+		log.Warn("order not found")
+		return nil, nil, ErrOrderNotFound
+	}
+
+	// Get auth info
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		log.Error("failed to get user id from context", zap.Error(err))
+		return nil, nil, err
+	}
+
+	userRole := utils.GetUserRoleFromContext(ctx)
+	isAdmin := userRole == "ADMIN"
+
+	// Authorization check
+	if !isAdmin {
+		if order.UserID == nil {
+			log.Error("order user_id is nil")
+			return nil, nil, fmt.Errorf("invalid order data")
+		}
+
+		if int32(userID) != *order.UserID {
+			log.Warn("unauthorized order access attempt",
+				zap.Uint("request_user_id", userID),
+				zap.Int32("order_user_id", *order.UserID),
+				zap.String("user_role", userRole),
+			)
+			return nil, nil, ErrUnauthorized
+		}
+	}
+
+	// Fetch address
+	addr, err := s.addressRepo.GetByID(ctx, order.AddressID)
+	if err != nil {
+		log.Error("failed to fetch address",
+			zap.String("address_id", order.AddressID.String()),
+			zap.Error(err),
+		)
+		return nil, nil, err
+	}
+
+	log.Info("order detail fetched successfully")
+
+	return order, addr, nil
 }
 
 // ✅ Update order status (admin only)
 func (s *service) UpdateOrderStatus(orderID uint, status OrderStatus) error {
 	validStatuses := map[OrderStatus]bool{
-		StatusPendingPayment: true,
-		StatusPaid:           true,
-		StatusFulFilling:     true,
-		StatusCompleted:      true,
-		StatusCanceled:       true,
+		OrderStatusPendingPayment: true,
+		OrderStatusPaid:           true,
+		OrderStatusAccepted:       true,
+		OrderStatusShipped:        true,
+		OrderStatusCompleted:      true,
+		OrderStatusCancelled:      true,
 	}
 
 	if !validStatuses[status] {
@@ -377,20 +535,11 @@ func (s *service) CreateSession(
 
 	log.Info("create checkout session started")
 
-	if len(input.Items) == 0 {
-		log.Warn("checkout session creation with empty items")
-		return nil, errors.New("checkout session must contain at least one item")
-	}
+	userId, _ := utils.GetUserIDFromContext(ctx)
 
-	// 1. Resolve user (optional)
-	userID, ok := utils.GetUserIDFromContext(ctx)
-	if !ok {
-		log.Debug("creating checkout session as guest")
-	}
-
-	// 2. Validate variants & calculate price
+	// 1. Validate variants & calculate price
 	items := make([]CheckoutSessionItem, 0, len(input.Items))
-	var subtotal int64 = 0
+	subtotal := 0
 
 	for i, item := range input.Items {
 		logItem := log.With(
@@ -406,27 +555,22 @@ func (s *service) CreateSession(
 
 		variant, product, err := s.repo.GetVariantForCheckout(ctx, item.VariantID)
 		if err != nil {
-			logItem.Error("failed to get variant for checkout", zap.Error(err))
+			logItem.Error(
+				"failed to get variant for checkout",
+				zap.Error(err),
+			)
 			return nil, err
 		}
 
-		if variant.Stock < item.Quantity {
-			logItem.Warn(
-				"insufficient stock",
-				zap.Int32("stock", variant.Stock),
-			)
-			return nil, errors.New("product stock is not enough")
-		}
-
-		itemSubtotal := int64(variant.Price) * int64(item.Quantity)
-		subtotal += itemSubtotal
+		itemSubtotal := int32(variant.Price) * item.Quantity
+		subtotal += int(itemSubtotal)
 
 		logItem.Debug(
 			"item calculated",
 			zap.String("variant_name", variant.Name),
 			zap.String("product_name", product.Name),
-			zap.Int64("price", int64(variant.Price)),
-			zap.Int64("item_subtotal", itemSubtotal),
+			zap.Int("price", int(variant.Price)),
+			zap.Int32("item_subtotal", itemSubtotal),
 		)
 
 		items = append(items, CheckoutSessionItem{
@@ -436,53 +580,56 @@ func (s *service) CreateSession(
 			ProductName:  product.Name,
 			Quantity:     int(item.Quantity),
 			QuantityType: variant.QuantityType,
-			ImageURL:     &variant.ImageURL, // already *string
+			ImageURL:     &variant.ImageURL,
 			Price:        int(variant.Price),
 			Subtotal:     int(itemSubtotal),
 		})
 	}
 
-	// 3. Calculate fees
+	// 2. Calculate fees
 	tax := subtotal * 10 / 100
-	var shippingFee int64 = 0
-	var discount int64 = 0
+	shippingFee := 0
+	discount := 0
 	totalPrice := subtotal + tax + shippingFee - discount
 
 	log.Info(
 		"price calculated",
-		zap.Int64("subtotal", subtotal),
-		zap.Int64("tax", tax),
-		zap.Int64("shipping_fee", shippingFee),
-		zap.Int64("discount", discount),
-		zap.Int64("total_price", totalPrice),
+		zap.Int("subtotal", subtotal),
+		zap.Int("tax", tax),
+		zap.Int("shipping_fee", shippingFee),
+		zap.Int("discount", discount),
+		zap.Int("total_price", totalPrice),
 	)
 
-	// 4. Create session model
 	sessionID := uuid.New()
+	sessionExternalID := utils.ExternalIDFromSession("ck", sessionID.String())
+	uid := int32(userId)
+
+	// 3. Create session model
 	session := &CheckoutSession{
 		ID:          sessionID,
-		ExternalID:  utils.ExternalIDFromSession("ck", sessionID.String()),
+		ExternalID:  sessionExternalID,
+		UserID:      &uid,
 		Status:      CheckoutSessionStatusPending,
-		Subtotal:    int(subtotal),
-		Tax:         int(tax),
-		ShippingFee: int(shippingFee),
-		Discount:    int(discount),
-		TotalPrice:  int(totalPrice),
+		Subtotal:    subtotal,
+		Tax:         tax,
+		ShippingFee: shippingFee,
+		Discount:    discount,
+		TotalPrice:  totalPrice,
 		ExpiresAt:   time.Now().Add(30 * time.Minute),
 	}
 
-	if userID != 0 {
-		session.UserID = &userID
-	}
-
 	log = log.With(
-		zap.String("session_id", session.ExternalID),
+		zap.String("session_id", session.ID.String()),
 		zap.String("status", string(session.Status)),
 	)
 
-	// 5. Persist in transaction
+	// 4. Persist in transaction
 	if err := s.repo.CreateCheckoutSession(ctx, session, items); err != nil {
-		log.Error("failed to create checkout session", zap.Error(err))
+		log.Error(
+			"failed to create checkout session",
+			zap.Error(err),
+		)
 		return nil, err
 	}
 
@@ -498,76 +645,38 @@ func (s *service) UpdateSessionAddress(
 	guestID *string,
 ) error {
 
-	log := logger.FromCtx(ctx).With(
-		zap.String("layer", "service"),
-		zap.String("method", "UpdateSessionAddress"),
-		zap.String("session_id", externalID),
-		zap.String("address_id", addressID),
-	)
-
-	// 1. Load checkout session
 	session, err := s.repo.GetCheckoutSession(ctx, externalID)
 	if err != nil {
-		log.Error("failed to fetch checkout session", zap.Error(err))
 		return err
 	}
 
-	if session.Status != "PENDING" {
-		return errors.New("session has expired")
-	}
-
-	// 2. Authorization
-	userID, ok := utils.GetUserIDFromContext(ctx)
-	if !ok {
-		log.Warn("failed to get user id from context", zap.Error(err))
-	}
+	userID, _ := utils.GetUserIDFromContext(ctx)
 
 	if guestID != nil {
-		guestUUID, err := uuid.Parse(*guestID)
-		if err != nil {
-			log.Warn("invalid guest id format", zap.String("guest_id", *guestID))
-			return errors.New("invalid guest id")
-		}
-
+		guestUUID := uuid.MustParse(*guestID)
 		if session.GuestID == nil || *session.GuestID != guestUUID {
-			log.Warn("guest id mismatch")
 			return errors.New("forbidden: guest ID mismatch")
 		}
-
-		log.Debug("authorized as guest", zap.String("guest_id", guestUUID.String()))
-
 	} else {
-		if session.UserID == nil || *session.UserID != userID {
-			log.Warn("user does not own checkout session", zap.Uint("user_id", userID))
+		if session.UserID == nil || *session.UserID != int32(userID) {
 			return errors.New("forbidden: cannot update others' sessions")
 		}
-
-		log.Debug("authorized as user", zap.Uint("user_id", userID))
 	}
 
-	// 3. Session state validation
 	if session.Status != CheckoutSessionStatusPending {
-		log.Warn("checkout session is not editable",
-			zap.String("status", string(session.Status)),
-		)
 		return errors.New("checkout session is not editable")
 	}
 
 	if time.Now().After(session.ExpiresAt) {
-		log.Warn("checkout session expired",
-			zap.Time("expires_at", session.ExpiresAt),
-		)
 		return errors.New("checkout session expired")
 	}
 
-	// 4. Fetch user address
 	address, err := s.repo.GetUserAddress(ctx, addressID, userID)
 	if err != nil {
-		log.Error("failed to fetch user address", zap.Error(err))
 		return err
 	}
 
-	// 5. Recalculate pricing
+	// 4. Recalculate pricing
 	shippingFee := s.calculateShippingFee(address, session.Items)
 	tax := s.calculateTax(address, session.Subtotal)
 
@@ -576,21 +685,8 @@ func (s *service) UpdateSessionAddress(
 	session.Tax = tax
 	session.TotalPrice = session.Subtotal + tax + shippingFee - session.Discount
 
-	log.Debug("pricing recalculated",
-		zap.Int("shipping_fee", shippingFee),
-		zap.Int("tax", tax),
-		zap.Int("total_price", session.TotalPrice),
-	)
-
-	// 6. Persist changes
-	if err := s.repo.UpdateSessionAddressAndPricing(ctx, session); err != nil {
-		log.Error("failed to update session address and pricing", zap.Error(err))
-		return err
-	}
-
-	log.Info("session address updated successfully")
-
-	return nil
+	// 5. Persist changes
+	return s.repo.UpdateSessionAddressAndPricing(ctx, session)
 }
 
 func (s *service) calculateShippingFee(
@@ -639,9 +735,9 @@ func (s *service) ConfirmSession(
 	)
 
 	// 2. Ownership check (if not guest)
-	if session.UserID != nil && *session.UserID != userID {
+	if session.UserID != nil && *session.UserID != int32(userID) {
 		log.Warn("ownership check failed",
-			zap.Uint("session_user_id", *session.UserID),
+			zap.Int32("session_user_id", *session.UserID),
 			zap.Uint("request_user_id", userID),
 		)
 		return nil, errors.New("forbidden")
@@ -702,9 +798,9 @@ func (s *service) ConfirmSession(
 
 	order := &Order{
 		UserID:      session.UserID,
-		Status:      OrderStatus(model.OrderStatusPendingPayment),
 		TotalAmount: uint(session.TotalPrice),
 		Currency:    session.Currency,
+		Status:      OrderStatus(model.OrderStatusPendingPayment),
 		ExternalID:  externalOrderID,
 	}
 
@@ -724,7 +820,7 @@ func (s *service) ConfirmSession(
 		return nil, err
 	}
 
-	_, err = s.OrderToPaymentProcess(ctx, session.ExternalID, externalOrderID, order.ID)
+	_, err = s.OrderToPaymentProcess(ctx, session.ExternalID, externalOrderID, uint(order.ID))
 
 	log.Info("checkout session confirmed successfully",
 		zap.String("final_status", string(session.Status)),
@@ -738,56 +834,27 @@ func (s *service) GetSession(
 	externalID string,
 ) (*CheckoutSession, error) {
 
-	log := logger.FromCtx(ctx).With(
-		zap.String("layer", "service"),
-		zap.String("method", "GetSession"),
-		zap.String("session_id", externalID),
-	)
-
-	// 1. Resolve user (if any)
-	userID, userOK := utils.GetUserIDFromContext(ctx)
-
-	// 2. Load session
+	userID, ok := utils.GetUserIDFromContext(ctx)
 	session, err := s.repo.GetCheckoutSession(ctx, externalID)
 	if err != nil {
-		log.Error("failed to fetch checkout session", zap.Error(err))
 		return nil, err
 	}
 
-	// 3. Ownership check
-	if session.UserID != nil {
-		if !userOK || *session.UserID != userID {
-			log.Warn("forbidden access to user checkout session",
-				zap.Uint("user_id", userID),
-			)
+	// Ownership check (if session is tied to a user)
+	if session.UserID != nil && ok {
+		if *session.UserID != int32(userID) {
 			return nil, errors.New("forbidden")
 		}
 	}
 
-	// Optional: guest ownership check (if you there is guest sessions)
-	// if session.GuestID != nil {
-	//     guestID := guestIDFromContext(ctx)
-	//     if guestID == nil || *guestID != *session.GuestID {
-	//         log.Warn("forbidden access to guest checkout session")
-	//         return nil, errors.New("forbidden")
-	//     }
-	// }
-
-	// 4. Lazy expiration handling
+	// Expiration handling (soft)
 	if time.Now().After(session.ExpiresAt) &&
 		session.Status == CheckoutSessionStatusPending {
 
-		if err := s.repo.MarkSessionExpired(ctx, session.ID); err != nil {
-			log.Error("failed to mark session expired", zap.Error(err))
-		} else {
-			log.Info("checkout session marked as expired")
-			session.Status = CheckoutSessionStatusExpired
-		}
+		// Optional: mark expired lazily
+		_ = s.repo.MarkSessionExpired(ctx, session.ID)
+		session.Status = CheckoutSessionStatusExpired
 	}
-
-	log.Debug("checkout session fetched successfully",
-		zap.String("status", string(session.Status)),
-	)
 
 	return session, nil
 }
@@ -796,20 +863,25 @@ func (s *service) GetPaymentOrderInfo(
 	ctx context.Context,
 	externalID string,
 ) (*PaymentOrderInfoResponse, error) {
+
 	userID, ok := utils.GetUserIDFromContext(ctx)
+
 	order, err := s.repo.GetOrderByExternalID(ctx, externalID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Ownership check (if order is tied to a user)
-	if order.UserID != nil && ok {
-		if *order.UserID != userID {
+	// Ownership check
+	if order.UserID != nil {
+		if !ok {
+			return nil, errors.New("forbidden")
+		}
+		if *order.UserID != int32(userID) {
 			return nil, errors.New("forbidden")
 		}
 	}
 
-	paymentData, err := s.paymentRepo.GetPaymentByOrder(order.ID)
+	paymentData, err := s.paymentRepo.GetPaymentByOrder(uint(order.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -820,7 +892,6 @@ func (s *service) GetPaymentOrderInfo(
 	}
 
 	instructions := payment.GetInstructions(paymentData.PaymentMethod)
-
 	instructions = payment.InjectVariables(
 		instructions,
 		payment.InstructionVars{
@@ -854,5 +925,4 @@ func (s *service) GetPaymentOrderInfo(
 	}
 
 	return paymentInfo, nil
-
 }

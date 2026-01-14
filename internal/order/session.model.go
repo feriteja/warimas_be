@@ -33,7 +33,7 @@ type CheckoutSession struct {
 	ConfirmedAt *time.Time
 
 	// Optional / lifecycle-dependent
-	UserID    *uint
+	UserID    *int32
 	GuestID   *uuid.UUID
 	AddressID *uuid.UUID
 

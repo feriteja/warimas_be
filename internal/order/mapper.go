@@ -1,22 +1,29 @@
 package order
 
 import (
+	"warimas-be/internal/address"
 	"warimas-be/internal/graph/model"
 )
 
 func MapOrderItemToGraphQL(i *OrderItem) *model.OrderItem {
 	return &model.OrderItem{
-		ID:          int32(i.ID),
-		Quantity:    int32(i.Quantity),
-		Price:       int32(i.Price),
-		VariantID:   i.VariantID,
-		VariantName: i.VariantName,
-		ProductName: i.ProductName,
-		Subtotal:    int32(i.Subtotal),
+		ID:           int32(i.ID),
+		Quantity:     int32(i.Quantity),
+		QuantityType: i.QuantityType,
+		Pricing: &model.OrderItemPricing{
+			Price:    int32(i.Price),
+			Subtotal: int32(i.Subtotal),
+		},
+		Variant: &model.VariantRef{
+			ID:          i.VariantID,
+			Name:        i.VariantName,
+			ProductName: i.ProductName,
+			ImageURL:    i.ImageURL,
+		},
 	}
 }
 
-func ToGraphQLOrder(o *Order) *model.Order {
+func ToGraphQLOrder(o *Order, addr *address.Address) *model.Order {
 	if o == nil {
 		return nil
 	}
@@ -26,26 +33,37 @@ func ToGraphQLOrder(o *Order) *model.Order {
 		items = append(items, MapOrderItemToGraphQL(item))
 	}
 
-	var userID *int32
-	if o.UserID != nil {
-		v := int32(*o.UserID)
-		userID = &v
-	}
-
 	return &model.Order{
-		ID:          int32(o.ID),
-		TotalPrice:  int32(o.TotalAmount),
-		UserID:      userID,
-		Currency:    o.Currency,
-		Subtotal:    int32(o.Subtotal),
-		Tax:         int32(o.Tax),
-		ShippingFee: int32(o.ShippingFee),
-		Status:      model.OrderStatus(o.Status),
-		AddressID:   o.AddressID.String(),
-		Discount:    int32(o.Discount),
-		CreatedAt:   o.CreatedAt,
-		UpdatedAt:   o.UpdatedAt,
-		Items:       items,
+		ID:         int32(o.ID),
+		ExternalID: o.ExternalID,
+		User:       &model.UserRef{ID: *o.UserID},
+		Timestamps: &model.OrderTimestamps{
+			CreatedAt: o.CreatedAt,
+			UpdatedAt: o.UpdatedAt,
+		},
+		Shipping: &model.OrderShipping{Address: &model.Address{
+			ID:           addr.ID.String(),
+			Name:         addr.Name,
+			ReceiverName: addr.ReceiverName,
+			Phone:        addr.Phone,
+			AddressLine1: addr.Address1,
+			AddressLine2: addr.Address2,
+			City:         addr.City,
+			Province:     addr.Province,
+			Country:      addr.Country,
+			PostalCode:   addr.Postal,
+		}},
+		InvoiceNumber: o.InvoiceNumber,
+		Pricing: &model.OrderPricing{
+			Currency:    o.Currency,
+			Subtotal:    int32(o.Subtotal),
+			Tax:         int32(o.Tax),
+			Discount:    int32(o.Discount),
+			ShippingFee: int32(o.ShippingFee),
+			Total:       int32(o.TotalAmount),
+		},
+		Status: model.OrderStatus(o.Status),
+		Items:  items,
 	}
 }
 

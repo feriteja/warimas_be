@@ -10,6 +10,7 @@ import (
 	"warimas-be/internal/address"
 	"warimas-be/internal/logger"
 	"warimas-be/internal/product"
+	"warimas-be/internal/utils"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -17,7 +18,7 @@ import (
 )
 
 type Repository interface {
-	CreateOrder(userID uint) (*Order, error)
+	// CreateOrder(userID uint) (*Order, error)
 	FetchOrders(
 		ctx context.Context,
 		filter *OrderFilterInput,
@@ -27,13 +28,14 @@ type Repository interface {
 	) ([]*Order, error)
 	FetchOrderItems(
 		ctx context.Context,
-		orderIDs []uint,
-	) (map[uint][]*OrderItem, error)
+		orderIDs []int32,
+	) (map[int32][]*OrderItem, error)
 	CountOrders(
 		ctx context.Context,
 		filter *OrderFilterInput,
 	) (int64, error)
-	GetOrderDetail(orderID uint) (*Order, error)
+	GetOrderDetail(ctx context.Context, orderID uint) (*Order, error)
+	GetOrderDetailByExternalID(ctx context.Context, external string) (*Order, error)
 	UpdateOrderStatus(orderID uint, status OrderStatus) error
 	UpdateStatusByReferenceID(ctx context.Context, referenceID, ExternalReference, paymentProviderID, status string) error
 	GetByReferenceID(ctx context.Context, referenceID string) (*Order, error)
@@ -176,7 +178,7 @@ func (r *repository) GetOrderByExternalID(
 
 	log.Info("order fetched successfully",
 		zap.String("external_id", externalID),
-		zap.Uint("order_id", o.ID),
+		zap.Uint("order_id", uint(o.ID)),
 	)
 
 	return &o, nil
@@ -238,7 +240,7 @@ func (r *repository) CreateOrderTx(
 	}
 
 	log.Info("order created",
-		zap.Uint("order_id", order.ID),
+		zap.Int32("order_id", order.ID),
 		zap.Int("items_count", len(session.Items)),
 	)
 
@@ -253,8 +255,9 @@ func (r *repository) CreateOrderTx(
 				variant_id,
 				variant_name,
 				product_name,
-				subtotal
-			) VALUES ($1,$2,$3,$4,$5,$6,$7)
+				subtotal,
+				image_url
+			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
 		`,
 			order.ID,
 			item.Quantity,
@@ -263,6 +266,7 @@ func (r *repository) CreateOrderTx(
 			item.VariantName,
 			item.ProductName,
 			item.Subtotal,
+			item.ImageURL,
 		)
 		if err != nil {
 			log.Error("failed to insert order item",
@@ -308,115 +312,154 @@ func (r *repository) CreateOrderTx(
 	}
 
 	log.Info("order transaction committed successfully",
-		zap.Uint("order_id", order.ID),
+		zap.Int32("order_id", order.ID),
 	)
 
 	return nil
 }
 
 // ✅ Create new order from user’s cart
-func (r *repository) CreateOrder(userID uint) (*Order, error) {
-	tx, err := r.db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
+// func (r *repository) CreateOrder(userID uint) (*Order, error) {
+// 	tx, err := r.db.Begin()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer tx.Rollback()
 
-	// 1️⃣ Get cart items
-	rows, err := tx.Query(`
-		SELECT c.product_id, c.quantity, p.price
-		FROM carts c
-		JOIN products p ON p.id = c.product_id
-		WHERE c.user_id = $1
-	`, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+// 	// 1️⃣ Get cart items
+// 	rows, err := tx.Query(`
+// 		SELECT c.product_id, c.quantity, p.price
+// 		FROM carts c
+// 		JOIN products p ON p.id = c.product_id
+// 		WHERE c.user_id = $1
+// 	`, userID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer rows.Close()
 
-	var items []*OrderItem
-	var total int
+// 	var items []*OrderItem
+// 	var total int
 
-	for rows.Next() {
-		var item OrderItem
-		err := rows.Scan(&item.ProductID, &item.Quantity, &item.Price)
-		if err != nil {
-			return nil, err
-		}
-		items = append(items, &item)
-		total += item.Quantity * int(item.Price)
-	}
+// 	for rows.Next() {
+// 		var item OrderItem
+// 		err := rows.Scan(&item.ProductID, &item.Quantity, &item.Pricing.Price)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		items = append(items, &item)
+// 		total += item.Quantity * int(item.Price)
+// 	}
 
-	if len(items) == 0 {
-		return nil, errors.New("cart is empty")
-	}
+// 	if len(items) == 0 {
+// 		return nil, errors.New("cart is empty")
+// 	}
 
-	// 2️⃣ Create order
-	var orderID uint
-	err = tx.QueryRow(`
-		INSERT INTO orders (user_id, total, status)
-		VALUES ($1, $2, 'PENDING')
-		RETURNING id
-	`, userID, total).Scan(&orderID)
-	if err != nil {
-		return nil, err
-	}
+// 	// 2️⃣ Create order
+// 	var orderID uint
+// 	err = tx.QueryRow(`
+// 		INSERT INTO orders (user_id, total, status)
+// 		VALUES ($1, $2, 'PENDING')
+// 		RETURNING id
+// 	`, userID, total).Scan(&orderID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	// 3️⃣ Insert order items
-	for _, item := range items {
-		_, err = tx.Exec(`
-			INSERT INTO order_items (order_id, product_id, quantity, price)
-			VALUES ($1, $2, $3, $4)
-		`, orderID, item.ProductID, item.Quantity, item.Price)
-		if err != nil {
-			return nil, err
-		}
-	}
+// 	// 3️⃣ Insert order items
+// 	for _, item := range items {
+// 		_, err = tx.Exec(`
+// 			INSERT INTO order_items (order_id, product_id, quantity, price)
+// 			VALUES ($1, $2, $3, $4)
+// 		`, orderID, item.ProductID, item.Quantity, item.Price)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 	}
 
-	// 4️⃣ Clear user cart
-	// _, err = tx.Exec("DELETE FROM carts WHERE user_id = $1", userID)
-	// if err != nil {
-	// 	return nil, err
-	// }
+// 	// 4️⃣ Clear user cart
+// 	// _, err = tx.Exec("DELETE FROM carts WHERE user_id = $1", userID)
+// 	// if err != nil {
+// 	// 	return nil, err
+// 	// }
 
-	// 5️⃣ Commit
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
+// 	// 5️⃣ Commit
+// 	if err := tx.Commit(); err != nil {
+// 		return nil, err
+// 	}
 
-	// Return order struct
-	return &Order{
-		ID:          orderID,
-		UserID:      &userID,
-		TotalAmount: uint(total),
-		Status:      StatusPendingPayment,
-		Items:       items,
-	}, nil
-}
+// 	// Return order struct
+// 	return &Order{
+// 		ID:          orderID,
+// 		UserID:      &userID,
+// 		TotalAmount: uint(total),
+// 		Status:      StatusPendingPayment,
+// 		Items:       items,
+// 	}, nil
+// }
 
 // ✅ Get detailed order with items
-func (r *repository) GetOrderDetail(orderID uint) (*Order, error) {
+func (r *repository) GetOrderDetail(
+	ctx context.Context,
+	orderID uint,
+) (*Order, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "GetOrderDetail"),
+		zap.Uint("order_id", orderID),
+	)
+
+	log.Debug("fetching order")
+
 	var o Order
-	err := r.db.QueryRow(`
-		SELECT id, user_id, total, status, created_at, updated_at
-		FROM orders WHERE id = $1
-	`, orderID).Scan(&o.ID, &o.UserID, &o.TotalAmount, &o.Status, &o.CreatedAt, &o.UpdatedAt)
-	if err == sql.ErrNoRows {
-		return nil, errors.New("order not found")
-	}
+
+	// Fetch order
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id, user_id, total_amount, status, created_at, updated_at, currency, 
+		address_id, external_id, subtotal, tax, shipping_fee, discount, invoice_number
+		FROM orders
+		WHERE id = $1
+	`, orderID).Scan(
+		&o.ID,
+		&o.UserID,
+		&o.TotalAmount,
+		&o.Status,
+		&o.CreatedAt,
+		&o.UpdatedAt,
+		&o.Currency,
+		&o.AddressID,
+		&o.ExternalID,
+		&o.Subtotal,
+		&o.Tax,
+		&o.ShippingFee,
+		&o.Discount,
+		&o.InvoiceNumber,
+	)
+
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Warn("order not found")
+			return nil, ErrOrderNotFound
+		}
+
+		log.Error("failed to query order", zap.Error(err))
 		return nil, err
 	}
 
-	rows, err := r.db.Query(`
-	SELECT id, order_id, quantity, unit_price, variant_id, variant_name, product_name, subtotal
+	// Fetch order items
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, order_id, quantity, unit_price, variant_id, variant_name, product_name, subtotal, image_url, quantity_type
 		FROM order_items
-		WHERE oi.order_id = $1
+		WHERE order_id = $1
 	`, orderID)
 	if err != nil {
+		log.Error("failed to query order items", zap.Error(err))
 		return nil, err
 	}
 	defer rows.Close()
+
+	o.Items = make([]*OrderItem, 0)
 
 	for rows.Next() {
 		var item OrderItem
@@ -428,11 +471,120 @@ func (r *repository) GetOrderDetail(orderID uint) (*Order, error) {
 			&item.VariantID,
 			&item.VariantName,
 			&item.ProductName,
-			&item.Subtotal); err != nil {
+			&item.Subtotal,
+			&item.ImageURL,
+			&item.QuantityType,
+		); err != nil {
+			log.Error("failed to scan order item", zap.Error(err))
 			return nil, err
 		}
+
 		o.Items = append(o.Items, &item)
 	}
+
+	if err := rows.Err(); err != nil {
+		log.Error("row iteration error", zap.Error(err))
+		return nil, err
+	}
+
+	log.Debug("order fetched successfully",
+		zap.Int("items_count", len(o.Items)),
+	)
+
+	return &o, nil
+}
+
+func (r *repository) GetOrderDetailByExternalID(
+	ctx context.Context,
+	externalID string,
+) (*Order, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "GetOrderDetail"),
+		zap.String("order_id", externalID),
+	)
+
+	log.Debug("fetching order")
+
+	var o Order
+
+	// Fetch order
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id, user_id, total_amount, status, created_at, updated_at, currency, 
+		address_id, external_id, subtotal, tax, shipping_fee, discount, invoice_number
+		FROM orders
+		WHERE external_id = $1
+	`, externalID).Scan(
+		&o.ID,
+		&o.UserID,
+		&o.TotalAmount,
+		&o.Status,
+		&o.CreatedAt,
+		&o.UpdatedAt,
+		&o.Currency,
+		&o.AddressID,
+		&o.ExternalID,
+		&o.Subtotal,
+		&o.Tax,
+		&o.ShippingFee,
+		&o.Discount,
+		&o.InvoiceNumber,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Warn("order not found")
+			return nil, ErrOrderNotFound
+		}
+
+		log.Error("failed to query order", zap.Error(err))
+		return nil, err
+	}
+
+	// Fetch order items
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, order_id, quantity, unit_price, variant_id, variant_name, product_name, subtotal, image_url, quantity_type
+		FROM order_items
+		WHERE order_id = $1
+	`, o.ID)
+	if err != nil {
+		log.Error("failed to query order items", zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
+
+	o.Items = make([]*OrderItem, 0)
+
+	for rows.Next() {
+		var item OrderItem
+		if err := rows.Scan(
+			&item.ID,
+			&item.OrderID,
+			&item.Quantity,
+			&item.Price,
+			&item.VariantID,
+			&item.VariantName,
+			&item.ProductName,
+			&item.Subtotal,
+			&item.ImageURL,
+			&item.QuantityType,
+		); err != nil {
+			log.Error("failed to scan order item", zap.Error(err))
+			return nil, err
+		}
+
+		o.Items = append(o.Items, &item)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Error("row iteration error", zap.Error(err))
+		return nil, err
+	}
+
+	log.Debug("order fetched successfully",
+		zap.Int("items_count", len(o.Items)),
+	)
 
 	return &o, nil
 }
@@ -538,7 +690,7 @@ func (r *repository) UpdateStatusByReferenceID(
 
 	args := []any{status, paymentProviderID}
 
-	if status == string(StatusPaid) {
+	if status == string(OrderStatusPaid) {
 		queryPayment += `, paid_at = now()`
 	}
 
@@ -613,7 +765,7 @@ func (r *repository) GetByReferenceID(
 	}
 
 	log.Debug("order fetched successfully",
-		zap.Uint("order_id", o.ID),
+		zap.Int32("order_id", o.ID),
 		zap.String("status", string(o.Status)),
 	)
 
@@ -1127,6 +1279,9 @@ func (r *repository) FetchOrders(
 	limit int32,
 	offset int32,
 ) ([]*Order, error) {
+	userId, _ := utils.GetUserIDFromContext(ctx)
+	userRole := utils.GetUserRoleFromContext(ctx)
+	isAdmin := userRole == "ADMIN"
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
@@ -1139,12 +1294,21 @@ func (r *repository) FetchOrders(
 	)
 
 	baseQuery := `
-		SELECT o.id, o.user_id, o.status, o.total_amount, o.created_at
+		SELECT 
+		o.id, o.external_id, o.invoice_number, 
+		o.user_id, o.currency, o.subtotal, o.tax, o.discount, 
+		o.shipping_fee, o.total_amount, o.status,
+		o.address_id, o.created_at, o.updated_at
 		FROM orders o
 	`
 
 	// Default condition
 	// where = append(where, "o.deleted_at IS NULL")
+	if !isAdmin {
+		where = append(where, fmt.Sprintf("o.user_id = $%d", len(args)))
+		args = append(args, userId)
+
+	}
 
 	if filter != nil {
 
@@ -1223,10 +1387,19 @@ func (r *repository) FetchOrders(
 		var o Order
 		if err := rows.Scan(
 			&o.ID,
+			&o.ExternalID,
+			&o.InvoiceNumber,
 			&o.UserID,
-			&o.Status,
+			&o.Currency,
+			&o.Subtotal,
+			&o.Tax,
+			&o.Discount,
+			&o.ShippingFee,
 			&o.TotalAmount,
+			&o.Status,
+			&o.AddressID,
 			&o.CreatedAt,
+			&o.UpdatedAt,
 		); err != nil {
 			log.Error("failed to scan order row", zap.Error(err))
 			return nil, err
@@ -1239,15 +1412,15 @@ func (r *repository) FetchOrders(
 
 func (r *repository) FetchOrderItems(
 	ctx context.Context,
-	orderIDs []uint,
-) (map[uint][]*OrderItem, error) {
+	orderIDs []int32,
+) (map[int32][]*OrderItem, error) {
 
 	if len(orderIDs) == 0 {
-		return map[uint][]*OrderItem{}, nil
+		return map[int32][]*OrderItem{}, nil
 	}
 
 	query := `
-		SELECT id, order_id, quantity, unit_price, variant_id, variant_name, product_name, subtotal
+		SELECT id, order_id,  variant_name, product_name, image_url, quantity, quantity_type, unit_price, variant_id, subtotal
 		FROM order_items
 		WHERE order_id = ANY($1)
 	`
@@ -1258,23 +1431,25 @@ func (r *repository) FetchOrderItems(
 	}
 	defer rows.Close()
 
-	itemsMap := make(map[uint][]*OrderItem)
+	itemsMap := make(map[int32][]*OrderItem)
 
 	for rows.Next() {
 		var item OrderItem
 		if err := rows.Scan(
 			&item.ID,
 			&item.OrderID,
-			&item.Quantity,
-			&item.Price,
-			&item.VariantID,
 			&item.VariantName,
 			&item.ProductName,
+			&item.ImageURL,
+			&item.Quantity,
+			&item.QuantityType,
+			&item.Price,
+			&item.VariantID,
 			&item.Subtotal,
 		); err != nil {
 			return nil, err
 		}
-		itemsMap[item.OrderID] = append(itemsMap[item.OrderID], &item)
+		itemsMap[int32(item.OrderID)] = append(itemsMap[int32(item.OrderID)], &item)
 	}
 
 	return itemsMap, rows.Err()

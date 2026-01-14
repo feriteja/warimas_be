@@ -15,9 +15,11 @@ enum PaymentStatus {
 enum OrderStatus {
   PENDING_PAYMENT
   PAID
-  FULFILLING
+  ACCEPTED
+  SHIPPED
   COMPLETED
   CANCELLED
+  FAILED
 }
 
 enum OrderSortField {
@@ -65,6 +67,11 @@ input CreateOrderFromSessionInput {
   externalId: ID!
 }
 
+input PaginationInput {
+  page: Int! = 1
+  limit: Int! = 20
+}
+
 """
 ====================
 Core Types
@@ -72,31 +79,62 @@ Core Types
 """
 type Order {
   id: Int!
-  userId: Int
+  externalId: String!
+  invoiceNumber: String
+
+  user: UserRef!
+
+  pricing: OrderPricing!
+  status: OrderStatus!
+
+  shipping: OrderShipping!
+
+  items: [OrderItem!]!
+
+  timestamps: OrderTimestamps!
+}
+
+type UserRef {
+  id: Int!
+}
+
+type OrderPricing {
   currency: String!
-  totalPrice: Int!
   subtotal: Int!
   tax: Int!
-  shippingFee: Int!
-  addressID: ID!
   discount: Int!
-  status: OrderStatus!
+  shippingFee: Int!
+  total: Int!
+}
+
+type OrderShipping {
+  address: Address!
+}
+
+type OrderTimestamps {
   createdAt: Time!
   updatedAt: Time!
-  items: [OrderItem!]!
 }
 
 type OrderItem {
   id: Int!
 
-  variantId: ID!
-  variantName: String!
-  productName: String!
-  imageUrl: String
+  variant: VariantRef!
 
   quantity: Int!
   quantityType: String!
 
+  pricing: OrderItemPricing!
+}
+
+type VariantRef {
+  id: ID!
+  name: String!
+  productName: String!
+  imageUrl: String
+}
+
+type OrderItemPricing {
   price: Int!
   subtotal: Int!
 }
@@ -135,9 +173,16 @@ type CheckoutSessionItem {
 
 type OrderListResponse {
   items: [Order!]!
-  total: Int!
+  pageInfo: PageInfoOrder!
+}
+
+type PageInfoOrder {
+  totalItems: Int!
+  totalPages: Int!
   page: Int!
   limit: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
 }
 
 type Payment {
@@ -202,11 +247,11 @@ extend type Query {
   orderList(
     filter: OrderFilterInput
     sort: OrderSortInput
-    limit: Int = 20
-    page: Int = 1
-  ): OrderListResponse
+    pagination: PaginationInput = { limit: 20, page: 1 }
+  ): OrderListResponse!
 
   orderDetail(orderId: ID!): Order! @auth(role: USER)
+  orderDetailByExternalId(externalId: ID!): Order! @auth(role: USER)
 
   checkoutSession(externalId: String!): CheckoutSession
 

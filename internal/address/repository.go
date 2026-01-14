@@ -7,12 +7,14 @@ import (
 	"warimas-be/internal/logger"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
 type Repository interface {
 	GetByUserID(ctx context.Context, userID uint) ([]*Address, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Address, error)
+	GetByIDs(ctx context.Context, ids []uuid.UUID) ([]Address, error)
 
 	Create(ctx context.Context, addr *Address) error
 	Deactivate(ctx context.Context, id uuid.UUID) error
@@ -239,4 +241,62 @@ func (r *repository) SetDefault(
 
 	_, err := r.db.ExecContext(ctx, q, userID, addressID)
 	return err
+}
+
+func (r *repository) GetByIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]Address, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("repo", "Address"),
+		zap.String("method", "GetByIDs"),
+		zap.Int("ids_count", len(ids)),
+	)
+
+	if len(ids) == 0 {
+		return []Address{}, nil
+	}
+
+	const q = `
+		SELECT
+			id, user_id,
+			name, phone,
+			address_line1, address_line2,
+			city, province, postal_code, country,
+			is_default, is_active, receiver_name
+		FROM addresses
+		WHERE id = ANY($1)
+	`
+
+	rows, err := r.db.QueryContext(ctx, q, pq.Array(ids))
+	if err != nil {
+		log.Error("query failed", zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
+
+	addresses := make([]Address, 0, len(ids))
+
+	for rows.Next() {
+		var a Address
+		if err := rows.Scan(
+			&a.ID, &a.UserID,
+			&a.Name, &a.Phone,
+			&a.Address1, &a.Address2,
+			&a.City, &a.Province, &a.Postal, &a.Country,
+			&a.IsDefault, &a.IsActive, &a.ReceiverName,
+		); err != nil {
+			log.Error("scan failed", zap.Error(err))
+			return nil, err
+		}
+		addresses = append(addresses, a)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Error("rows iteration failed", zap.Error(err))
+		return nil, err
+	}
+
+	return addresses, nil
 }

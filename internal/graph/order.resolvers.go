@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"warimas-be/internal/address"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
 	"warimas-be/internal/order"
@@ -39,17 +40,29 @@ func (r *mutationResolver) CreateOrderFromSession(ctx context.Context, input mod
 		return nil, err
 	}
 
+	log.Info("order created from session", zap.Int32("order_id", orderCreated.ID))
+
 	return &model.CreateOrderResponse{
 		Success: true,
-		Order:   order.ToGraphQLOrder(orderCreated),
+		Order:   order.ToGraphQLOrder(orderCreated, nil),
 	}, nil
 }
 
 // UpdateOrderStatus is the resolver for the updateOrderStatus field.
 func (r *mutationResolver) UpdateOrderStatus(ctx context.Context, input model.UpdateOrderStatusInput) (*model.CreateOrderResponse, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "UpdateOrderStatus"),
+		zap.String("order_id", input.OrderID),
+		zap.String("status", input.Status.String()),
+	)
+
+	log.Info("update order status request received")
+
 	// Admin only — you already handle auth via @auth(role: ADMIN)
 	orderID, err := utils.ToUint(input.OrderID)
 	if err != nil {
+		log.Warn("invalid order id", zap.Error(err))
 		return &model.CreateOrderResponse{
 			Success: false,
 			Message: utils.StrPtr("Invalid order ID"),
@@ -60,11 +73,14 @@ func (r *mutationResolver) UpdateOrderStatus(ctx context.Context, input model.Up
 
 	err = r.OrderSvc.UpdateOrderStatus(orderID, status)
 	if err != nil {
+		log.Error("failed to update order status", zap.Error(err))
 		return &model.CreateOrderResponse{
 			Success: false,
 			Message: utils.StrPtr(err.Error()),
 		}, nil
 	}
+
+	log.Info("order status updated successfully")
 
 	return &model.CreateOrderResponse{
 		Success: true,
@@ -111,11 +127,7 @@ func (r *mutationResolver) CreateCheckoutSession(ctx context.Context, input mode
 }
 
 // UpdateSessionAddress is the resolver for the updateSessionAddress field.
-func (r *mutationResolver) UpdateSessionAddress(
-	ctx context.Context,
-	input model.UpdateSessionAddressInput,
-) (*model.UpdateSessionAddressResponse, error) {
-
+func (r *mutationResolver) UpdateSessionAddress(ctx context.Context, input model.UpdateSessionAddressInput) (*model.UpdateSessionAddressResponse, error) {
 	logFields := []zap.Field{
 		zap.String("layer", "resolver"),
 		zap.String("method", "UpdateSessionAddress"),
@@ -174,44 +186,62 @@ func (r *mutationResolver) ConfirmCheckoutSession(ctx context.Context, input mod
 }
 
 // OrderList is the resolver for the orderList field.
-func (r *queryResolver) OrderList(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, page *int32) (*model.OrderListResponse, error) {
+func (r *queryResolver) OrderList(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, pagination *model.PaginationInput) (*model.OrderListResponse, error) {
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "resolver"),
 		zap.String("method", "OrderList"),
 	)
 
+	// Defaults
+	limit := int32(20)
+	page := int32(1)
+
+	if pagination != nil {
+		if pagination.Limit > 0 {
+			limit = pagination.Limit
+		}
+		if pagination.Page > 0 {
+			page = pagination.Page
+		}
+	}
+
 	log.Info("order list request started",
-		zap.Any("filter", filter),
-		zap.Any("sort", sort),
-		zap.Int32p("limit", limit),
-		zap.Int32p("page", page),
+		zap.Int32("limit", limit),
+		zap.Int32("page", page),
 	)
 
+	// Map filter
 	filterOrder := &order.OrderFilterInput{}
 	if filter != nil {
-		filterOrder = &order.OrderFilterInput{
-			Search:   filter.Search,
-			Status:   (*order.OrderStatus)(filter.Status),
-			DateFrom: filter.DateFrom,
-			DateTo:   filter.DateTo,
+		filterOrder.Search = filter.Search
+		filterOrder.DateFrom = filter.DateFrom
+		filterOrder.DateTo = filter.DateTo
+
+		if filter.Status != nil {
+			status := order.OrderStatus(*filter.Status)
+			filterOrder.Status = &status
 		}
 	}
 
-	sortOrder := &order.OrderSortInput{}
+	// Map sort
+	sortOrder := &order.OrderSortInput{
+		Field:     order.OrderSortFieldCreatedAt,
+		Direction: order.SortDirectionDesc,
+	}
+
 	if sort != nil {
-		sortOrder = &order.OrderSortInput{
-			Field:     order.OrderSortField(sort.Field),
-			Direction: order.SortDirection(sort.Direction),
-		}
-	} else {
-		// default sort
-		sortOrder = &order.OrderSortInput{
-			Field:     order.OrderSortFieldCreatedAt,
-			Direction: order.SortDirectionDesc,
-		}
+		sortOrder.Field = order.OrderSortField(sort.Field)
+		sortOrder.Direction = order.SortDirection(sort.Direction)
 	}
 
-	orders, total, err := r.OrderSvc.GetOrders(ctx, filterOrder, sortOrder, limit, page)
+	// Fetch data
+	orders, total, addressMap, err := r.OrderSvc.GetOrders(
+		ctx,
+		filterOrder,
+		sortOrder,
+		limit,
+		page,
+	)
 	if err != nil {
 		log.Error("order list request failed", zap.Error(err))
 		return nil, err
@@ -219,40 +249,87 @@ func (r *queryResolver) OrderList(ctx context.Context, filter *model.OrderFilter
 
 	log.Info("order list request success",
 		zap.Int("items_count", len(orders)),
-		zap.Int64("total", total),
+		zap.Int64("total_items", total),
 	)
 
-	var mapOrder []*model.Order
+	// Map orders to GraphQL
+	items := make([]*model.Order, 0, len(orders))
+
 	for _, o := range orders {
-		mapOrder = append(mapOrder, order.ToGraphQLOrder(o))
+		var addr *address.Address
+
+		if list, ok := addressMap[o.AddressID]; ok && len(list) > 0 {
+			addr = &list[0] // usually 1 address per order
+		}
+
+		items = append(items, order.ToGraphQLOrder(o, addr))
+	}
+
+	// Page info
+	totalPages := int32((total + int64(limit) - 1) / int64(limit))
+
+	pageInfo := &model.PageInfoOrder{
+		TotalItems:      int32(total),
+		TotalPages:      totalPages,
+		Page:            page,
+		Limit:           limit,
+		HasNextPage:     page < totalPages,
+		HasPreviousPage: page > 1,
 	}
 
 	return &model.OrderListResponse{
-		Items: mapOrder,
-		Total: int32(total),
-		Page:  *page,
-		Limit: *limit,
+		Items:    items,
+		PageInfo: pageInfo,
 	}, nil
 }
 
 // OrderDetail is the resolver for the orderDetail field.
 func (r *queryResolver) OrderDetail(ctx context.Context, orderID string) (*model.Order, error) {
-	userID, ok := utils.GetUserIDFromContext(ctx)
-	if !ok {
-		return nil, fmt.Errorf("unauthorized")
-	}
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "OrderDetail"),
+		zap.String("order_id", orderID),
+	)
+
+	log.Info("order detail request received")
 
 	oid, err := utils.ToUint(orderID)
 	if err != nil {
+		log.Warn("invalid order id", zap.Error(err))
 		return nil, err
 	}
 
-	orderDetail, err := r.OrderSvc.GetOrderDetail(uint(userID), oid, false)
+	orderDetail, address, err := r.OrderSvc.GetOrderDetail(ctx, oid)
 	if err != nil {
+		log.Error("failed to get order detail", zap.Error(err))
 		return nil, err
 	}
 
-	return order.ToGraphQLOrder(orderDetail), nil
+	log.Info("order detail fetched successfully")
+
+	return order.ToGraphQLOrder(orderDetail, address), nil
+}
+
+// OrderDetailByExternalID is the resolver for the orderDetailByExternalId field.
+func (r *queryResolver) OrderDetailByExternalID(ctx context.Context, externalID string) (*model.Order, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "OrderDetailByExternalID"),
+		zap.String("external_id", externalID),
+	)
+
+	log.Info("order detail request received")
+
+	orderDetail, address, err := r.OrderSvc.GetOrderDetailByExternalID(ctx, externalID)
+	if err != nil {
+		log.Error("failed to get order detail", zap.Error(err))
+		return nil, err
+	}
+
+	log.Info("order detail fetched successfully")
+
+	return order.ToGraphQLOrder(orderDetail, address), nil
 }
 
 // CheckoutSession is the resolver for the checkoutSession field.

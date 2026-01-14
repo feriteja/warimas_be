@@ -44,8 +44,9 @@ type QueryResolver interface {
 	MyCart(ctx context.Context, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) ([]*model.CartItem, error)
 	Category(ctx context.Context, filter *string, limit *int32, page *int32) ([]*model.Category, error)
 	Subcategory(ctx context.Context, filter *string, categoryID string, limit *int32, page *int32) ([]*model.Subcategory, error)
-	OrderList(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, limit *int32, page *int32) (*model.OrderListResponse, error)
+	OrderList(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, pagination *model.PaginationInput) (*model.OrderListResponse, error)
 	OrderDetail(ctx context.Context, orderID string) (*model.Order, error)
+	OrderDetailByExternalID(ctx context.Context, externalID string) (*model.Order, error)
 	CheckoutSession(ctx context.Context, externalID string) (*model.CheckoutSession, error)
 	PaymentOrderInfo(ctx context.Context, externalID string) (*model.PaymentOrderInfoResponse, error)
 	PackageRecomamendation(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) (*model.PackageResponse, error)
@@ -363,6 +364,17 @@ func (ec *executionContext) field_Query_myCart_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_orderDetailByExternalId_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "externalId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["externalId"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_orderDetail_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -387,16 +399,11 @@ func (ec *executionContext) field_Query_orderList_args(ctx context.Context, rawA
 		return nil, err
 	}
 	args["sort"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint32)
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "pagination", ec.unmarshalOPaginationInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPaginationInput)
 	if err != nil {
 		return nil, err
 	}
-	args["limit"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "page", ec.unmarshalOInt2ᚖint32)
-	if err != nil {
-		return nil, err
-	}
-	args["page"] = arg3
+	args["pagination"] = arg2
 	return args, nil
 }
 
@@ -2061,12 +2068,12 @@ func (ec *executionContext) _Query_orderList(ctx context.Context, field graphql.
 		ec.fieldContext_Query_orderList,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().OrderList(ctx, fc.Args["filter"].(*model.OrderFilterInput), fc.Args["sort"].(*model.OrderSortInput), fc.Args["limit"].(*int32), fc.Args["page"].(*int32))
+			return ec.resolvers.Query().OrderList(ctx, fc.Args["filter"].(*model.OrderFilterInput), fc.Args["sort"].(*model.OrderSortInput), fc.Args["pagination"].(*model.PaginationInput))
 		},
 		nil,
-		ec.marshalOOrderListResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderListResponse,
+		ec.marshalNOrderListResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrderListResponse,
 		true,
-		false,
+		true,
 	)
 }
 
@@ -2080,12 +2087,8 @@ func (ec *executionContext) fieldContext_Query_orderList(ctx context.Context, fi
 			switch field.Name {
 			case "items":
 				return ec.fieldContext_OrderListResponse_items(ctx, field)
-			case "total":
-				return ec.fieldContext_OrderListResponse_total(ctx, field)
-			case "page":
-				return ec.fieldContext_OrderListResponse_page(ctx, field)
-			case "limit":
-				return ec.fieldContext_OrderListResponse_limit(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_OrderListResponse_pageInfo(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type OrderListResponse", field.Name)
 		},
@@ -2149,30 +2152,22 @@ func (ec *executionContext) fieldContext_Query_orderDetail(ctx context.Context, 
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Order_id(ctx, field)
-			case "userId":
-				return ec.fieldContext_Order_userId(ctx, field)
-			case "currency":
-				return ec.fieldContext_Order_currency(ctx, field)
-			case "totalPrice":
-				return ec.fieldContext_Order_totalPrice(ctx, field)
-			case "subtotal":
-				return ec.fieldContext_Order_subtotal(ctx, field)
-			case "tax":
-				return ec.fieldContext_Order_tax(ctx, field)
-			case "shippingFee":
-				return ec.fieldContext_Order_shippingFee(ctx, field)
-			case "addressID":
-				return ec.fieldContext_Order_addressID(ctx, field)
-			case "discount":
-				return ec.fieldContext_Order_discount(ctx, field)
+			case "externalId":
+				return ec.fieldContext_Order_externalId(ctx, field)
+			case "invoiceNumber":
+				return ec.fieldContext_Order_invoiceNumber(ctx, field)
+			case "user":
+				return ec.fieldContext_Order_user(ctx, field)
+			case "pricing":
+				return ec.fieldContext_Order_pricing(ctx, field)
 			case "status":
 				return ec.fieldContext_Order_status(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Order_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Order_updatedAt(ctx, field)
+			case "shipping":
+				return ec.fieldContext_Order_shipping(ctx, field)
 			case "items":
 				return ec.fieldContext_Order_items(ctx, field)
+			case "timestamps":
+				return ec.fieldContext_Order_timestamps(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Order", field.Name)
 		},
@@ -2185,6 +2180,85 @@ func (ec *executionContext) fieldContext_Query_orderDetail(ctx context.Context, 
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_orderDetail_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_orderDetailByExternalId(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_orderDetailByExternalId,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().OrderDetailByExternalID(ctx, fc.Args["externalId"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				role, err := ec.unmarshalORole2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal *model.Order
+					return zeroVal, err
+				}
+				if ec.directives.Auth == nil {
+					var zeroVal *model.Order
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.directives.Auth(ctx, nil, directive0, role)
+			}
+
+			next = directive1
+			return next
+		},
+		ec.marshalNOrder2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐOrder,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_orderDetailByExternalId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Order_id(ctx, field)
+			case "externalId":
+				return ec.fieldContext_Order_externalId(ctx, field)
+			case "invoiceNumber":
+				return ec.fieldContext_Order_invoiceNumber(ctx, field)
+			case "user":
+				return ec.fieldContext_Order_user(ctx, field)
+			case "pricing":
+				return ec.fieldContext_Order_pricing(ctx, field)
+			case "status":
+				return ec.fieldContext_Order_status(ctx, field)
+			case "shipping":
+				return ec.fieldContext_Order_shipping(ctx, field)
+			case "items":
+				return ec.fieldContext_Order_items(ctx, field)
+			case "timestamps":
+				return ec.fieldContext_Order_timestamps(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Order", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_orderDetailByExternalId_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -2961,13 +3035,16 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		case "orderList":
 			field := field
 
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
 				defer func() {
 					if r := recover(); r != nil {
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
 				res = ec._Query_orderList(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
 				return res
 			}
 
@@ -2987,6 +3064,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_orderDetail(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "orderDetailByExternalId":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_orderDetailByExternalId(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}

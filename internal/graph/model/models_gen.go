@@ -186,19 +186,15 @@ type NewVariant struct {
 // Core Types
 // ====================
 type Order struct {
-	ID          int32        `json:"id"`
-	UserID      *int32       `json:"userId,omitempty"`
-	Currency    string       `json:"currency"`
-	TotalPrice  int32        `json:"totalPrice"`
-	Subtotal    int32        `json:"subtotal"`
-	Tax         int32        `json:"tax"`
-	ShippingFee int32        `json:"shippingFee"`
-	AddressID   string       `json:"addressID"`
-	Discount    int32        `json:"discount"`
-	Status      OrderStatus  `json:"status"`
-	CreatedAt   time.Time    `json:"createdAt"`
-	UpdatedAt   time.Time    `json:"updatedAt"`
-	Items       []*OrderItem `json:"items"`
+	ID            int32            `json:"id"`
+	ExternalID    string           `json:"externalId"`
+	InvoiceNumber *string          `json:"invoiceNumber,omitempty"`
+	User          *UserRef         `json:"user"`
+	Pricing       *OrderPricing    `json:"pricing"`
+	Status        OrderStatus      `json:"status"`
+	Shipping      *OrderShipping   `json:"shipping"`
+	Items         []*OrderItem     `json:"items"`
+	Timestamps    *OrderTimestamps `json:"timestamps"`
 }
 
 type OrderFilterInput struct {
@@ -209,27 +205,44 @@ type OrderFilterInput struct {
 }
 
 type OrderItem struct {
-	ID           int32   `json:"id"`
-	VariantID    string  `json:"variantId"`
-	VariantName  string  `json:"variantName"`
-	ProductName  string  `json:"productName"`
-	ImageURL     *string `json:"imageUrl,omitempty"`
-	Quantity     int32   `json:"quantity"`
-	QuantityType string  `json:"quantityType"`
-	Price        int32   `json:"price"`
-	Subtotal     int32   `json:"subtotal"`
+	ID           int32             `json:"id"`
+	Variant      *VariantRef       `json:"variant"`
+	Quantity     int32             `json:"quantity"`
+	QuantityType string            `json:"quantityType"`
+	Pricing      *OrderItemPricing `json:"pricing"`
+}
+
+type OrderItemPricing struct {
+	Price    int32 `json:"price"`
+	Subtotal int32 `json:"subtotal"`
 }
 
 type OrderListResponse struct {
-	Items []*Order `json:"items"`
-	Total int32    `json:"total"`
-	Page  int32    `json:"page"`
-	Limit int32    `json:"limit"`
+	Items    []*Order       `json:"items"`
+	PageInfo *PageInfoOrder `json:"pageInfo"`
+}
+
+type OrderPricing struct {
+	Currency    string `json:"currency"`
+	Subtotal    int32  `json:"subtotal"`
+	Tax         int32  `json:"tax"`
+	Discount    int32  `json:"discount"`
+	ShippingFee int32  `json:"shippingFee"`
+	Total       int32  `json:"total"`
+}
+
+type OrderShipping struct {
+	Address *Address `json:"address"`
 }
 
 type OrderSortInput struct {
 	Field     OrderSortField `json:"field"`
 	Direction SortDirection  `json:"direction"`
+}
+
+type OrderTimestamps struct {
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 type Package struct {
@@ -273,6 +286,20 @@ type PageInfo struct {
 	HasPreviousPage bool    `json:"hasPreviousPage"`
 	StartCursor     *string `json:"startCursor,omitempty"`
 	EndCursor       *string `json:"endCursor,omitempty"`
+}
+
+type PageInfoOrder struct {
+	TotalItems      int32 `json:"totalItems"`
+	TotalPages      int32 `json:"totalPages"`
+	Page            int32 `json:"page"`
+	Limit           int32 `json:"limit"`
+	HasNextPage     bool  `json:"hasNextPage"`
+	HasPreviousPage bool  `json:"hasPreviousPage"`
+}
+
+type PaginationInput struct {
+	Page  int32 `json:"page"`
+	Limit int32 `json:"limit"`
 }
 
 type Payment struct {
@@ -462,6 +489,10 @@ type User struct {
 	Role  Role   `json:"role"`
 }
 
+type UserRef struct {
+	ID int32 `json:"id"`
+}
+
 type Variant struct {
 	ID           string  `json:"id"`
 	Name         string  `json:"name"`
@@ -474,6 +505,13 @@ type Variant struct {
 	SellerID     string  `json:"sellerId"`
 	CreatedAt    string  `json:"createdAt"`
 	Description  *string `json:"description,omitempty"`
+}
+
+type VariantRef struct {
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	ProductName string  `json:"productName"`
+	ImageURL    *string `json:"imageUrl,omitempty"`
 }
 
 type CartSortField string
@@ -652,22 +690,26 @@ type OrderStatus string
 const (
 	OrderStatusPendingPayment OrderStatus = "PENDING_PAYMENT"
 	OrderStatusPaid           OrderStatus = "PAID"
-	OrderStatusFulfilling     OrderStatus = "FULFILLING"
+	OrderStatusAccepted       OrderStatus = "ACCEPTED"
+	OrderStatusShipped        OrderStatus = "SHIPPED"
 	OrderStatusCompleted      OrderStatus = "COMPLETED"
 	OrderStatusCancelled      OrderStatus = "CANCELLED"
+	OrderStatusFailed         OrderStatus = "FAILED"
 )
 
 var AllOrderStatus = []OrderStatus{
 	OrderStatusPendingPayment,
 	OrderStatusPaid,
-	OrderStatusFulfilling,
+	OrderStatusAccepted,
+	OrderStatusShipped,
 	OrderStatusCompleted,
 	OrderStatusCancelled,
+	OrderStatusFailed,
 }
 
 func (e OrderStatus) IsValid() bool {
 	switch e {
-	case OrderStatusPendingPayment, OrderStatusPaid, OrderStatusFulfilling, OrderStatusCompleted, OrderStatusCancelled:
+	case OrderStatusPendingPayment, OrderStatusPaid, OrderStatusAccepted, OrderStatusShipped, OrderStatusCompleted, OrderStatusCancelled, OrderStatusFailed:
 		return true
 	}
 	return false
