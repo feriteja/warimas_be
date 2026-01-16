@@ -43,8 +43,6 @@ func NewRepository(db *sql.DB) Repository {
 	return &repository{db: db}
 }
 
-var ErrRepositoryFailure = errors.New("internal data access error")
-
 func (r *repository) GetProductsByGroup(
 	ctx context.Context,
 	opts ProductQueryOptions,
@@ -380,47 +378,51 @@ func (r *repository) GetList(
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
-		zap.String("method", "GetProductList"),
+		zap.String("method", "GetList"),
 	)
 
 	start := time.Now()
 
-	baseQuery := `
-		FROM products p
-		LEFT JOIN sellers ON sellers.id = p.seller_id
-		LEFT JOIN category c ON c.id = p.category_id
-		LEFT JOIN subcategories s ON s.id = p.subcategory_id
-		LEFT JOIN variants v ON v.product_id = p.id
-	`
-
+	// 1. Build Dynamic Query Parts
 	var (
-		args   []any
-		where  []string
-		having []string
+		joinClauses []string
+		where       []string
+		having      []string
+		args        []any
 	)
 
-	var totalProduct *int
+	// Helper to add arg and return placeholder
+	addArg := func(v any) string {
+		args = append(args, v)
+		return fmt.Sprintf("$%d", len(args))
+	}
+
+	// Always need these joins for the main selection
+	joinClauses = append(joinClauses, "LEFT JOIN sellers ON sellers.id = p.seller_id")
+	joinClauses = append(joinClauses, "LEFT JOIN category c ON c.id = p.category_id")
+	joinClauses = append(joinClauses, "LEFT JOIN subcategories s ON s.id = p.subcategory_id")
+	joinClauses = append(joinClauses, "LEFT JOIN variants v ON v.product_id = p.id")
 
 	/* ---------- FILTERS ---------- */
 
 	if opts.SellerID != nil {
-		args = append(args, *opts.SellerID)
-		where = append(where, fmt.Sprintf("p.seller_id = $%d", len(args)))
+		where = append(where, fmt.Sprintf("p.seller_id = %s", addArg(*opts.SellerID)))
 	}
 
 	if opts.CategoryID != nil {
-		args = append(args, *opts.CategoryID)
-		where = append(where, fmt.Sprintf("p.category_id = $%d", len(args)))
+		where = append(where, fmt.Sprintf("p.category_id = %s", addArg(*opts.CategoryID)))
+	}
+
+	if opts.CategorySlug != nil {
+		where = append(where, fmt.Sprintf("c.slug = %s", addArg(*opts.CategorySlug)))
 	}
 
 	if opts.SellerName != nil {
-		args = append(args, "%"+*opts.SellerName+"%")
-		where = append(where, fmt.Sprintf("sellers.name ILIKE $%d", len(args)))
+		where = append(where, fmt.Sprintf("sellers.name ILIKE %s", addArg("%"+*opts.SellerName+"%")))
 	}
 
 	if opts.Search != nil {
-		args = append(args, "%"+*opts.Search+"%")
-		where = append(where, fmt.Sprintf("p.name ILIKE $%d", len(args)))
+		where = append(where, fmt.Sprintf("p.name ILIKE %s", addArg("%"+*opts.Search+"%")))
 	}
 
 	if opts.InStock != nil && *opts.InStock {
@@ -435,8 +437,7 @@ func (r *repository) GetList(
 
 	// ---- STATUS & VISIBILITY (single source of truth) ----
 	if opts.Status != nil {
-		args = append(args, *opts.Status)
-		where = append(where, fmt.Sprintf("p.status = $%d", len(args)))
+		where = append(where, fmt.Sprintf("p.status = %s", addArg(*opts.Status)))
 	} else if opts.OnlyActive {
 		where = append(where, "p.status = 'active'")
 	}
@@ -444,21 +445,15 @@ func (r *repository) GetList(
 	/* ---------- PRICE FILTERS (HAVING) ---------- */
 
 	if opts.MinPrice != nil {
-		args = append(args, *opts.MinPrice)
-		having = append(
-			having,
-			fmt.Sprintf("MIN(v.price) IS NOT NULL AND MIN(v.price) >= $%d", len(args)),
-		)
+		having = append(having, fmt.Sprintf("MIN(v.price) >= %s", addArg(*opts.MinPrice)))
 	}
 
 	if opts.MaxPrice != nil {
-		args = append(args, *opts.MaxPrice)
-		having = append(
-			having,
-			fmt.Sprintf("MIN(v.price) IS NOT NULL AND MIN(v.price) <= $%d", len(args)),
-		)
+		having = append(having, fmt.Sprintf("MIN(v.price) <= %s", addArg(*opts.MaxPrice)))
 	}
 
+	// Construct Base FROM + JOIN + WHERE
+	baseQuery := "FROM products p " + strings.Join(joinClauses, " ")
 	if len(where) > 0 {
 		baseQuery += " WHERE " + strings.Join(where, " AND ")
 	}
@@ -489,31 +484,53 @@ func (r *repository) GetList(
 
 	/* ---------- COUNT QUERY ---------- */
 
+	var totalProduct *int
+
 	if opts.IncludeCount {
-		countQuery := `
-			SELECT COUNT(*) FROM (
-				SELECT p.id
-		` + baseQuery + `
-				GROUP BY p.id
-		`
-
-		if len(having) > 0 {
-			countQuery += " HAVING " + strings.Join(having, " AND ")
+		var countQuery string
+		// Optimization: If no HAVING clause, we can use COUNT(DISTINCT p.id)
+		if len(having) == 0 {
+			countQuery = "SELECT COUNT(DISTINCT p.id) " + baseQuery
+		} else {
+			// With HAVING, we must group first
+			countQuery = fmt.Sprintf(`
+				SELECT COUNT(*) FROM (
+					SELECT p.id
+					%s
+					GROUP BY p.id
+					HAVING %s
+				) AS sub`, baseQuery, strings.Join(having, " AND "))
 		}
-
-		countQuery += ") AS sub"
 
 		var total int
 		if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
 			log.Error("count query failed", zap.Error(err))
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to count products: %w", err)
 		}
 		totalProduct = &total
 	}
 
 	/* ---------- DATA QUERY ---------- */
 
-	selectQuery := `
+	// Sort Logic
+	orderBy := "p.created_at"
+	switch opts.SortField {
+	case ProductSortFieldPrice:
+		orderBy = "MIN(v.price)"
+	case ProductSortFieldName:
+		orderBy = "p.name"
+	}
+
+	dir := "DESC"
+	if opts.SortDirection == SortDirectionAsc {
+		dir = "ASC"
+	}
+
+	// Add limit/offset to args
+	limitPlaceholder := addArg(limit)
+	offsetPlaceholder := addArg(offset)
+
+	selectQuery := fmt.Sprintf(`
 SELECT
 	p.id,
 	p.name,
@@ -537,52 +554,33 @@ SELECT
 				'name', v.name,
 				'price', v.price,
 				'stock', v.stock,
-				'imageUrl', v.imageurl
-			)
+				'imageUrl', v.imageurl,
+				'quantityType', v.quantity_type
+			) ORDER BY v.price ASC
 		) FILTER (WHERE v.id IS NOT NULL),
 		'[]'
 	) AS variants
-` + baseQuery + `
+%s
 GROUP BY
 	p.id, sellers.name, c.name, s.name
-`
+`, baseQuery)
 
 	if len(having) > 0 {
 		selectQuery += " HAVING " + strings.Join(having, " AND ")
 	}
 
-	/* ---------- SORT ---------- */
-
-	orderBy := "p.created_at"
-	switch opts.SortField {
-	case ProductSortFieldPrice:
-		orderBy = "MIN(v.price)"
-	case ProductSortFieldName:
-		orderBy = "p.name"
-	}
-
-	dir := "DESC"
-	if opts.SortDirection == SortDirectionAsc {
-		dir = "ASC"
-	}
-
-	selectQuery += " ORDER BY " + orderBy + " " + dir
-
-	/* ---------- LIMIT / OFFSET ---------- */
-
-	args = append(args, limit, offset)
-	selectQuery += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)-1, len(args))
+	selectQuery += fmt.Sprintf(" ORDER BY %s %s LIMIT %s OFFSET %s", orderBy, dir, limitPlaceholder, offsetPlaceholder)
 
 	/* ---------- EXEC ---------- */
 
 	rows, err := r.db.QueryContext(ctx, selectQuery, args...)
 	if err != nil {
 		log.Error("data query failed", zap.Error(err))
-		return nil, totalProduct, err
+		return nil, totalProduct, fmt.Errorf("failed to fetch product list: %w", err)
 	}
 	defer rows.Close()
 
-	var products []*Product
+	products := make([]*Product, 0, limit)
 
 	for rows.Next() {
 		var (
@@ -608,14 +606,17 @@ GROUP BY
 			&variantsJSON,
 		); err != nil {
 			log.Error("row scan failed", zap.Error(err))
-			return nil, totalProduct, err
+			return nil, totalProduct, fmt.Errorf("failed to scan product row: %w", err)
 		}
 
-		if err := json.Unmarshal(variantsJSON, &p.Variants); err != nil {
-			log.Warn("failed to unmarshal variants",
-				zap.String("product_id", p.ID),
-				zap.Error(err),
-			)
+		if len(variantsJSON) > 0 {
+			if err := json.Unmarshal(variantsJSON, &p.Variants); err != nil {
+				log.Warn("failed to unmarshal variants",
+					zap.String("product_id", p.ID),
+					zap.Error(err),
+				)
+				p.Variants = []*Variant{}
+			}
 		}
 
 		products = append(products, &p)
@@ -623,7 +624,7 @@ GROUP BY
 
 	if err := rows.Err(); err != nil {
 		log.Error("rows iteration failed", zap.Error(err))
-		return nil, totalProduct, ErrRepositoryFailure
+		return nil, totalProduct, fmt.Errorf("rows iteration error: %w", err)
 	}
 
 	/* ---------- SUCCESS LOG ---------- */
