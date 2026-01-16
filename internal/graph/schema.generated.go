@@ -23,7 +23,7 @@ type MutationResolver interface {
 	SetDefaultAddress(ctx context.Context, addressID string) (bool, error)
 	AddToCart(ctx context.Context, input model.AddToCartInput) (*model.AddToCartResponse, error)
 	UpdateCart(ctx context.Context, input model.UpdateCartInput) (*model.Response, error)
-	RemoveFromCart(ctx context.Context, variantID string) (*model.Response, error)
+	RemoveFromCart(ctx context.Context, variantIds []string) (*model.Response, error)
 	AddCategory(ctx context.Context, name string) (*model.Category, error)
 	AddSubcategory(ctx context.Context, categoryID string, name string) (*model.Subcategory, error)
 	CreateOrderFromSession(ctx context.Context, input model.CreateOrderFromSessionInput) (*model.CreateOrderResponse, error)
@@ -41,7 +41,7 @@ type MutationResolver interface {
 type QueryResolver interface {
 	Addresses(ctx context.Context) ([]*model.Address, error)
 	Address(ctx context.Context, addressID string) (*model.Address, error)
-	MyCart(ctx context.Context, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) ([]*model.CartItem, error)
+	MyCart(ctx context.Context, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) (*model.CartListResponse, error)
 	Category(ctx context.Context, filter *string, limit *int32, page *int32) (*model.CategoryPage, error)
 	Subcategory(ctx context.Context, filter *string, categoryID string, limit *int32, page *int32) (*model.SubcategoryPage, error)
 	OrderList(ctx context.Context, filter *model.OrderFilterInput, sort *model.OrderSortInput, pagination *model.PaginationInput) (*model.OrderListResponse, error)
@@ -199,11 +199,11 @@ func (ec *executionContext) field_Mutation_register_args(ctx context.Context, ra
 func (ec *executionContext) field_Mutation_removeFromCart_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "variantId", ec.unmarshalNID2string)
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "variantIds", ec.unmarshalNID2ᚕstringᚄ)
 	if err != nil {
 		return nil, err
 	}
-	args["variantId"] = arg0
+	args["variantIds"] = arg0
 	return args, nil
 }
 
@@ -857,7 +857,7 @@ func (ec *executionContext) _Mutation_removeFromCart(ctx context.Context, field 
 		ec.fieldContext_Mutation_removeFromCart,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().RemoveFromCart(ctx, fc.Args["variantId"].(string))
+			return ec.resolvers.Mutation().RemoveFromCart(ctx, fc.Args["variantIds"].([]string))
 		},
 		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
 			directive0 := next
@@ -1909,11 +1909,11 @@ func (ec *executionContext) _Query_myCart(ctx context.Context, field graphql.Col
 			directive1 := func(ctx context.Context) (any, error) {
 				role, err := ec.unmarshalORole2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐRole(ctx, "USER")
 				if err != nil {
-					var zeroVal []*model.CartItem
+					var zeroVal *model.CartListResponse
 					return zeroVal, err
 				}
 				if ec.directives.Auth == nil {
-					var zeroVal []*model.CartItem
+					var zeroVal *model.CartListResponse
 					return zeroVal, errors.New("directive auth is not implemented")
 				}
 				return ec.directives.Auth(ctx, nil, directive0, role)
@@ -1922,7 +1922,7 @@ func (ec *executionContext) _Query_myCart(ctx context.Context, field graphql.Col
 			next = directive1
 			return next
 		},
-		ec.marshalOCartItem2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartItem,
+		ec.marshalOCartListResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartListResponse,
 		true,
 		false,
 	)
@@ -1936,20 +1936,12 @@ func (ec *executionContext) fieldContext_Query_myCart(ctx context.Context, field
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_CartItem_id(ctx, field)
-			case "userId":
-				return ec.fieldContext_CartItem_userId(ctx, field)
-			case "quantity":
-				return ec.fieldContext_CartItem_quantity(ctx, field)
-			case "product":
-				return ec.fieldContext_CartItem_product(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_CartItem_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_CartItem_updatedAt(ctx, field)
+			case "items":
+				return ec.fieldContext_CartListResponse_items(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_CartListResponse_pageInfo(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type CartItem", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type CartListResponse", field.Name)
 		},
 	}
 	defer func() {

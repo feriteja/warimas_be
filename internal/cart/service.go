@@ -3,7 +3,6 @@ package cart
 import (
 	"context"
 	"errors"
-	"time"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
 	"warimas-be/internal/product"
@@ -23,9 +22,9 @@ type Service interface {
 	GetCart(ctx context.Context, userID uint,
 		filter *model.CartFilterInput,
 		sort *model.CartSortInput,
-		limit, page *uint16) ([]*model.CartItem, error)
+		limit, page *uint16) ([]*cartRow, int64, error)
 	UpdateCartQuantity(ctx context.Context, params UpdateToCartParams) error
-	RemoveFromCart(ctx context.Context, param DeleteFromCartParams) error
+	RemoveFromCart(ctx context.Context, variantIDs []string) error
 	ClearCart(ctx context.Context) error
 }
 
@@ -163,7 +162,7 @@ func (s *service) GetCart(
 	filter *model.CartFilterInput,
 	sort *model.CartSortInput,
 	limit, page *uint16,
-) ([]*model.CartItem, error) {
+) ([]*cartRow, int64, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "service"),
@@ -176,53 +175,18 @@ func (s *service) GetCart(
 	rows, err := s.repo.GetCartRows(ctx, userID, filter, sort, limit, page)
 	if err != nil {
 		log.Error("failed to get cart rows", zap.Error(err))
-		return nil, ErrFailedGetCartRows
+		return nil, 0, ErrFailedGetCartRows
 	}
 
-	items := make([]*model.CartItem, 0, len(rows))
-
-	for _, r := range rows {
-		var variantImageURL string
-		if r.VariantImageURL != nil {
-			variantImageURL = *r.VariantImageURL
-		}
-
-		item := &model.CartItem{
-			ID:        r.CartID,
-			UserID:    r.UserID,
-			Quantity:  r.Quantity,
-			CreatedAt: r.CreatedAt.Format(time.RFC3339),
-			UpdatedAt: r.UpdatedAt.Format(time.RFC3339),
-			Product: &model.ProductCart{
-				ID:            r.ProductID,
-				Name:          r.ProductName,
-				SellerID:      r.SellerID,
-				SellerName:    r.SellerName,
-				CategoryID:    r.CategoryID,
-				SubcategoryID: r.SubcategoryID,
-				Slug:          r.Slug,
-				Status:        &r.Status,
-				ImageURL:      r.ProductImageURL,
-				Variant: &model.Variant{
-					ID:           r.VariantID,
-					ProductID:    r.VariantProductID,
-					Name:         r.VariantName,
-					QuantityType: r.QuantityType,
-					Price:        r.Price,
-					Stock:        int32(r.Stock),
-					ImageURL:     variantImageURL,
-				},
-			},
-		}
-
-		items = append(items, item)
+	total, err := s.repo.CountCartItems(ctx, userID, filter)
+	if err != nil {
+		log.Error("failed to count cart items", zap.Error(err))
+		return nil, 0, err
 	}
 
-	log.Info("get cart success",
-		zap.Int("items", len(items)),
-	)
+	log.Info("get cart success")
 
-	return items, nil
+	return rows, total, nil
 }
 
 // UpdateCartQuantity updates the quantity of a specific product in the user's cart
@@ -257,7 +221,7 @@ func (s *service) UpdateCartQuantity(
 
 		err := s.repo.RemoveFromCart(ctx, DeleteFromCartParams{
 			UserID:    uint32(userID),
-			VariantID: updateParams.VariantID,
+			VariantID: []string{updateParams.VariantID},
 		})
 		if err != nil {
 			log.Error("failed to remove item from cart", zap.Error(err))
@@ -284,13 +248,13 @@ func (s *service) UpdateCartQuantity(
 // RemoveFromCart deletes a product from the user's cart
 func (s *service) RemoveFromCart(
 	ctx context.Context,
-	param DeleteFromCartParams,
+	variantIDs []string,
 ) error {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "service"),
 		zap.String("method", "RemoveFromCart"),
-		zap.String("variant_id", param.VariantID),
+		zap.Strings("variant_id", variantIDs),
 	)
 
 	userID, ok := utils.GetUserIDFromContext(ctx)
@@ -300,11 +264,18 @@ func (s *service) RemoveFromCart(
 	}
 
 	log = log.With(zap.Uint("user_id", userID))
-	param.UserID = uint32(userID)
 
-	if err := s.repo.RemoveFromCart(ctx, param); err != nil {
+	if len(variantIDs) == 0 {
+		log.Warn("no variant IDs provided")
+		return ErrInvalidRemoveCartInput
+	}
+
+	if err := s.repo.RemoveFromCart(ctx, DeleteFromCartParams{
+		UserID:    uint32(userID),
+		VariantID: variantIDs,
+	}); err != nil {
 		log.Error("failed to remove cart item", zap.Error(err))
-		return ErrFailedRemoveCart
+		return err
 	}
 
 	log.Info("cart item removed successfully")

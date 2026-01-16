@@ -39,17 +39,22 @@ type AddToCartResponse {
   cartItem: CartItem
 }
 
+type CartListResponse {
+  items: [CartItem]!
+  pageInfo: PageInfo!
+}
+
 extend type Query {
   myCart(
     filter: CartFilterInput
     sort: CartSortInput
     limit: Int = 20
     page: Int = 1
-  ): [CartItem] @auth(role: USER)
+  ): CartListResponse @auth(role: USER)
 }
 
 extend type Mutation {
   addToCart(input: AddToCartInput!): AddToCartResponse! @auth(role: USER)
   updateCart(input: UpdateCartInput!): Response! @auth(role: USER)
-  removeFromCart(variantId: ID!): Response! @auth(role: USER)
+  removeFromCart(variantIds: [ID!]!): Response! @auth(role: USER)
 }

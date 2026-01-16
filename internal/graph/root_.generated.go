@@ -78,6 +78,11 @@ type ComplexityRoot struct {
 		UserID    func(childComplexity int) int
 	}
 
+	CartListResponse struct {
+		Items    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
+	}
+
 	Category struct {
 		ID            func(childComplexity int) int
 		Name          func(childComplexity int) int
@@ -157,7 +162,7 @@ type ComplexityRoot struct {
 		DeleteAddress          func(childComplexity int, input model.DeleteAddressInput) int
 		Login                  func(childComplexity int, input model.LoginInput) int
 		Register               func(childComplexity int, input model.RegisterInput) int
-		RemoveFromCart         func(childComplexity int, variantID string) int
+		RemoveFromCart         func(childComplexity int, variantIds []string) int
 		SetDefaultAddress      func(childComplexity int, addressID string) int
 		UpdateAddress          func(childComplexity int, input model.UpdateAddressInput) int
 		UpdateCart             func(childComplexity int, input model.UpdateCartInput) int
@@ -608,6 +613,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.CartItem.UserID(childComplexity), true
 
+	case "CartListResponse.items":
+		if e.complexity.CartListResponse.Items == nil {
+			break
+		}
+
+		return e.complexity.CartListResponse.Items(childComplexity), true
+
+	case "CartListResponse.pageInfo":
+		if e.complexity.CartListResponse.PageInfo == nil {
+			break
+		}
+
+		return e.complexity.CartListResponse.PageInfo(childComplexity), true
+
 	case "Category.id":
 		if e.complexity.Category.ID == nil {
 			break
@@ -1035,7 +1054,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Mutation.RemoveFromCart(childComplexity, args["variantId"].(string)), true
+		return e.complexity.Mutation.RemoveFromCart(childComplexity, args["variantIds"].([]string)), true
 
 	case "Mutation.setDefaultAddress":
 		if e.complexity.Mutation.SetDefaultAddress == nil {

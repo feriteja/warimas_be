@@ -38,7 +38,12 @@ type Repository interface {
 		filter *model.CartFilterInput,
 		sort *model.CartSortInput,
 		limit, page *uint16,
-	) ([]cartRow, error)
+	) ([]*cartRow, error)
+	CountCartItems(
+		ctx context.Context,
+		userID uint,
+		filter *model.CartFilterInput,
+	) (int64, error)
 }
 
 type repository struct {
@@ -97,6 +102,7 @@ func (r *repository) UpdateCartQuantity(
 	log.Info("cart quantity updated successfully")
 	return nil
 }
+
 func (r *repository) RemoveFromCart(
 	ctx context.Context,
 	deleteParams DeleteFromCartParams,
@@ -105,15 +111,15 @@ func (r *repository) RemoveFromCart(
 		zap.String("layer", "repository"),
 		zap.String("method", "RemoveFromCart"),
 		zap.Uint32("user_id", deleteParams.UserID),
-		zap.String("variant_id", deleteParams.VariantID),
+		zap.Strings("variant_id", deleteParams.VariantID),
 	)
 
 	res, err := r.db.ExecContext(ctx, `
 		DELETE FROM carts
-		WHERE user_id = $1 AND variant_id = $2
+		WHERE user_id = $1 AND variant_id = ANY($2)
 	`,
 		deleteParams.UserID,
-		deleteParams.VariantID,
+		pq.Array(deleteParams.VariantID),
 	)
 	if err != nil {
 		log.Error("failed to execute delete cart query", zap.Error(err))
@@ -365,7 +371,7 @@ func (r *repository) GetCartRows(
 	filter *model.CartFilterInput,
 	sort *model.CartSortInput,
 	limit, page *uint16,
-) ([]cartRow, error) {
+) ([]*cartRow, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
@@ -510,7 +516,7 @@ func (r *repository) GetCartRows(
 	}
 	defer rows.Close()
 
-	result := make([]cartRow, 0, finalLimit)
+	result := make([]*cartRow, 0, finalLimit)
 
 	for rows.Next() {
 		var row cartRow
@@ -546,7 +552,7 @@ func (r *repository) GetCartRows(
 			return nil, ErrFailedGetCartRows
 		}
 
-		result = append(result, row)
+		result = append(result, &row)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -563,4 +569,57 @@ func (r *repository) GetCartRows(
 	)
 
 	return result, nil
+}
+
+func (r *repository) CountCartItems(
+	ctx context.Context,
+	userID uint,
+	filter *model.CartFilterInput,
+) (int64, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "CountCartItems"),
+		zap.Uint("user_id", userID),
+	)
+
+	where := []string{"c.user_id = $1"}
+	args := []any{userID}
+
+	if filter != nil {
+		if filter.InStock != nil {
+			if *filter.InStock {
+				where = append(where, "v.stock > 0")
+			} else {
+				where = append(where, "v.stock = 0")
+			}
+		}
+
+		if filter.Search != nil && *filter.Search != "" {
+			where = append(
+				where,
+				fmt.Sprintf(
+					"(p.name ILIKE $%d OR v.name ILIKE $%d)",
+					len(args)+1,
+					len(args)+1,
+				),
+			)
+			args = append(args, "%"+*filter.Search+"%")
+		}
+	}
+
+	query := `
+		SELECT COUNT(*)
+		FROM carts c
+		JOIN variants v ON c.variant_id = v.id
+		JOIN products p ON v.product_id = p.id
+		WHERE ` + strings.Join(where, " AND ")
+
+	var count int64
+	err := r.db.QueryRowContext(ctx, query, args...).Scan(&count)
+	if err != nil {
+		log.Error("failed to count cart items", zap.Error(err))
+		return 0, err
+	}
+
+	return count, nil
 }

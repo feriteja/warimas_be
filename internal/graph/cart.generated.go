@@ -336,6 +336,92 @@ func (ec *executionContext) fieldContext_CartItem_updatedAt(_ context.Context, f
 	return fc, nil
 }
 
+func (ec *executionContext) _CartListResponse_items(ctx context.Context, field graphql.CollectedField, obj *model.CartListResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CartListResponse_items,
+		func(ctx context.Context) (any, error) {
+			return obj.Items, nil
+		},
+		nil,
+		ec.marshalNCartItem2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartItem,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CartListResponse_items(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CartListResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_CartItem_id(ctx, field)
+			case "userId":
+				return ec.fieldContext_CartItem_userId(ctx, field)
+			case "quantity":
+				return ec.fieldContext_CartItem_quantity(ctx, field)
+			case "product":
+				return ec.fieldContext_CartItem_product(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_CartItem_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_CartItem_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CartItem", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CartListResponse_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.CartListResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CartListResponse_pageInfo,
+		func(ctx context.Context) (any, error) {
+			return obj.PageInfo, nil
+		},
+		nil,
+		ec.marshalNPageInfo2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPageInfo,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CartListResponse_pageInfo(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CartListResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "totalItems":
+				return ec.fieldContext_PageInfo_totalItems(ctx, field)
+			case "totalPages":
+				return ec.fieldContext_PageInfo_totalPages(ctx, field)
+			case "page":
+				return ec.fieldContext_PageInfo_page(ctx, field)
+			case "limit":
+				return ec.fieldContext_PageInfo_limit(ctx, field)
+			case "hasNextPage":
+				return ec.fieldContext_PageInfo_hasNextPage(ctx, field)
+			case "hasPreviousPage":
+				return ec.fieldContext_PageInfo_hasPreviousPage(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 // endregion **************************** field.gotpl *****************************
 
 // region    **************************** input.gotpl *****************************
@@ -595,6 +681,50 @@ func (ec *executionContext) _CartItem(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
+var cartListResponseImplementors = []string{"CartListResponse"}
+
+func (ec *executionContext) _CartListResponse(ctx context.Context, sel ast.SelectionSet, obj *model.CartListResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, cartListResponseImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("CartListResponse")
+		case "items":
+			out.Values[i] = ec._CartListResponse_items(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pageInfo":
+			out.Values[i] = ec._CartListResponse_pageInfo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 // endregion **************************** object.gotpl ****************************
 
 // region    ***************************** type.gotpl *****************************
@@ -618,33 +748,7 @@ func (ec *executionContext) marshalNAddToCartResponse2ᚖwarimasᚑbeᚋinternal
 	return ec._AddToCartResponse(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNCartSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartSortField(ctx context.Context, v any) (model.CartSortField, error) {
-	var res model.CartSortField
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNCartSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartSortField(ctx context.Context, sel ast.SelectionSet, v model.CartSortField) graphql.Marshaler {
-	return v
-}
-
-func (ec *executionContext) unmarshalNUpdateCartInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐUpdateCartInput(ctx context.Context, v any) (model.UpdateCartInput, error) {
-	res, err := ec.unmarshalInputUpdateCartInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOCartFilterInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartFilterInput(ctx context.Context, v any) (*model.CartFilterInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputCartFilterInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOCartItem2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartItem(ctx context.Context, sel ast.SelectionSet, v []*model.CartItem) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
+func (ec *executionContext) marshalNCartItem2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartItem(ctx context.Context, sel ast.SelectionSet, v []*model.CartItem) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -682,11 +786,41 @@ func (ec *executionContext) marshalOCartItem2ᚕᚖwarimasᚑbeᚋinternalᚋgra
 	return ret
 }
 
+func (ec *executionContext) unmarshalNCartSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartSortField(ctx context.Context, v any) (model.CartSortField, error) {
+	var res model.CartSortField
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNCartSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartSortField(ctx context.Context, sel ast.SelectionSet, v model.CartSortField) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNUpdateCartInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐUpdateCartInput(ctx context.Context, v any) (model.UpdateCartInput, error) {
+	res, err := ec.unmarshalInputUpdateCartInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOCartFilterInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartFilterInput(ctx context.Context, v any) (*model.CartFilterInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputCartFilterInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalOCartItem2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartItem(ctx context.Context, sel ast.SelectionSet, v *model.CartItem) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._CartItem(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOCartListResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartListResponse(ctx context.Context, sel ast.SelectionSet, v *model.CartListResponse) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._CartListResponse(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOCartSortInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐCartSortInput(ctx context.Context, v any) (*model.CartSortInput, error) {

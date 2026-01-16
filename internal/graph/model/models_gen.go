@@ -65,6 +65,11 @@ type CartItem struct {
 	UpdatedAt string       `json:"updatedAt"`
 }
 
+type CartListResponse struct {
+	Items    []*CartItem `json:"items"`
+	PageInfo *PageInfo   `json:"pageInfo"`
+}
+
 type CartSortInput struct {
 	Field     CartSortField `json:"field"`
 	Direction SortDirection `json:"direction"`

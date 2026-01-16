@@ -52,7 +52,7 @@ type UpdateToCartParams struct {
 
 type DeleteFromCartParams struct {
 	UserID    uint32
-	VariantID string
+	VariantID []string
 }
 
 type CreateCartItemParams struct {

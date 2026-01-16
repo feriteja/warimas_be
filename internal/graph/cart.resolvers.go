@@ -124,22 +124,59 @@ func (r *mutationResolver) UpdateCart(ctx context.Context, input model.UpdateCar
 }
 
 // Remove item from cart
-func (r *mutationResolver) RemoveFromCart(ctx context.Context, variantID string) (*model.Response, error) {
-	err := r.CartSvc.RemoveFromCart(ctx, cart.DeleteFromCartParams{VariantID: variantID})
+func (r *mutationResolver) RemoveFromCart(ctx context.Context, variantIds []string) (*model.Response, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "RemoveFromCart"),
+		zap.Strings("variant_ids", variantIds),
+	)
+
+	log.Info("remove from cart request received")
+
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		log.Warn("unauthorized access")
+		return &model.Response{
+			Success: false,
+			Message: utils.StrPtr("Unauthorized"),
+		}, nil
+	}
+	log = log.With(zap.Uint("user_id", userID))
+
+	if len(variantIds) == 0 {
+		log.Warn("invalid input: empty variant ID list")
+		return &model.Response{
+			Success: false,
+			Message: utils.StrPtr("Variant IDs are required"),
+		}, nil
+	}
+
+	// Service expects a slice
+	err := r.CartSvc.RemoveFromCart(ctx, variantIds)
 	if err != nil {
+		if errors.Is(err, cart.ErrCartItemNotFound) {
+			return &model.Response{
+				Success: false,
+				Message: utils.StrPtr("Item not found in cart"),
+			}, nil
+		}
+		log.Error("failed to remove item from cart", zap.Error(err))
 		return &model.Response{
 			Success: false,
 			Message: utils.StrPtr(err.Error()),
 		}, nil
 	}
+
+	log.Info("item removed from cart successfully")
+
 	return &model.Response{
 		Success: true,
-		Message: utils.StrPtr("Cart updated"),
+		Message: utils.StrPtr("Item removed from cart"),
 	}, nil
 }
 
 // Get all items in my cart
-func (r *queryResolver) MyCart(ctx context.Context, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) ([]*model.CartItem, error) {
+func (r *queryResolver) MyCart(ctx context.Context, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) (*model.CartListResponse, error) {
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "resolver"),
 		zap.String("method", "MyCart"),
@@ -194,7 +231,7 @@ func (r *queryResolver) MyCart(ctx context.Context, filter *model.CartFilterInpu
 		zap.Any("sort", sort),
 	)
 
-	cartResult, err := r.CartSvc.GetCart(
+	cartResult, total, err := r.CartSvc.GetCart(
 		ctx,
 		userID,
 		filter,
@@ -207,13 +244,29 @@ func (r *queryResolver) MyCart(ctx context.Context, filter *model.CartFilterInpu
 			zap.Error(err),
 			zap.Uint("user_id", userID),
 		)
-		return nil, err
+		// Return generic error to avoid leaking sensitive info
+		return nil, errors.New("failed to fetch cart items")
 	}
 
 	log.Info("success get cart",
 		zap.Uint("user_id", userID),
 		zap.Int("item_count", len(cartResult)),
+		zap.Int64("total_items", total),
 	)
 
-	return cartResult, nil
+	cartData := cart.MapCartItemToGraphQL(cartResult)
+
+	totalPages := int32((total + int64(l) - 1) / int64(l))
+
+	return &model.CartListResponse{
+		Items: cartData,
+		PageInfo: &model.PageInfo{
+			TotalItems:      int32(total),
+			TotalPages:      totalPages,
+			Page:            int32(p),
+			Limit:           int32(l),
+			HasNextPage:     int32(p) < totalPages,
+			HasPreviousPage: p > 1,
+		},
+	}, nil
 }
