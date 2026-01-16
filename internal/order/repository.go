@@ -1305,8 +1305,8 @@ func (r *repository) FetchOrders(
 	// Default condition
 	// where = append(where, "o.deleted_at IS NULL")
 	if !isAdmin {
-		where = append(where, fmt.Sprintf("o.user_id = $%d", len(args)))
 		args = append(args, userId)
+		where = append(where, fmt.Sprintf("o.user_id = $%d", len(args)))
 
 	}
 
