@@ -10,6 +10,7 @@ input PackageSortInput {
 
 input ProductFilterInput {
   categoryId: String
+  categorySlug: String
   minPrice: Float
   maxPrice: Float
   search: String

@@ -54,24 +54,37 @@ func (r *mutationResolver) UpdateProduct(ctx context.Context, input model.Update
 
 // ProductList is the resolver for the productList field.
 func (r *queryResolver) ProductList(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) (*model.ProductPage, error) {
-	p := int32(1)
-	l := int32(20)
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "ProductList"),
+	)
 
+	// 1. Input Normalization & Defaults
+	p := int32(1)
 	if page != nil && *page > 0 {
 		p = *page
 	}
+
+	l := int32(20)
 	if limit != nil && *limit > 0 {
 		l = *limit
 	}
-	includeCount := false
+	// Cap limit to prevent abuse
+	if l > 100 {
+		l = 100
+	}
 
-	if utils.HasAnyField(ctx,
+	log.Info("resolver started",
+		zap.Int32("page", p),
+		zap.Int32("limit", l),
+	)
+
+	// 2. Optimization: Check requested fields to avoid unnecessary count query
+	includeCount := utils.HasAnyField(ctx,
 		"totalCount",
 		"totalPages",
 		"hasNext",
-	) {
-		includeCount = true
-	}
+	)
 
 	var sortField *model.ProductSortField
 	var sortDirection *model.SortDirection
@@ -86,27 +99,27 @@ func (r *queryResolver) ProductList(ctx context.Context, filter *model.ProductFi
 	}
 
 	opts := prodInternal.ProductQueryOptions{
-		CategoryID: filter.CategoryID,
-		SellerName: filter.SellerName,
-		Status:     filter.Status,
-		Search:     filter.Search,
-		MinPrice:   filter.MinPrice,
-		MaxPrice:   filter.MaxPrice,
-		InStock:    filter.InStock,
+		CategoryID:   filter.CategoryID,
+		CategorySlug: filter.CategorySlug,
+		SellerName:   filter.SellerName,
+		Status:       filter.Status,
+		Search:       filter.Search,
+		MinPrice:     filter.MinPrice,
+		MaxPrice:     filter.MaxPrice,
+		InStock:      filter.InStock,
 
 		SortField:     prodInternal.MapSortField(sortField),
 		SortDirection: prodInternal.MapSortDirection(sortDirection),
 
-		Page:  p,
-		Limit: l,
-
+		Page:         p,
+		Limit:        l,
 		IncludeCount: includeCount,
 	}
 
-	// 2. Fetch grouped products
-	// call service
+	// 4. Call Service
 	result, err := r.ProductSvc.GetList(ctx, opts)
 	if err != nil {
+		log.Error("failed to fetch product list", zap.Error(err))
 		return nil, err
 	}
 
@@ -122,9 +135,16 @@ func (r *queryResolver) ProductList(ctx context.Context, filter *model.ProductFi
 
 	if includeCount && result.TotalCount != nil {
 		totalCount = int32(*result.TotalCount)
-		totalPages = (totalCount + l - 1) / l
+		if l > 0 {
+			totalPages = (totalCount + l - 1) / l
+		}
 		hasNext = p < totalPages
 	}
+
+	log.Info("resolver success",
+		zap.Int("items_count", len(items)),
+		zap.Int32("total_count", totalCount),
+	)
 
 	return &model.ProductPage{
 		Items:      items,
@@ -183,13 +203,14 @@ func (r *queryResolver) ProductsHome(ctx context.Context, filter *model.ProductF
 	// 3. Build service query options
 	// -------------------------------
 	opts := prodInternal.ProductQueryOptions{
-		CategoryID: filter.CategoryID,
-		SellerName: filter.SellerName,
-		Status:     filter.Status,
-		Search:     filter.Search,
-		MinPrice:   filter.MinPrice,
-		MaxPrice:   filter.MaxPrice,
-		InStock:    filter.InStock,
+		CategoryID:   filter.CategoryID,
+		CategorySlug: filter.CategorySlug,
+		SellerName:   filter.SellerName,
+		Status:       filter.Status,
+		Search:       filter.Search,
+		MinPrice:     filter.MinPrice,
+		MaxPrice:     filter.MaxPrice,
+		InStock:      filter.InStock,
 
 		SortField:     prodInternal.MapSortField(sortField),
 		SortDirection: prodInternal.MapSortDirection(sortDirection),

@@ -1410,7 +1410,7 @@ func (ec *executionContext) unmarshalInputProductFilterInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"categoryId", "minPrice", "maxPrice", "search", "inStock", "status", "sellerName"}
+	fieldsInOrder := [...]string{"categoryId", "categorySlug", "minPrice", "maxPrice", "search", "inStock", "status", "sellerName"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -1424,6 +1424,13 @@ func (ec *executionContext) unmarshalInputProductFilterInput(ctx context.Context
 				return it, err
 			}
 			it.CategoryID = data
+		case "categorySlug":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("categorySlug"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CategorySlug = data
 		case "minPrice":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("minPrice"))
 			data, err := ec.unmarshalOFloat2ᚖfloat64(ctx, v)

@@ -394,13 +394,14 @@ type ProductEdge struct {
 }
 
 type ProductFilterInput struct {
-	CategoryID *string  `json:"categoryId,omitempty"`
-	MinPrice   *float64 `json:"minPrice,omitempty"`
-	MaxPrice   *float64 `json:"maxPrice,omitempty"`
-	Search     *string  `json:"search,omitempty"`
-	InStock    *bool    `json:"inStock,omitempty"`
-	Status     *string  `json:"status,omitempty"`
-	SellerName *string  `json:"sellerName,omitempty"`
+	CategoryID   *string  `json:"categoryId,omitempty"`
+	CategorySlug *string  `json:"categorySlug,omitempty"`
+	MinPrice     *float64 `json:"minPrice,omitempty"`
+	MaxPrice     *float64 `json:"maxPrice,omitempty"`
+	Search       *string  `json:"search,omitempty"`
+	InStock      *bool    `json:"inStock,omitempty"`
+	Status       *string  `json:"status,omitempty"`
+	SellerName   *string  `json:"sellerName,omitempty"`
 }
 
 type ProductPage struct {

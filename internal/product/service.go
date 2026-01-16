@@ -57,10 +57,10 @@ func (s *service) GetList(
 	ctx context.Context,
 	opts ProductQueryOptions,
 ) (*ProductListResult, error) {
+	// 1. Auth & Visibility
 	role := utils.GetUserRoleFromContext(ctx)
-
-	OnlyActive := role != string(user.RoleAdmin)
-	opts.OnlyActive = OnlyActive
+	// Default to active only, unless Admin
+	opts.OnlyActive = role != string(user.RoleAdmin)
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "service"),
@@ -69,39 +69,54 @@ func (s *service) GetList(
 
 	start := time.Now()
 
-	/* ---------- INPUT NORMALIZATION ---------- */
-
+	// 2. Input Normalization
 	if opts.Page <= 0 {
 		opts.Page = 1
 	}
 
-	if opts.Limit <= 0 {
-		opts.Limit = 20
-	} else if opts.Limit > 100 {
-		opts.Limit = 100
-	}
-
-	/* ---------- DEBUG INPUT LOG ---------- */
-
-	log.Debug("get product list requested",
-		zap.Int32("page", opts.Page),
-		zap.Int32("limit", opts.Limit),
-		zap.Bool("include_count", opts.IncludeCount),
-		zap.Bool("OnlyActive", OnlyActive),
-		zap.Any("filters", map[string]any{
-			"category_id": opts.CategoryID,
-			"seller_id":   opts.SellerID,
-			"seller_name": opts.SellerName,
-			"status":      opts.Status,
-			"search":      opts.Search,
-			"min_price":   opts.MinPrice,
-			"max_price":   opts.MaxPrice,
-			"in_stock":    opts.InStock,
-		}),
+	// Cap limit to prevent DB strain
+	const (
+		defaultLimit = 20
+		maxLimit     = 100
 	)
 
-	/* ---------- FETCH DATA ---------- */
+	if opts.Limit <= 0 {
+		opts.Limit = defaultLimit
+	} else if opts.Limit > maxLimit {
+		opts.Limit = maxLimit
+	}
 
+	// 3. Validation
+	if opts.MinPrice != nil && opts.MaxPrice != nil {
+		if *opts.MinPrice > *opts.MaxPrice {
+			log.Warn("invalid price range",
+				zap.Float64("min_price", *opts.MinPrice),
+				zap.Float64("max_price", *opts.MaxPrice),
+			)
+			return nil, errors.New("min_price cannot be greater than max_price")
+		}
+	}
+
+	// 4. Debug Logging (Optimized)
+	if log.Core().Enabled(zap.DebugLevel) {
+		log.Debug("get product list requested",
+			zap.Int32("page", opts.Page),
+			zap.Int32("limit", opts.Limit),
+			zap.Bool("include_count", opts.IncludeCount),
+			zap.Bool("only_active", opts.OnlyActive),
+			zap.Stringp("category_id", opts.CategoryID),
+			zap.Stringp("category_slug", opts.CategorySlug),
+			zap.Stringp("seller_id", opts.SellerID),
+			zap.Stringp("seller_name", opts.SellerName),
+			zap.Stringp("status", opts.Status),
+			zap.Stringp("search", opts.Search),
+			zap.Float64p("min_price", opts.MinPrice),
+			zap.Float64p("max_price", opts.MaxPrice),
+			zap.Boolp("in_stock", opts.InStock),
+		)
+	}
+
+	// 5. Fetch Data
 	products, total, err := s.repo.GetList(ctx, opts)
 	if err != nil {
 		log.Error("failed to fetch product list",
@@ -111,22 +126,14 @@ func (s *service) GetList(
 		return nil, err
 	}
 
-	/* ---------- SUCCESS LOG ---------- */
-
-	fields := []zap.Field{
+	// 6. Success Log
+	log.Info("get product list success",
 		zap.Int("count", len(products)),
 		zap.Int32("page", opts.Page),
 		zap.Int32("limit", opts.Limit),
+		zap.Intp("total", total),
 		zap.Duration("duration", time.Since(start)),
-	}
-
-	if total != nil {
-		fields = append(fields, zap.Int("total", *total))
-	}
-
-	log.Info("get product list success", fields...)
-
-	/* ---------- RESPONSE ---------- */
+	)
 
 	return &ProductListResult{
 		Items:      products,

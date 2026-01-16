@@ -71,13 +71,14 @@ type ProductListResult struct {
 
 type ProductQueryOptions struct {
 	// filters (plain values, no GraphQL)
-	CategoryID *string
-	SellerName *string
-	Status     *string
-	Search     *string
-	MinPrice   *float64
-	MaxPrice   *float64
-	InStock    *bool
+	CategoryID   *string
+	CategorySlug *string
+	SellerName   *string
+	Status       *string
+	Search       *string
+	MinPrice     *float64
+	MaxPrice     *float64
+	InStock      *bool
 
 	// sorting
 	SortField     ProductSortField

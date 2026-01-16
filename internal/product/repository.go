@@ -59,52 +59,185 @@ func (r *repository) GetProductsByGroup(
 	log.Info("start get products by group")
 	log.Debug("query options", zap.Any("opts", opts))
 
-	query := `
+	var (
+		args       []any
+		argCounter = 1
+	)
+
+	// ---------------------------------------------------------
+	// 1. Build Product Filters (applied inside LATERAL joins)
+	// ---------------------------------------------------------
+	var prodConditions []string
+
+	// Mandatory: link product to the current category row
+	prodConditions = append(prodConditions, "p.category_id = c.id")
+
+	// Status Filter
+	if opts.Status != nil {
+		prodConditions = append(prodConditions, fmt.Sprintf("p.status = $%d", argCounter))
+		args = append(args, *opts.Status)
+		argCounter++
+	} else if opts.OnlyActive {
+		prodConditions = append(prodConditions, fmt.Sprintf("p.status = $%d", argCounter))
+		args = append(args, "active")
+		argCounter++
+	}
+
+	// Search Filter (Product Name)
+	if opts.Search != nil {
+		prodConditions = append(prodConditions, fmt.Sprintf("p.name ILIKE $%d", argCounter))
+		args = append(args, "%"+*opts.Search+"%")
+		argCounter++
+	}
+
+	// Seller Name Filter
+	if opts.SellerName != nil {
+		prodConditions = append(prodConditions, fmt.Sprintf("EXISTS (SELECT 1 FROM sellers s WHERE s.id = p.seller_id AND s.name ILIKE $%d)", argCounter))
+		args = append(args, "%"+*opts.SellerName+"%")
+		argCounter++
+	}
+
+	// Price Range Filter (Check if any variant matches)
+	if opts.MinPrice != nil {
+		prodConditions = append(prodConditions, fmt.Sprintf("EXISTS (SELECT 1 FROM variants v_filter WHERE v_filter.product_id = p.id AND v_filter.price >= $%d)", argCounter))
+		args = append(args, *opts.MinPrice)
+		argCounter++
+	}
+	if opts.MaxPrice != nil {
+		prodConditions = append(prodConditions, fmt.Sprintf("EXISTS (SELECT 1 FROM variants v_filter WHERE v_filter.product_id = p.id AND v_filter.price <= $%d)", argCounter))
+		args = append(args, *opts.MaxPrice)
+		argCounter++
+	}
+
+	// Stock Filter
+	if opts.InStock != nil && *opts.InStock {
+		prodConditions = append(prodConditions, "EXISTS (SELECT 1 FROM variants v_filter WHERE v_filter.product_id = p.id AND v_filter.stock > 0)")
+	}
+
+	productWhere := strings.Join(prodConditions, " AND ")
+
+	// ---------------------------------------------------------
+	// 2. Build Category Filters (applied to outer query)
+	// ---------------------------------------------------------
+	var catConditions []string
+	if opts.CategoryID != nil {
+		catConditions = append(catConditions, fmt.Sprintf("c.id = $%d", argCounter))
+		args = append(args, *opts.CategoryID)
+		argCounter++
+	}
+
+	if opts.CategorySlug != nil {
+		catConditions = append(catConditions, fmt.Sprintf("c.slug = $%d", argCounter))
+		args = append(args, *opts.CategorySlug)
+		argCounter++
+	}
+
+	categoryWhere := ""
+	if len(catConditions) > 0 {
+		categoryWhere = "WHERE " + strings.Join(catConditions, " AND ")
+	}
+
+	// ---------------------------------------------------------
+	// 3. Sorting (applied inside product LATERAL join)
+	// ---------------------------------------------------------
+	innerOrderBy := "p.name ASC" // Default
+	if opts.SortField == ProductSortFieldCreatedAt {
+		dir := "DESC"
+		if opts.SortDirection == SortDirectionAsc {
+			dir = "ASC"
+		}
+		innerOrderBy = fmt.Sprintf("p.created_at %s", dir)
+	} else if opts.SortField == ProductSortFieldName {
+		dir := "ASC"
+		if opts.SortDirection == SortDirectionDesc {
+			dir = "DESC"
+		}
+		innerOrderBy = fmt.Sprintf("p.name %s", dir)
+	}
+
+	// ---------------------------------------------------------
+	// 4. Pagination (Categories)
+	// ---------------------------------------------------------
+	limit := opts.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+	page := opts.Page
+	if page <= 0 {
+		page = 1
+	}
+	offset := (page - 1) * limit
+
+	limitArg := argCounter
+	offsetArg := argCounter + 1
+	args = append(args, limit, offset)
+
+	// ---------------------------------------------------------
+	// 5. Construct Final Query
+	// ---------------------------------------------------------
+	query := fmt.Sprintf(`
 	SELECT
 	    c.id AS category_id,
 	    c.name AS category_name,
 	    s.id AS subcategory_id,
 	    s.name AS subcategory_name,
-	    p_total.total_products,
+	    COALESCE(p_total.total_products, 0) AS total_products,
 
 	    p.id AS product_id,
 	    p.name AS product_name,
 	    p.seller_id,
 	    p.slug,
+		p.status,
 
 	    v.id AS variant_id,
 	    v.product_id AS variant_product_id,
 	    v.name AS variant_name,
 	    v.price AS variant_price,
 	    v.stock,
-	    v.imageurl
+	    v.imageurl,
+		v.quantity_type,
 
-	FROM category c
+		sellers.name
 
-	-- Total products per category
+	FROM (
+		SELECT * FROM category c
+		%s
+		ORDER BY c.name
+		LIMIT $%d OFFSET $%d
+	) c
+
+	-- Total products per category (filtered)
 	LEFT JOIN LATERAL (
 	    SELECT COUNT(*) AS total_products
 	    FROM products p
-	    WHERE p.category_id = c.id
+	    WHERE %s
 	) AS p_total ON true
 
-	-- Limit 10 products per category
+	-- Limit 10 products per category (filtered & sorted)
 	LEFT JOIN LATERAL (
 	    SELECT *
 	    FROM products p
-	    WHERE p.category_id = c.id
-	    ORDER BY p.name
+	    WHERE %s
+	    ORDER BY %s
 	    LIMIT 10
 	) AS p ON true
+
+	LEFT JOIN sellers ON sellers.id = p.seller_id
 
 	-- Join variants
 	LEFT JOIN variants v ON v.product_id = p.id
 	LEFT JOIN subcategories s ON s.id = p.subcategory_id
 
 	ORDER BY c.name, p.name, v.name;
-	`
+	`,
+		categoryWhere,       // Outer category filter
+		limitArg, offsetArg, // Pagination
+		productWhere, // Count subquery filter
+		productWhere, // Product list subquery filter
+		innerOrderBy, // Product sort
+	)
 
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		log.Error("failed to query products by group", zap.Error(err))
 		return nil, err
@@ -129,13 +262,17 @@ func (r *repository) GetProductsByGroup(
 			pName     sql.NullString
 			pSellerID sql.NullString
 			pSlug     sql.NullString
+			pStatus   sql.NullString
 
-			vID       sql.NullString
-			vProdID   sql.NullString
-			vName     sql.NullString
-			vPrice    sql.NullFloat64
-			vStock    sql.NullInt32
-			vImageURL sql.NullString
+			vID           sql.NullString
+			vProdID       sql.NullString
+			vName         sql.NullString
+			vPrice        sql.NullFloat64
+			vStock        sql.NullInt32
+			vImageURL     sql.NullString
+			vQuantityType sql.NullString
+
+			SellerName sql.NullString
 		)
 
 		if err := rows.Scan(
@@ -144,15 +281,15 @@ func (r *repository) GetProductsByGroup(
 			&subcategoryID,
 			&subcategoryName,
 			&totalProducts,
-			&pID, &pName, &pSellerID, &pSlug,
-			&vID, &vProdID, &vName, &vPrice, &vStock, &vImageURL,
+			&pID, &pName, &pSellerID, &pSlug, &pStatus,
+			&vID, &vProdID, &vName, &vPrice, &vStock, &vImageURL, &vQuantityType,
+			&SellerName,
 		); err != nil {
 			log.Error("failed to scan grouped product row", zap.Error(err))
 			return nil, err
 		}
 
 		if !categoryID.Valid {
-			// Should never happen, but stay defensive
 			continue
 		}
 
@@ -171,7 +308,7 @@ func (r *repository) GetProductsByGroup(
 		}
 
 		//--------------------------------------
-		// PRODUCT (limit to 10 per category)
+		// PRODUCT
 		//--------------------------------------
 		if pID.Valid {
 			productKey := catID + ":" + pID.String
@@ -181,6 +318,8 @@ func (r *repository) GetProductsByGroup(
 					ID:              pID.String,
 					Name:            pName.String,
 					SellerID:        pSellerID.String,
+					SellerName:      SellerName.String,
+					Status:          pStatus.String,
 					CategoryID:      catID,
 					CategoryName:    categoryName.String,
 					SubcategoryID:   subcategoryID.String,
@@ -200,12 +339,13 @@ func (r *repository) GetProductsByGroup(
 				productMap[productKey].Variants = append(
 					productMap[productKey].Variants,
 					&Variant{
-						ID:        vID.String,
-						ProductID: vProdID.String,
-						Name:      vName.String,
-						Price:     vPrice.Float64,
-						Stock:     vStock.Int32,
-						ImageURL:  vImageURL.String,
+						ID:           vID.String,
+						ProductID:    vProdID.String,
+						Name:         vName.String,
+						Price:        vPrice.Float64,
+						QuantityType: vQuantityType.String,
+						Stock:        vStock.Int32,
+						ImageURL:     vImageURL.String,
 					},
 				)
 			}
