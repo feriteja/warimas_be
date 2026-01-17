@@ -22,7 +22,7 @@ type Service interface {
 	GetCart(ctx context.Context, userID uint,
 		filter *model.CartFilterInput,
 		sort *model.CartSortInput,
-		limit, page *uint16) ([]*cartRow, int64, error)
+		limit, page *uint16) ([]*CartRow, int64, error)
 	UpdateCartQuantity(ctx context.Context, params UpdateToCartParams) error
 	RemoveFromCart(ctx context.Context, variantIDs []string) error
 	ClearCart(ctx context.Context) error
@@ -162,7 +162,7 @@ func (s *service) GetCart(
 	filter *model.CartFilterInput,
 	sort *model.CartSortInput,
 	limit, page *uint16,
-) ([]*cartRow, int64, error) {
+) ([]*CartRow, int64, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "service"),

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
 	"warimas-be/internal/utils"
 
@@ -18,19 +17,19 @@ import (
 type Repository interface {
 	GetProductsByGroup(ctx context.Context, opts ProductQueryOptions) ([]ProductByCategory, error)
 	GetList(ctx context.Context, opts ProductQueryOptions) ([]*Product, *int, error)
-	Create(ctx context.Context, input model.NewProduct, sellerID string) (model.Product, error)
-	Update(ctx context.Context, input model.UpdateProduct, sellerID string) (model.Product, error)
+	Create(ctx context.Context, input NewProductInput, sellerID string) (Product, error)
+	Update(ctx context.Context, input UpdateProductInput, sellerID string) (Product, error)
 	BulkCreateVariants(
 		ctx context.Context,
-		input []*model.NewVariant,
+		input []*NewVariantInput,
 		sellerID string,
-	) ([]*model.Variant, error)
+	) ([]*Variant, error)
 	BulkUpdateVariants(
 		ctx context.Context,
-		input []*model.UpdateVariant,
+		input []*UpdateVariantInput,
 		sellerID string,
-	) ([]*model.Variant, error)
-	GetPackages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit, page int32, includeDisabled bool) ([]*model.Package, error)
+	) ([]*Variant, error)
+	GetPackages(ctx context.Context, filter *PackageFilterInput, sort *PackageSortInput, limit, page int32, includeDisabled bool) ([]*Package, error)
 	GetProductByID(ctx context.Context, productParams GetProductOptions) (*Product, error)
 	GetProductVariantByID(ctx context.Context, productParams GetVariantOptions) (*Variant, error)
 }
@@ -139,13 +138,14 @@ func (r *repository) GetProductsByGroup(
 	// 3. Sorting (applied inside product LATERAL join)
 	// ---------------------------------------------------------
 	innerOrderBy := "p.name ASC" // Default
-	if opts.SortField == ProductSortFieldCreatedAt {
+	switch opts.SortField {
+	case ProductSortFieldCreatedAt:
 		dir := "DESC"
 		if opts.SortDirection == SortDirectionAsc {
 			dir = "ASC"
 		}
 		innerOrderBy = fmt.Sprintf("p.created_at %s", dir)
-	} else if opts.SortField == ProductSortFieldName {
+	case ProductSortFieldName:
 		dir := "ASC"
 		if opts.SortDirection == SortDirectionDesc {
 			dir = "DESC"
@@ -647,9 +647,9 @@ GROUP BY
 
 func (r *repository) Create(
 	ctx context.Context,
-	input model.NewProduct,
+	input NewProductInput,
 	sellerID string,
-) (model.Product, error) {
+) (Product, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
@@ -662,7 +662,7 @@ func (r *repository) Create(
 	start := time.Now()
 	log.Info("start create product")
 
-	var p model.Product
+	var p Product
 
 	// 🔒 Validation
 	if sellerID == "" {
@@ -729,9 +729,9 @@ func (r *repository) Create(
 
 func (r *repository) Update(
 	ctx context.Context,
-	input model.UpdateProduct,
+	input UpdateProductInput,
 	sellerID string,
-) (model.Product, error) {
+) (Product, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
@@ -802,7 +802,7 @@ func (r *repository) Update(
 	// 🚨 No fields to update
 	if len(setClauses) == 0 {
 		log.Warn("update product skipped: no fields to update")
-		return model.Product{}, errors.New("no fields to update")
+		return Product{}, errors.New("no fields to update")
 	}
 
 	// WHERE clause args
@@ -815,7 +815,7 @@ func (r *repository) Update(
 		argPos+1,
 	)
 
-	var product model.Product
+	var product Product
 	err := r.db.QueryRowContext(ctx, finalQuery, args...).Scan(
 		&product.ID,
 		&product.Name,
@@ -830,11 +830,11 @@ func (r *repository) Update(
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Warn("product not found or not owned by seller")
-			return model.Product{}, errors.New("product not found or not owned by seller")
+			return Product{}, errors.New("product not found or not owned by seller")
 		}
 
 		log.Error("failed to update product", zap.Error(err))
-		return model.Product{}, err
+		return Product{}, err
 	}
 
 	log.Info("success update product",
@@ -847,9 +847,9 @@ func (r *repository) Update(
 
 func (r *repository) BulkCreateVariants(
 	ctx context.Context,
-	input []*model.NewVariant,
+	input []*NewVariantInput,
 	sellerID string,
-) ([]*model.Variant, error) {
+) ([]*Variant, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
@@ -925,10 +925,10 @@ func (r *repository) BulkCreateVariants(
 	}
 	defer rows.Close()
 
-	variants := make([]*model.Variant, 0, len(input))
+	variants := make([]*Variant, 0, len(input))
 
 	for rows.Next() {
-		var v model.Variant
+		var v Variant
 		if err := rows.Scan(
 			&v.ID,
 			&v.ProductID,
@@ -961,9 +961,9 @@ func (r *repository) BulkCreateVariants(
 
 func (r *repository) BulkUpdateVariants(
 	ctx context.Context,
-	input []*model.UpdateVariant,
+	input []*UpdateVariantInput,
 	sellerID string,
-) ([]*model.Variant, error) {
+) ([]*Variant, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
@@ -985,7 +985,7 @@ func (r *repository) BulkUpdateVariants(
 		_ = tx.Rollback()
 	}()
 
-	var updatedVariants []*model.Variant
+	var updatedVariants []*Variant
 
 	for _, v := range input {
 		setClauses := []string{}
@@ -1050,7 +1050,7 @@ func (r *repository) BulkUpdateVariants(
 			argPos+2,
 		)
 
-		var variant model.Variant
+		var variant Variant
 		if err := tx.QueryRowContext(ctx, query, args...).Scan(
 			&variant.ID,
 			&variant.ProductID,
@@ -1087,11 +1087,11 @@ func (r *repository) BulkUpdateVariants(
 
 func (r *repository) GetPackages(
 	ctx context.Context,
-	filter *model.PackageFilterInput,
-	sort *model.PackageSortInput,
+	filter *PackageFilterInput,
+	sort *PackageSortInput,
 	limit, page int32,
 	includeDisabled bool,
-) ([]*model.Package, error) {
+) ([]*Package, error) {
 
 	// ---------- PAGINATION ----------
 	if limit <= 0 {
@@ -1165,16 +1165,13 @@ func (r *repository) GetPackages(
 	// ---------- SORTING ----------
 	orderBy := "p.created_at DESC"
 	if sort != nil {
-		dir := strings.ToUpper(string(sort.Direction))
-		if dir != "ASC" && dir != "DESC" {
-			dir = "DESC"
-		}
+		dir := sort.Direction
 
 		switch sort.Field {
-		case model.PackageSortFieldName:
-			orderBy = "p.name " + dir
-		case model.PackageSortFieldCreatedAt:
-			orderBy = "p.created_at " + dir
+		case PackageSortFieldName:
+			orderBy = fmt.Sprintf("p.name %s", dir)
+		case PackageSortFieldCreatedAt:
+			orderBy = fmt.Sprintf("p.created_at %s", dir)
 		}
 	}
 
@@ -1197,12 +1194,12 @@ func (r *repository) GetPackages(
 	}
 	defer rows.Close()
 
-	packagesMap := make(map[string]*model.Package)
+	packagesMap := make(map[string]*Package)
 
 	for rows.Next() {
 		var (
-			p            model.Package
-			pi           model.PackageItem
+			p            Package
+			pi           PackageItem
 			variantPrice sql.NullFloat64
 			imageURL     sql.NullString
 			userID       sql.NullString
@@ -1235,7 +1232,7 @@ func (r *repository) GetPackages(
 
 		pkg, exists := packagesMap[p.ID]
 		if !exists {
-			p.Items = []*model.PackageItem{}
+			p.Items = []*PackageItem{}
 			packagesMap[p.ID] = &p
 			pkg = &p
 		}
@@ -1253,7 +1250,7 @@ func (r *repository) GetPackages(
 		return nil, err
 	}
 
-	result := make([]*model.Package, 0, len(packagesMap))
+	result := make([]*Package, 0, len(packagesMap))
 	for _, pkg := range packagesMap {
 		result = append(result, pkg)
 	}

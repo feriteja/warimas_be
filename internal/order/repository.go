@@ -145,7 +145,7 @@ func (r *repository) GetOrderByExternalID(
 	)
 
 	query := `
-		SELECT id, user_id, status, total_amount, currency, address_id
+		SELECT id, user_id, status, total_amount, currency, address_id, external_id
 		FROM orders
 		WHERE external_id = $1
 	`
@@ -159,6 +159,7 @@ func (r *repository) GetOrderByExternalID(
 			&o.TotalAmount,
 			&o.Currency,
 			&o.AddressID,
+			&o.ExternalID,
 		)
 
 	if err == sql.ErrNoRows {

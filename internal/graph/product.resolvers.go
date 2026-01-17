@@ -23,7 +23,7 @@ func (r *mutationResolver) CreateProduct(ctx context.Context, input model.NewPro
 		return nil, errors.New("unauthorized: please login first")
 	}
 
-	p, err := r.ProductSvc.Create(ctx, input)
+	p, err := r.ProductSvc.Create(ctx, MapNewProductInput(input))
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (r *mutationResolver) UpdateProduct(ctx context.Context, input model.Update
 		return nil, errors.New("unauthorized: please login first")
 	}
 
-	p, err := r.ProductSvc.Update(ctx, input)
+	p, err := r.ProductSvc.Update(ctx, MapUpdateProductInput(input))
 	if err != nil {
 		return nil, err
 	}
@@ -108,8 +108,8 @@ func (r *queryResolver) ProductList(ctx context.Context, filter *model.ProductFi
 		MaxPrice:     filter.MaxPrice,
 		InStock:      filter.InStock,
 
-		SortField:     prodInternal.MapSortField(sortField),
-		SortDirection: prodInternal.MapSortDirection(sortDirection),
+		SortField:     MapSortField(sortField),
+		SortDirection: MapSortDirection(sortDirection),
 
 		Page:         p,
 		Limit:        l,
@@ -126,7 +126,7 @@ func (r *queryResolver) ProductList(ctx context.Context, filter *model.ProductFi
 	// map domain → graphql
 	items := make([]*model.Product, 0, len(result.Items))
 	for _, p := range result.Items {
-		items = append(items, prodInternal.MapProductToGraphQL(p))
+		items = append(items, MapProductToGraphQL(p))
 	}
 
 	var totalCount int32 = 0
@@ -212,8 +212,8 @@ func (r *queryResolver) ProductsHome(ctx context.Context, filter *model.ProductF
 		MaxPrice:     filter.MaxPrice,
 		InStock:      filter.InStock,
 
-		SortField:     prodInternal.MapSortField(sortField),
-		SortDirection: prodInternal.MapSortDirection(sortDirection),
+		SortField:     MapSortField(sortField),
+		SortDirection: MapSortDirection(sortDirection),
 
 		Page:  p,
 		Limit: l,
@@ -249,7 +249,7 @@ func (r *queryResolver) ProductsHome(ctx context.Context, filter *model.ProductF
 			continue
 		}
 
-		result = append(result, prodInternal.MapProductByCategoryToGraphQL(g))
+		result = append(result, MapProductByCategoryToGraphQL(g))
 	}
 
 	log.Info("ProductsHome resolver completed",
@@ -275,7 +275,7 @@ func (r *queryResolver) ProductDetail(ctx context.Context, productID string) (*m
 	if err != nil {
 		return nil, err
 	}
-	productGraph := prodInternal.MapProductToGraphQL(product)
+	productGraph := MapProductToGraphQL(product)
 
 	log.Debug("product found")
 	return productGraph, nil

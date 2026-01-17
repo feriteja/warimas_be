@@ -6,7 +6,7 @@ import (
 )
 
 // Changed return type to slice of CartItem
-func MapCartItemToGraphQL(cr []*cartRow) []*model.CartItem {
+func MapCartItemToGraphQL(cr []*CartRow) []*model.CartItem {
 	items := make([]*model.CartItem, 0, len(cr))
 
 	for _, r := range cr {

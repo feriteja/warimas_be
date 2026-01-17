@@ -2349,6 +2349,8 @@ func (ec *executionContext) fieldContext_Query_paymentOrderInfo(ctx context.Cont
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "orderExternalID":
+				return ec.fieldContext_PaymentOrderInfoResponse_orderExternalID(ctx, field)
 			case "status":
 				return ec.fieldContext_PaymentOrderInfoResponse_status(ctx, field)
 			case "expiresAt":

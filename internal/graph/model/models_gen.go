@@ -338,6 +338,7 @@ type PaymentDetail struct {
 }
 
 type PaymentOrderInfoResponse struct {
+	OrderExternalID string           `json:"orderExternalID"`
 	Status          PaymentStatus    `json:"status"`
 	ExpiresAt       time.Time        `json:"expiresAt"`
 	TotalAmount     int32            `json:"totalAmount"`

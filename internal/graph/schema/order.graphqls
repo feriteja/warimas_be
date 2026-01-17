@@ -216,6 +216,7 @@ type ConfirmCheckoutSessionResponse {
 }
 
 type PaymentOrderInfoResponse {
+  orderExternalID: String!
   status: PaymentStatus!
   expiresAt: Time!
   totalAmount: Int!

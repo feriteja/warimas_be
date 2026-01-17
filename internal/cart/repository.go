@@ -38,7 +38,7 @@ type Repository interface {
 		filter *model.CartFilterInput,
 		sort *model.CartSortInput,
 		limit, page *uint16,
-	) ([]*cartRow, error)
+	) ([]*CartRow, error)
 	CountCartItems(
 		ctx context.Context,
 		userID uint,
@@ -371,7 +371,7 @@ func (r *repository) GetCartRows(
 	filter *model.CartFilterInput,
 	sort *model.CartSortInput,
 	limit, page *uint16,
-) ([]*cartRow, error) {
+) ([]*CartRow, error) {
 
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "repository"),
@@ -516,10 +516,10 @@ func (r *repository) GetCartRows(
 	}
 	defer rows.Close()
 
-	result := make([]*cartRow, 0, finalLimit)
+	result := make([]*CartRow, 0, finalLimit)
 
 	for rows.Next() {
-		var row cartRow
+		var row CartRow
 		if err := rows.Scan(
 			&row.CartID,
 			&row.UserID,

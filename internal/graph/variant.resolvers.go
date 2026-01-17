@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"warimas-be/internal/graph/model"
+	"warimas-be/internal/product"
 	"warimas-be/internal/utils"
 )
 
@@ -18,12 +19,30 @@ func (r *mutationResolver) CreateVariants(ctx context.Context, input []*model.Ne
 		return nil, errors.New("unauthorized: please login first")
 	}
 
-	v, err := r.ProductSvc.CreateVariants(ctx, input)
+	svcInput := make([]*product.NewVariantInput, len(input))
+	for i, v := range input {
+		svcInput[i] = &product.NewVariantInput{
+			ProductID:    v.ProductID,
+			QuantityType: v.QuantityType,
+			Name:         v.Name,
+			Price:        v.Price,
+			Stock:        int32(v.Stock),
+			ImageURL:     v.ImageURL,
+			Description:  v.Description,
+		}
+	}
+
+	v, err := r.ProductSvc.CreateVariants(ctx, svcInput)
 	if err != nil {
 		return nil, err
 	}
 
-	return v, nil
+	res := make([]*model.Variant, len(v))
+	for i, variant := range v {
+		res[i] = MapVariantToGraphQL(variant)
+	}
+
+	return res, nil
 }
 
 // UpdateVariants is the resolver for the updateVariants field.
@@ -33,10 +52,34 @@ func (r *mutationResolver) UpdateVariants(ctx context.Context, input []*model.Up
 		return nil, errors.New("unauthorized: please login first")
 	}
 
-	v, err := r.ProductSvc.UpdateVariants(ctx, input)
+	svcInput := make([]*product.UpdateVariantInput, len(input))
+	for i, v := range input {
+		var stock *int32
+		if v.Stock != nil {
+			s := int32(*v.Stock)
+			stock = &s
+		}
+		svcInput[i] = &product.UpdateVariantInput{
+			ID:           v.ID,
+			ProductID:    v.ProductID,
+			QuantityType: v.QuantityType,
+			Name:         v.Name,
+			Price:        v.Price,
+			Stock:        stock,
+			ImageURL:     v.ImageURL,
+			Description:  v.Description,
+		}
+	}
+
+	v, err := r.ProductSvc.UpdateVariants(ctx, svcInput)
 	if err != nil {
 		return nil, err
 	}
 
-	return v, nil
+	res := make([]*model.Variant, len(v))
+	for i, variant := range v {
+		res[i] = MapVariantToGraphQL(variant)
+	}
+
+	return res, nil
 }

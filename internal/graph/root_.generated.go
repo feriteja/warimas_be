@@ -288,6 +288,7 @@ type ComplexityRoot struct {
 	PaymentOrderInfoResponse struct {
 		Currency        func(childComplexity int) int
 		ExpiresAt       func(childComplexity int) int
+		OrderExternalID func(childComplexity int) int
 		Payment         func(childComplexity int) int
 		ShippingAddress func(childComplexity int) int
 		Status          func(childComplexity int) int
@@ -1629,6 +1630,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.PaymentOrderInfoResponse.ExpiresAt(childComplexity), true
+
+	case "PaymentOrderInfoResponse.orderExternalID":
+		if e.complexity.PaymentOrderInfoResponse.OrderExternalID == nil {
+			break
+		}
+
+		return e.complexity.PaymentOrderInfoResponse.OrderExternalID(childComplexity), true
 
 	case "PaymentOrderInfoResponse.payment":
 		if e.complexity.PaymentOrderInfoResponse.Payment == nil {

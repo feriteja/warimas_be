@@ -61,7 +61,7 @@ type CreateCartItemParams struct {
 	Quantity  uint32
 }
 
-type cartRow struct {
+type CartRow struct {
 	CartID    string
 	UserID    int32
 	Quantity  int32

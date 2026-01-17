@@ -10,11 +10,11 @@ const (
 	ProductSortFieldPrice
 )
 
-type SortDirection int
+type SortDirection string
 
 const (
-	SortDirectionAsc SortDirection = iota
-	SortDirectionDesc
+	SortDirectionAsc  SortDirection = "ASC"
+	SortDirectionDesc SortDirection = "DESC"
 )
 
 type Variant struct {
@@ -91,4 +91,80 @@ type ProductQueryOptions struct {
 	OnlyActive   bool
 	IncludeCount bool
 	SellerID     *string
+}
+
+type NewProductInput struct {
+	Name          string
+	ImageURL      *string
+	Description   *string
+	CategoryID    string
+	SubcategoryID string
+}
+
+type UpdateProductInput struct {
+	ID            string
+	Name          *string
+	ImageURL      *string
+	Description   *string
+	CategoryID    *string
+	SubcategoryID *string
+	Status        *string
+}
+
+type NewVariantInput struct {
+	ProductID    string
+	QuantityType string
+	Name         string
+	Price        float64
+	Stock        int32
+	ImageURL     *string
+	Description  *string
+}
+
+type UpdateVariantInput struct {
+	ID           string
+	ProductID    string
+	QuantityType *string
+	Name         *string
+	Price        *float64
+	Stock        *int32
+	ImageURL     *string
+	Description  *string
+}
+
+type Package struct {
+	ID       string
+	Name     string
+	ImageURL *string
+	UserID   *string
+	Items    []*PackageItem
+}
+
+type PackageItem struct {
+	ID        string
+	PackageID string
+	VariantID string
+	ImageURL  string
+	Name      string
+	Price     float64
+	Quantity  int32
+	CreatedAt string
+	UpdatedAt string
+}
+
+type PackageFilterInput struct {
+	ID   *string
+	Name *string
+}
+
+type PackageSortField string
+
+const (
+	PackageSortFieldName      PackageSortField = "NAME"
+	PackageSortFieldCreatedAt PackageSortField = "CREATED_AT"
+)
+
+type PackageSortInput struct {
+	Field     PackageSortField
+	Direction SortDirection
 }

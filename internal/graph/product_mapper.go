@@ -1,28 +1,29 @@
-package product
+package graph
 
 import (
 	"time"
 	"warimas-be/internal/graph/model"
+	"warimas-be/internal/product"
 	"warimas-be/internal/utils"
 )
 
-func MapSortField(f *model.ProductSortField) ProductSortField {
+func MapSortField(f *model.ProductSortField) product.ProductSortField {
 	if f == nil {
-		return ProductSortFieldCreatedAt
+		return product.ProductSortFieldCreatedAt
 	}
 
 	switch *f {
 	case model.ProductSortFieldPrice:
-		return ProductSortFieldPrice
+		return product.ProductSortFieldPrice
 	case model.ProductSortFieldName:
-		return ProductSortFieldName
+		return product.ProductSortFieldName
 	default:
-		return ProductSortFieldCreatedAt
+		return product.ProductSortFieldCreatedAt
 	}
 }
 
 func MapProductByCategoryToGraphQL(
-	e ProductByCategory,
+	e product.ProductByCategory,
 ) *model.ProductByCategory {
 
 	products := make([]*model.Product, 0, len(e.Products))
@@ -37,18 +38,18 @@ func MapProductByCategoryToGraphQL(
 	}
 }
 
-func MapSortDirection(d *model.SortDirection) SortDirection {
+func MapSortDirection(d *model.SortDirection) product.SortDirection {
 	if d == nil {
-		return SortDirectionDesc
+		return product.SortDirectionDesc
 	}
 
 	if *d == model.SortDirectionAsc {
-		return SortDirectionAsc
+		return product.SortDirectionAsc
 	}
-	return SortDirectionDesc
+	return product.SortDirectionDesc
 }
 
-func MapProductToGraphQL(p *Product) *model.Product {
+func MapProductToGraphQL(p *product.Product) *model.Product {
 	status := p.Status
 
 	variants := make([]*model.Variant, 0, len(p.Variants))
@@ -76,7 +77,7 @@ func MapProductToGraphQL(p *Product) *model.Product {
 	}
 }
 
-func MapVariantToGraphQL(v *Variant) *model.Variant {
+func MapVariantToGraphQL(v *product.Variant) *model.Variant {
 	if v == nil {
 		return nil
 	}
@@ -97,5 +98,27 @@ func MapVariantToGraphQL(v *Variant) *model.Variant {
 		Description:  v.Description,
 		CategoryID:   nil,
 		CreatedAt:    v.CreatedAt,
+	}
+}
+
+func MapNewProductInput(input model.NewProduct) product.NewProductInput {
+	return product.NewProductInput{
+		Name:          input.Name,
+		ImageURL:      input.ImageURL,
+		Description:   input.Description,
+		CategoryID:    input.CategoryID,
+		SubcategoryID: input.SubcategoryID,
+	}
+}
+
+func MapUpdateProductInput(input model.UpdateProduct) product.UpdateProductInput {
+	return product.UpdateProductInput{
+		ID:            input.ID,
+		Name:          input.Name,
+		ImageURL:      input.ImageURL,
+		Description:   input.Description,
+		CategoryID:    input.CategoryID,
+		SubcategoryID: input.SubcategoryID,
+		Status:        input.Status,
 	}
 }

@@ -2308,6 +2308,35 @@ func (ec *executionContext) fieldContext_PaymentDetail_instructions(_ context.Co
 	return fc, nil
 }
 
+func (ec *executionContext) _PaymentOrderInfoResponse_orderExternalID(ctx context.Context, field graphql.CollectedField, obj *model.PaymentOrderInfoResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PaymentOrderInfoResponse_orderExternalID,
+		func(ctx context.Context) (any, error) {
+			return obj.OrderExternalID, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PaymentOrderInfoResponse_orderExternalID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaymentOrderInfoResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _PaymentOrderInfoResponse_status(ctx context.Context, field graphql.CollectedField, obj *model.PaymentOrderInfoResponse) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4097,6 +4126,11 @@ func (ec *executionContext) _PaymentOrderInfoResponse(ctx context.Context, sel a
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("PaymentOrderInfoResponse")
+		case "orderExternalID":
+			out.Values[i] = ec._PaymentOrderInfoResponse_orderExternalID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "status":
 			out.Values[i] = ec._PaymentOrderInfoResponse_status(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

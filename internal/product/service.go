@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
 	"warimas-be/internal/user"
 	"warimas-be/internal/utils"
@@ -18,11 +17,11 @@ import (
 type Service interface {
 	GetProductsByGroup(ctx context.Context, opts ProductQueryOptions) ([]ProductByCategory, error)
 	GetList(ctx context.Context, opts ProductQueryOptions) (*ProductListResult, error)
-	Create(ctx context.Context, input model.NewProduct) (model.Product, error)
-	Update(ctx context.Context, input model.UpdateProduct) (model.Product, error)
-	CreateVariants(ctx context.Context, input []*model.NewVariant) ([]*model.Variant, error)
-	UpdateVariants(ctx context.Context, input []*model.UpdateVariant) ([]*model.Variant, error)
-	GetPackages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit, page int32) ([]*model.Package, error)
+	Create(ctx context.Context, input NewProductInput) (Product, error)
+	Update(ctx context.Context, input UpdateProductInput) (Product, error)
+	CreateVariants(ctx context.Context, input []*NewVariantInput) ([]*Variant, error)
+	UpdateVariants(ctx context.Context, input []*UpdateVariantInput) ([]*Variant, error)
+	GetPackages(ctx context.Context, filter *PackageFilterInput, sort *PackageSortInput, limit, page int32) ([]*Package, error)
 	GetProductByID(ctx context.Context, productID string) (*Product, error)
 }
 
@@ -141,14 +140,14 @@ func (s *service) GetList(
 	}, nil
 }
 
-func (s *service) Create(ctx context.Context, input model.NewProduct) (model.Product, error) {
+func (s *service) Create(ctx context.Context, input NewProductInput) (Product, error) {
 	if input.Name == "" {
-		return model.Product{}, errors.New("name cannot be empty")
+		return Product{}, errors.New("name cannot be empty")
 	}
 
 	sellerID, ok := ctx.Value(utils.SellerIDKey).(string)
 	if !ok || sellerID == "" {
-		return model.Product{}, errors.New("unauthorized: seller ID not found in context")
+		return Product{}, errors.New("unauthorized: seller ID not found in context")
 	}
 
 	return s.repo.Create(ctx, input, sellerID)
@@ -156,26 +155,26 @@ func (s *service) Create(ctx context.Context, input model.NewProduct) (model.Pro
 
 func (s *service) Update(
 	ctx context.Context,
-	input model.UpdateProduct,
-) (model.Product, error) {
+	input UpdateProductInput,
+) (Product, error) {
 
 	if input.ID == "" {
-		return model.Product{}, errors.New("product id is required")
+		return Product{}, errors.New("product id is required")
 	}
 
 	// Validate only provided fields
 	if input.Name != nil && strings.TrimSpace(*input.Name) == "" {
-		return model.Product{}, errors.New("name cannot be empty")
+		return Product{}, errors.New("name cannot be empty")
 	}
 
 	sellerID, ok := ctx.Value(utils.SellerIDKey).(string)
 	if !ok || sellerID == "" {
-		return model.Product{}, errors.New("unauthorized")
+		return Product{}, errors.New("unauthorized")
 	}
 
 	// Ensure at least one field is updated
-	if !utils.HasAnyUpdateProductField(input) {
-		return model.Product{}, errors.New("no fields to update")
+	if input.Name == nil && input.ImageURL == nil && input.Description == nil && input.CategoryID == nil && input.SubcategoryID == nil && input.Status == nil {
+		return Product{}, errors.New("no fields to update")
 	}
 
 	return s.repo.Update(ctx, input, sellerID)
@@ -183,8 +182,8 @@ func (s *service) Update(
 
 func (s *service) CreateVariants(
 	ctx context.Context,
-	input []*model.NewVariant,
-) ([]*model.Variant, error) {
+	input []*NewVariantInput,
+) ([]*Variant, error) {
 
 	if len(input) == 0 {
 		return nil, errors.New("variant input cannot be empty")
@@ -200,8 +199,8 @@ func (s *service) CreateVariants(
 
 func (s *service) UpdateVariants(
 	ctx context.Context,
-	input []*model.UpdateVariant,
-) ([]*model.Variant, error) {
+	input []*UpdateVariantInput,
+) ([]*Variant, error) {
 
 	if len(input) == 0 {
 		return nil, errors.New("variant input cannot be empty")
@@ -238,7 +237,7 @@ func (s *service) UpdateVariants(
 			return nil, fmt.Errorf("stock cannot be negative at index %d", i)
 		}
 
-		if !utils.HasAnyVariantUpdateField(v) {
+		if v.Name == nil && v.Price == nil && v.Stock == nil && v.ImageURL == nil && v.Description == nil && v.QuantityType == nil {
 			return nil, fmt.Errorf("no fields to update at index %d", i)
 		}
 	}
@@ -248,10 +247,10 @@ func (s *service) UpdateVariants(
 
 func (s *service) GetPackages(
 	ctx context.Context,
-	filter *model.PackageFilterInput,
-	sort *model.PackageSortInput,
+	filter *PackageFilterInput,
+	sort *PackageSortInput,
 	limit, page int32,
-) ([]*model.Package, error) {
+) ([]*Package, error) {
 
 	// ---------- PAGINATION ----------
 	if limit <= 0 {

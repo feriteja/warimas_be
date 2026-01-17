@@ -57,12 +57,12 @@ func (m *MockCartRepository) CreateCartItem(ctx context.Context, params CreateCa
 	return args.Get(0).(*CartItem), args.Error(1)
 }
 
-func (m *MockCartRepository) GetCartRows(ctx context.Context, userID uint, filter *model.CartFilterInput, sort *model.CartSortInput, limit, page *uint16) ([]*cartRow, error) {
+func (m *MockCartRepository) GetCartRows(ctx context.Context, userID uint, filter *model.CartFilterInput, sort *model.CartSortInput, limit, page *uint16) ([]*CartRow, error) {
 	args := m.Called(ctx, userID, filter, sort, limit, page)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]*cartRow), args.Error(1)
+	return args.Get(0).([]*CartRow), args.Error(1)
 }
 
 func (m *MockCartRepository) CountCartItems(ctx context.Context, userID uint, filter *model.CartFilterInput) (int64, error) {
@@ -90,19 +90,19 @@ func (m *MockProductRepository) GetProductsByGroup(ctx context.Context, opts pro
 func (m *MockProductRepository) GetList(ctx context.Context, opts product.ProductQueryOptions) ([]*product.Product, *int, error) {
 	return nil, nil, nil
 }
-func (m *MockProductRepository) Create(ctx context.Context, input model.NewProduct, sellerID string) (model.Product, error) {
-	return model.Product{}, nil
+func (m *MockProductRepository) Create(ctx context.Context, input product.NewProductInput, sellerID string) (product.Product, error) {
+	return product.Product{}, nil
 }
-func (m *MockProductRepository) Update(ctx context.Context, input model.UpdateProduct, sellerID string) (model.Product, error) {
-	return model.Product{}, nil
+func (m *MockProductRepository) Update(ctx context.Context, input product.UpdateProductInput, sellerID string) (product.Product, error) {
+	return product.Product{}, nil
 }
-func (m *MockProductRepository) BulkCreateVariants(ctx context.Context, input []*model.NewVariant, sellerID string) ([]*model.Variant, error) {
+func (m *MockProductRepository) BulkCreateVariants(ctx context.Context, input []*product.NewVariantInput, sellerID string) ([]*product.Variant, error) {
 	return nil, nil
 }
-func (m *MockProductRepository) BulkUpdateVariants(ctx context.Context, input []*model.UpdateVariant, sellerID string) ([]*model.Variant, error) {
+func (m *MockProductRepository) BulkUpdateVariants(ctx context.Context, input []*product.UpdateVariantInput, sellerID string) ([]*product.Variant, error) {
 	return nil, nil
 }
-func (m *MockProductRepository) GetPackages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit, page int32, includeDisabled bool) ([]*model.Package, error) {
+func (m *MockProductRepository) GetPackages(ctx context.Context, filter *product.PackageFilterInput, sort *product.PackageSortInput, limit, page int32, includeDisabled bool) ([]*product.Package, error) {
 	return nil, nil
 }
 func (m *MockProductRepository) GetProductByID(ctx context.Context, productParams product.GetProductOptions) (*product.Product, error) {
@@ -228,7 +228,7 @@ func TestService_GetCart(t *testing.T) {
 		mockProdRepo := new(MockProductRepository)
 		svc := NewService(mockRepo, mockProdRepo)
 
-		expectedRows := []*cartRow{
+		expectedRows := []*CartRow{
 			{CartID: "cart-1", UserID: 1, VariantID: "var-1", Quantity: 1},
 		}
 		expectedTotal := int64(1)

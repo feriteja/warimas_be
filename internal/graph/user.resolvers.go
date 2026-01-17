@@ -26,15 +26,17 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 	}
 
 	w := transport.GetResponseWriter(ctx) // <-- your helper
-	http.SetCookie(w, &http.Cookie{
-		Name:     "access_token",
-		Value:    token,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   true, // HTTPS only
-		SameSite: http.SameSiteNoneMode,
-		MaxAge:   60 * 60 * 24, // 24 hours
-	})
+	if w != nil {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "access_token",
+			Value:    token,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   true, // HTTPS only
+			SameSite: http.SameSiteNoneMode,
+			MaxAge:   60 * 60 * 24, // 24 hours
+		})
+	}
 
 	log.Info("user registered successfully",
 		zap.String("user_id", fmt.Sprint(u.ID)),
@@ -69,15 +71,17 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 	}
 
 	w := transport.GetResponseWriter(ctx) // <-- your helper
-	http.SetCookie(w, &http.Cookie{
-		Name:     "access_token",
-		Value:    token,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   true, // HTTPS only
-		SameSite: http.SameSiteNoneMode,
-		MaxAge:   60 * 60 * 24, // 24 hours
-	})
+	if w != nil {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "access_token",
+			Value:    token,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   true, // HTTPS only
+			SameSite: http.SameSiteNoneMode,
+			MaxAge:   60 * 60 * 24, // 24 hours
+		})
+	}
 
 	log.Info("Login successful",
 		zap.String("user_id", fmt.Sprint(u.ID)),

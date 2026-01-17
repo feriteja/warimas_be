@@ -369,10 +369,11 @@ func (r *queryResolver) PaymentOrderInfo(ctx context.Context, externalID string)
 	}
 
 	paymentInfoMap := &model.PaymentOrderInfoResponse{
-		Status:      model.PaymentStatus(paymentInfo.Status),
-		TotalAmount: int32(paymentInfo.TotalAmount),
-		Currency:    paymentInfo.Currency,
-		ExpiresAt:   paymentInfo.ExpiresAt,
+		OrderExternalID: paymentInfo.OrderExternalID,
+		Status:          model.PaymentStatus(paymentInfo.Status),
+		TotalAmount:     int32(paymentInfo.TotalAmount),
+		Currency:        paymentInfo.Currency,
+		ExpiresAt:       paymentInfo.ExpiresAt,
 		ShippingAddress: &model.ShippingAddress{
 			Name:         paymentInfo.ShippingAddress.Name,
 			ReceiverName: paymentInfo.ShippingAddress.ReceiverName,
