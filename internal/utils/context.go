@@ -21,3 +21,7 @@ const internalRequestKey ctxKey = "internal_request"
 func WithInternalRequest(ctx context.Context) context.Context {
 	return context.WithValue(ctx, internalRequestKey, true)
 }
+
+func SetInternalContext(ctx context.Context) context.Context {
+	return WithInternalRequest(ctx)
+}

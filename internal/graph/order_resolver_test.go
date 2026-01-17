@@ -2,12 +2,14 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 	"warimas-be/internal/address"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/order"
 	"warimas-be/internal/payment"
+	"warimas-be/internal/utils"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -146,6 +148,20 @@ func TestMutationResolver_CreateCheckoutSession(t *testing.T) {
 		assert.Error(t, err)
 		assert.Equal(t, "items must not be empty", err.Error())
 	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockOrderService)
+		resolver := &Resolver{OrderSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		ctx := context.Background()
+		input := model.CreateCheckoutSessionInput{Items: []*model.CheckoutSessionItemInput{{VariantID: "v1", Quantity: 1}}}
+
+		mockSvc.On("CreateSession", ctx, input).Return(nil, errors.New("stock error"))
+
+		_, err := mr.CreateCheckoutSession(ctx, input)
+		assert.Error(t, err)
+	})
 }
 
 func TestMutationResolver_ConfirmCheckoutSession(t *testing.T) {
@@ -167,6 +183,18 @@ func TestMutationResolver_ConfirmCheckoutSession(t *testing.T) {
 		assert.Equal(t, "ord_123", res.OrderExternalID)
 		mockSvc.AssertExpectations(t)
 	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockOrderService)
+		resolver := &Resolver{OrderSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		ctx := context.Background()
+		input := model.ConfirmCheckoutSessionInput{ExternalID: "sess_123"}
+		mockSvc.On("ConfirmSession", ctx, "sess_123").Return(nil, errors.New("db error"))
+		_, err := mr.ConfirmCheckoutSession(ctx, input)
+		assert.Error(t, err)
+	})
 }
 
 func TestMutationResolver_UpdateSessionAddress(t *testing.T) {
@@ -184,6 +212,18 @@ func TestMutationResolver_UpdateSessionAddress(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.True(t, res.Success)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockOrderService)
+		resolver := &Resolver{OrderSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		ctx := context.Background()
+		input := model.UpdateSessionAddressInput{ExternalID: "sess_123", AddressID: "addr_1"}
+		mockSvc.On("UpdateSessionAddress", ctx, "sess_123", "addr_1", (*string)(nil)).Return(errors.New("db error"))
+		_, err := mr.UpdateSessionAddress(ctx, input)
+		assert.Error(t, err)
 	})
 }
 
@@ -219,6 +259,18 @@ func TestMutationResolver_UpdateOrderStatus(t *testing.T) {
 		assert.False(t, res.Success)
 		assert.Equal(t, "Invalid order ID", *res.Message)
 	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockOrderService)
+		resolver := &Resolver{OrderSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		input := model.UpdateOrderStatusInput{OrderID: "10", Status: model.OrderStatusPaid}
+		mockSvc.On("UpdateOrderStatus", uint(10), order.OrderStatusPaid).Return(errors.New("db error"))
+		res, _ := mr.UpdateOrderStatus(context.Background(), input)
+		assert.False(t, res.Success)
+		assert.Equal(t, "db error", *res.Message)
+	})
 }
 
 func TestMutationResolver_CreateOrderFromSession(t *testing.T) {
@@ -235,6 +287,47 @@ func TestMutationResolver_CreateOrderFromSession(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Equal(t, "forbidden", err.Error())
+	})
+
+	t.Run("Success", func(t *testing.T) {
+		mockSvc := new(MockOrderService)
+		resolver := &Resolver{OrderSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		// Mock internal request (ensure utils.SetInternalContext exists or implement it)
+		ctx := utils.SetInternalContext(context.Background())
+		input := model.CreateOrderFromSessionInput{ExternalID: "sess_123"}
+
+		userID := int32(1)
+		now := time.Now()
+		expectedOrder := &order.Order{
+			ID:         1,
+			ExternalID: "ord_123",
+			UserID:     &userID,
+			CreatedAt:  now,
+			UpdatedAt:  now,
+		}
+
+		mockSvc.On("CreateFromSession", ctx, "sess_123").Return(expectedOrder, nil)
+
+		res, err := mr.CreateOrderFromSession(ctx, input)
+
+		assert.NoError(t, err)
+		assert.True(t, res.Success)
+		assert.Equal(t, int32(1), res.Order.ID)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockOrderService)
+		resolver := &Resolver{OrderSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		ctx := utils.SetInternalContext(context.Background())
+		input := model.CreateOrderFromSessionInput{ExternalID: "sess_123"}
+
+		mockSvc.On("CreateFromSession", ctx, "sess_123").Return(nil, errors.New("db error"))
+		_, err := mr.CreateOrderFromSession(ctx, input)
+		assert.Error(t, err)
 	})
 }
 
@@ -269,6 +362,70 @@ func TestQueryResolver_OrderList(t *testing.T) {
 		assert.Len(t, res.Items, 1)
 		assert.Equal(t, int32(1), res.PageInfo.TotalItems)
 	})
+
+	t.Run("WithFilter", func(t *testing.T) {
+		mockSvc := new(MockOrderService)
+		resolver := &Resolver{OrderSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		ctx := context.Background()
+		status := model.OrderStatusPaid
+		filter := &model.OrderFilterInput{
+			Status: &status,
+			Search: utils.StrPtr("ORD-123"),
+		}
+
+		// Expect service to be called with mapped filter
+		mockSvc.On("GetOrders", ctx, mock.MatchedBy(func(f *order.OrderFilterInput) bool {
+			return *f.Status == order.OrderStatusPaid && *f.Search == "ORD-123"
+		}), mock.Anything, int32(20), int32(1)).
+			Return([]*order.Order{}, int64(0), map[uuid.UUID][]address.Address{}, nil)
+
+		res, err := qr.OrderList(ctx, filter, nil, nil)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, res)
+	})
+
+	t.Run("MissingAddress", func(t *testing.T) {
+		mockSvc := new(MockOrderService)
+		resolver := &Resolver{OrderSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		ctx := context.Background()
+		addrID := uuid.New()
+		userID := int32(1)
+		now := time.Now()
+		expectedOrders := []*order.Order{{
+			ID:        1,
+			AddressID: addrID,
+			UserID:    &userID,
+			CreatedAt: now,
+			UpdatedAt: now,
+		}}
+		// Empty address map simulating missing address data
+		addrMap := map[uuid.UUID][]address.Address{}
+
+		mockSvc.On("GetOrders", ctx, mock.Anything, mock.Anything, int32(20), int32(1)).
+			Return(expectedOrders, int64(1), addrMap, nil)
+
+		res, err := qr.OrderList(ctx, nil, nil, nil)
+
+		assert.NoError(t, err)
+		assert.Len(t, res.Items, 1)
+		// Ensure no panic and address is nil
+		assert.Nil(t, res.Items[0].Shipping)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockOrderService)
+		resolver := &Resolver{OrderSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		mockSvc.On("GetOrders", context.Background(), mock.Anything, mock.Anything, int32(20), int32(1)).Return(nil, int64(0), nil, errors.New("db error"))
+		_, err := qr.OrderList(context.Background(), nil, nil, nil)
+		assert.Error(t, err)
+	})
 }
 
 func TestQueryResolver_OrderDetail(t *testing.T) {
@@ -295,6 +452,23 @@ func TestQueryResolver_OrderDetail(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, int32(123), res.ID)
+	})
+
+	t.Run("InvalidID", func(t *testing.T) {
+		mockSvc := new(MockOrderService)
+		resolver := &Resolver{OrderSvc: mockSvc}
+		qr := &queryResolver{resolver}
+		_, err := qr.OrderDetail(context.Background(), "abc")
+		assert.Error(t, err)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockOrderService)
+		resolver := &Resolver{OrderSvc: mockSvc}
+		qr := &queryResolver{resolver}
+		mockSvc.On("GetOrderDetail", context.Background(), uint(123)).Return(nil, nil, errors.New("db error"))
+		_, err := qr.OrderDetail(context.Background(), "123")
+		assert.Error(t, err)
 	})
 }
 
@@ -323,6 +497,15 @@ func TestQueryResolver_OrderDetailByExternalID(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, int32(123), res.ID)
 	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockOrderService)
+		resolver := &Resolver{OrderSvc: mockSvc}
+		qr := &queryResolver{resolver}
+		mockSvc.On("GetOrderDetailByExternalID", context.Background(), "ext_123").Return(nil, nil, errors.New("db error"))
+		_, err := qr.OrderDetailByExternalID(context.Background(), "ext_123")
+		assert.Error(t, err)
+	})
 }
 
 func TestQueryResolver_CheckoutSession(t *testing.T) {
@@ -344,6 +527,15 @@ func TestQueryResolver_CheckoutSession(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, extID, res.ExternalID)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockOrderService)
+		resolver := &Resolver{OrderSvc: mockSvc}
+		qr := &queryResolver{resolver}
+		mockSvc.On("GetSession", context.Background(), "sess_123").Return(nil, errors.New("db error"))
+		_, err := qr.CheckoutSession(context.Background(), "sess_123")
+		assert.Error(t, err)
 	})
 }
 
@@ -372,5 +564,14 @@ func TestQueryResolver_PaymentOrderInfo(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, extID, res.OrderExternalID)
 		assert.Equal(t, int32(10000), res.TotalAmount)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockOrderService)
+		resolver := &Resolver{OrderSvc: mockSvc}
+		qr := &queryResolver{resolver}
+		mockSvc.On("GetPaymentOrderInfo", context.Background(), "ord_123").Return(nil, errors.New("db error"))
+		_, err := qr.PaymentOrderInfo(context.Background(), "ord_123")
+		assert.Error(t, err)
 	})
 }

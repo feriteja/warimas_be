@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/product"
@@ -36,6 +37,20 @@ func TestMutationResolver_CreateVariants(t *testing.T) {
 		assert.Len(t, res, 1)
 		assert.Equal(t, "v1", res[0].ID)
 	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockProductService)
+		resolver := &Resolver{ProductSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "seller")
+		input := []*model.NewVariant{{ProductID: "p1", Name: "Var 1"}}
+
+		mockSvc.On("CreateVariants", ctx, mock.Anything).Return(nil, errors.New("db error"))
+
+		_, err := mr.CreateVariants(ctx, input)
+		assert.Error(t, err)
+	})
 }
 
 func TestMutationResolver_UpdateVariants(t *testing.T) {
@@ -58,5 +73,17 @@ func TestMutationResolver_UpdateVariants(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, res, 1)
 		assert.Equal(t, "Var 1 Updated", res[0].Name)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockProductService)
+		resolver := &Resolver{ProductSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "seller")
+		input := []*model.UpdateVariant{{ID: "v1"}}
+		mockSvc.On("UpdateVariants", ctx, mock.Anything).Return(nil, errors.New("db error"))
+		_, err := mr.UpdateVariants(ctx, input)
+		assert.Error(t, err)
 	})
 }

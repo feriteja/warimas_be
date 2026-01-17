@@ -108,6 +108,16 @@ func TestMutationResolver_AddSubcategory(t *testing.T) {
 		assert.Equal(t, expected.ID, res.ID)
 		assert.Equal(t, expected.Name, res.Name)
 	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockCategoryService)
+		resolver := &Resolver{CategorySvc: mockSvc}
+		mr := &mutationResolver{resolver}
+		ctx := context.Background()
+		mockSvc.On("AddSubcategory", ctx, "cat1", "Sub Cat").Return(nil, errors.New("db error"))
+		_, err := mr.AddSubcategory(ctx, "cat1", "Sub Cat")
+		assert.Error(t, err)
+	})
 }
 
 func TestQueryResolver_Category(t *testing.T) {
@@ -127,6 +137,15 @@ func TestQueryResolver_Category(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, int32(1), res.PageInfo.TotalItems)
 		assert.Len(t, res.Items, 1)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockCategoryService)
+		resolver := &Resolver{CategorySvc: mockSvc}
+		qr := &queryResolver{resolver}
+		mockSvc.On("GetCategories", context.Background(), (*string)(nil), (*int32)(nil), (*int32)(nil)).Return(nil, int64(0), errors.New("db error"))
+		_, err := qr.Category(context.Background(), nil, nil, nil)
+		assert.Error(t, err)
 	})
 }
 
@@ -148,5 +167,14 @@ func TestQueryResolver_Subcategory(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, int32(1), res.PageInfo.TotalItems)
 		assert.Len(t, res.Items, 1)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockCategoryService)
+		resolver := &Resolver{CategorySvc: mockSvc}
+		qr := &queryResolver{resolver}
+		mockSvc.On("GetSubcategories", context.Background(), "cat1", (*string)(nil), (*int32)(nil), (*int32)(nil)).Return(nil, int64(0), errors.New("db error"))
+		_, err := qr.Subcategory(context.Background(), nil, "cat1", nil, nil)
+		assert.Error(t, err)
 	})
 }

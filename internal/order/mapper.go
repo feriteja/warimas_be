@@ -33,15 +33,9 @@ func ToGraphQLOrder(o *Order, addr *address.Address) *model.Order {
 		items = append(items, MapOrderItemToGraphQL(item))
 	}
 
-	return &model.Order{
-		ID:         int32(o.ID),
-		ExternalID: o.ExternalID,
-		User:       &model.UserRef{ID: *o.UserID},
-		Timestamps: &model.OrderTimestamps{
-			CreatedAt: o.CreatedAt,
-			UpdatedAt: o.UpdatedAt,
-		},
-		Shipping: &model.OrderShipping{Address: &model.Address{
+	var shipping *model.OrderShipping
+	if addr != nil {
+		shipping = &model.OrderShipping{Address: &model.Address{
 			ID:           addr.ID.String(),
 			Name:         addr.Name,
 			ReceiverName: addr.ReceiverName,
@@ -52,7 +46,18 @@ func ToGraphQLOrder(o *Order, addr *address.Address) *model.Order {
 			Province:     addr.Province,
 			Country:      addr.Country,
 			PostalCode:   addr.Postal,
-		}},
+		}}
+	}
+
+	return &model.Order{
+		ID:         int32(o.ID),
+		ExternalID: o.ExternalID,
+		User:       &model.UserRef{ID: *o.UserID},
+		Timestamps: &model.OrderTimestamps{
+			CreatedAt: o.CreatedAt,
+			UpdatedAt: o.UpdatedAt,
+		},
+		Shipping:      shipping,
 		InvoiceNumber: o.InvoiceNumber,
 		Pricing: &model.OrderPricing{
 			Currency:    o.Currency,

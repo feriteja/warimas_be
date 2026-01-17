@@ -49,33 +49,35 @@ func TestMutationResolver_Register(t *testing.T) {
 		resolver := &Resolver{UserSvc: mockSvc}
 		mr := &mutationResolver{resolver}
 
-		jwtToken := "jwt-token"
 		ctx := context.Background()
 		input := model.RegisterInput{Email: "test@test.com", Password: "password"}
+		expectedUser := &user.User{ID: 1, Email: "test@test.com", Role: "USER"}
+		token := "token_123"
 
-		// Mock service return
-		serviceUser := &user.User{ID: 1, Email: "test@test.com", Role: "USER"}
-
-		mockSvc.On("Register", ctx, input.Email, input.Password).Return(jwtToken, serviceUser, nil)
+		mockSvc.On("Register", ctx, input.Email, input.Password).Return(token, expectedUser, nil)
 
 		res, err := mr.Register(ctx, input)
 
 		assert.NoError(t, err)
-		assert.Equal(t, jwtToken, *res.Token)
+		assert.Equal(t, token, *res.Token)
 		assert.Equal(t, "test@test.com", res.User.Email)
 		mockSvc.AssertExpectations(t)
 	})
 
-	t.Run("Error", func(t *testing.T) {
+	t.Run("ServiceError", func(t *testing.T) {
 		mockSvc := new(MockUserService)
 		resolver := &Resolver{UserSvc: mockSvc}
 		mr := &mutationResolver{resolver}
 
-		input := model.RegisterInput{Email: "test@test.com"}
-		mockSvc.On("Register", context.Background(), input.Email, input.Password).Return("", nil, errors.New("email exists"))
+		ctx := context.Background()
+		input := model.RegisterInput{Email: "test@test.com", Password: "password"}
 
-		_, err := mr.Register(context.Background(), input)
+		mockSvc.On("Register", ctx, input.Email, input.Password).Return("", nil, errors.New("email exists"))
+
+		_, err := mr.Register(ctx, input)
+
 		assert.Error(t, err)
+		assert.Equal(t, "email exists", err.Error())
 	})
 }
 
@@ -87,13 +89,32 @@ func TestMutationResolver_Login(t *testing.T) {
 
 		ctx := context.Background()
 		input := model.LoginInput{Email: "test@test.com", Password: "password"}
-		jwtToken := "jwt-token"
-		serviceUser := &user.User{ID: 1, Email: "test@test.com", Role: "USER"}
+		expectedUser := &user.User{ID: 1, Email: "test@test.com", Role: "USER"}
+		token := "token_123"
 
-		mockSvc.On("Login", ctx, input.Email, input.Password).Return(jwtToken, serviceUser, nil)
+		mockSvc.On("Login", ctx, input.Email, input.Password).Return(token, expectedUser, nil)
 
 		res, err := mr.Login(ctx, input)
+
 		assert.NoError(t, err)
-		assert.Equal(t, jwtToken, *res.Token)
+		assert.Equal(t, token, *res.Token)
+		assert.Equal(t, "test@test.com", res.User.Email)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockUserService)
+		resolver := &Resolver{UserSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		ctx := context.Background()
+		input := model.LoginInput{Email: "test@test.com", Password: "password"}
+
+		mockSvc.On("Login", ctx, input.Email, input.Password).Return("", nil, errors.New("invalid credentials"))
+
+		_, err := mr.Login(ctx, input)
+
+		assert.Error(t, err)
+		assert.Equal(t, "invalid credentials", err.Error())
 	})
 }

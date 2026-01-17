@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"warimas-be/internal/address"
 	"warimas-be/internal/graph/model"
@@ -115,6 +116,16 @@ func TestMutationResolver_CreateAddress(t *testing.T) {
 		assert.Error(t, err)
 		assert.Equal(t, "unauthorized", err.Error())
 	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockAddressService)
+		resolver := &Resolver{AddressSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		mockSvc.On("Create", ctx, mock.Anything).Return(nil, errors.New("db error"))
+		_, err := mr.CreateAddress(ctx, model.CreateAddressInput{})
+		assert.Error(t, err)
+	})
 }
 
 func TestMutationResolver_UpdateAddress(t *testing.T) {
@@ -149,6 +160,16 @@ func TestMutationResolver_UpdateAddress(t *testing.T) {
 		assert.Equal(t, "New Home", res.Address.Name)
 		mockSvc.AssertExpectations(t)
 	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockAddressService)
+		resolver := &Resolver{AddressSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		mockSvc.On("Update", ctx, mock.Anything).Return(nil, errors.New("db error"))
+		_, err := mr.UpdateAddress(ctx, model.UpdateAddressInput{})
+		assert.Error(t, err)
+	})
 }
 
 func TestMutationResolver_DeleteAddress(t *testing.T) {
@@ -169,6 +190,17 @@ func TestMutationResolver_DeleteAddress(t *testing.T) {
 		assert.True(t, res.Success)
 		mockSvc.AssertExpectations(t)
 	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockAddressService)
+		resolver := &Resolver{AddressSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		addrID := uuid.New()
+		mockSvc.On("Delete", ctx, addrID).Return(errors.New("db error"))
+		_, err := mr.DeleteAddress(ctx, model.DeleteAddressInput{AddressID: addrID.String()})
+		assert.Error(t, err)
+	})
 }
 
 func TestMutationResolver_SetDefaultAddress(t *testing.T) {
@@ -187,6 +219,17 @@ func TestMutationResolver_SetDefaultAddress(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, res)
 		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockAddressService)
+		resolver := &Resolver{AddressSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		addrID := uuid.New()
+		mockSvc.On("SetDefaultAddress", ctx, addrID).Return(errors.New("db error"))
+		_, err := mr.SetDefaultAddress(ctx, addrID.String())
+		assert.Error(t, err)
 	})
 }
 
@@ -209,6 +252,16 @@ func TestQueryResolver_Addresses(t *testing.T) {
 		assert.Len(t, res, 1)
 		assert.Equal(t, "Home", res[0].Name)
 	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockAddressService)
+		resolver := &Resolver{AddressSvc: mockSvc}
+		qr := &queryResolver{resolver}
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		mockSvc.On("List", ctx).Return(nil, errors.New("db error"))
+		_, err := qr.Addresses(ctx)
+		assert.Error(t, err)
+	})
 }
 
 func TestQueryResolver_Address(t *testing.T) {
@@ -228,5 +281,16 @@ func TestQueryResolver_Address(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "Home", res.Name)
 		assert.Equal(t, addrID.String(), res.ID)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockAddressService)
+		resolver := &Resolver{AddressSvc: mockSvc}
+		qr := &queryResolver{resolver}
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		addrID := uuid.New()
+		mockSvc.On("Get", ctx, addrID).Return(nil, errors.New("db error"))
+		_, err := qr.Address(ctx, addrID.String())
+		assert.Error(t, err)
 	})
 }

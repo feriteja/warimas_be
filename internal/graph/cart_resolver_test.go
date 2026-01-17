@@ -115,6 +115,20 @@ func TestMutationResolver_AddToCart(t *testing.T) {
 		assert.False(t, res.Success)
 		assert.Contains(t, *res.Message, "insufficient stock")
 	})
+
+	t.Run("InvalidInput", func(t *testing.T) {
+		mockSvc := new(MockCartService)
+		resolver := &Resolver{CartSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		input := model.AddToCartInput{VariantID: "", Quantity: 0}
+
+		res, err := mr.AddToCart(ctx, input)
+		assert.NoError(t, err)
+		assert.False(t, res.Success)
+		assert.Equal(t, "invalid product or quantity", *res.Message)
+	})
 }
 
 func TestMutationResolver_UpdateCart(t *testing.T) {
@@ -185,6 +199,49 @@ func TestMutationResolver_RemoveFromCart(t *testing.T) {
 		assert.NoError(t, err)
 		assert.False(t, res.Success)
 	})
+
+	t.Run("EmptyInput", func(t *testing.T) {
+		mockSvc := new(MockCartService)
+		resolver := &Resolver{CartSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+
+		// Empty slice
+		res, err := mr.RemoveFromCart(ctx, []string{})
+
+		assert.NoError(t, err)
+		assert.False(t, res.Success)
+		assert.Equal(t, "Variant IDs are required", *res.Message)
+	})
+
+	t.Run("ItemNotFound", func(t *testing.T) {
+		mockSvc := new(MockCartService)
+		resolver := &Resolver{CartSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		mockSvc.On("RemoveFromCart", ctx, []string{"v1"}).Return(cart.ErrCartItemNotFound)
+
+		res, err := mr.RemoveFromCart(ctx, []string{"v1"})
+		assert.NoError(t, err)
+		assert.False(t, res.Success)
+		assert.Equal(t, "Item not found in cart", *res.Message)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockCartService)
+		resolver := &Resolver{CartSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		mockSvc.On("RemoveFromCart", ctx, []string{"v1"}).Return(errors.New("db error"))
+
+		res, err := mr.RemoveFromCart(ctx, []string{"v1"})
+		assert.NoError(t, err)
+		assert.False(t, res.Success)
+		assert.Equal(t, "db error", *res.Message)
+	})
 }
 
 func TestQueryResolver_MyCart(t *testing.T) {
@@ -233,5 +290,31 @@ func TestQueryResolver_MyCart(t *testing.T) {
 		_, err := qr.MyCart(ctx, nil, nil, nil, nil)
 		assert.Error(t, err)
 		assert.Equal(t, "failed to fetch cart items", err.Error())
+	})
+
+	t.Run("InvalidPagination", func(t *testing.T) {
+		mockSvc := new(MockCartService)
+		resolver := &Resolver{CartSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		limit := int32(0)
+
+		_, err := qr.MyCart(ctx, nil, nil, &limit, nil)
+		assert.Error(t, err)
+		assert.Equal(t, "limit must be greater than 0", err.Error())
+	})
+
+	t.Run("LimitTooLarge", func(t *testing.T) {
+		mockSvc := new(MockCartService)
+		resolver := &Resolver{CartSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		limit := int32(70000) // > 65535 (MaxUint16)
+
+		_, err := qr.MyCart(ctx, nil, nil, &limit, nil)
+		assert.Error(t, err)
+		assert.Equal(t, "limit too large", err.Error())
 	})
 }

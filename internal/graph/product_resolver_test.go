@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/product"
@@ -109,6 +110,20 @@ func TestMutationResolver_CreateProduct(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unauthorized")
 	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockProductService)
+		resolver := &Resolver{ProductSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "seller")
+		input := model.NewProduct{Name: "New Product"}
+
+		mockSvc.On("Create", ctx, mock.Anything).Return(product.Product{}, errors.New("db error"))
+
+		_, err := mr.CreateProduct(ctx, input)
+		assert.Error(t, err)
+	})
 }
 
 func TestMutationResolver_UpdateProduct(t *testing.T) {
@@ -145,6 +160,19 @@ func TestMutationResolver_UpdateProduct(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unauthorized")
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockProductService)
+		resolver := &Resolver{ProductSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "seller")
+		input := model.UpdateProduct{ID: "100"}
+
+		mockSvc.On("Update", ctx, mock.Anything).Return(product.Product{}, errors.New("db error"))
+		_, err := mr.UpdateProduct(ctx, input)
+		assert.Error(t, err)
 	})
 }
 
@@ -193,6 +221,86 @@ func TestQueryResolver_ProductList(t *testing.T) {
 		assert.Equal(t, "Product A", res.Items[0].Name)
 		mockSvc.AssertExpectations(t)
 	})
+
+	t.Run("WithFilter", func(t *testing.T) {
+		mockSvc := new(MockProductService)
+		resolver := &Resolver{ProductSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		// Setup Context
+		opCtx := &graphql.OperationContext{Operation: &ast.OperationDefinition{SelectionSet: ast.SelectionSet{}}}
+		ctx := graphql.WithOperationContext(context.Background(), opCtx)
+		ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{Field: graphql.CollectedField{Field: &ast.Field{Name: "productList", SelectionSet: ast.SelectionSet{}}}})
+
+		filter := &model.ProductFilterInput{
+			Search: utils.StrPtr("Phone"),
+		}
+
+		totalCount := 0
+		mockRes := &product.ProductListResult{Items: []*product.Product{}, TotalCount: &totalCount}
+
+		mockSvc.On("GetList", ctx, mock.MatchedBy(func(opts product.ProductQueryOptions) bool {
+			return *opts.Search == "Phone"
+		})).Return(mockRes, nil)
+
+		res, err := qr.ProductList(ctx, filter, nil, nil, nil)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, res)
+	})
+
+	t.Run("PaginationDefaults", func(t *testing.T) {
+		mockSvc := new(MockProductService)
+		resolver := &Resolver{ProductSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		// Setup Context
+		opCtx := &graphql.OperationContext{Operation: &ast.OperationDefinition{SelectionSet: ast.SelectionSet{}}}
+		ctx := graphql.WithOperationContext(context.Background(), opCtx)
+		ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{Field: graphql.CollectedField{Field: &ast.Field{Name: "productList", SelectionSet: ast.SelectionSet{}}}})
+
+		// Expect defaults: page=1, limit=20
+		mockSvc.On("GetList", ctx, mock.MatchedBy(func(opts product.ProductQueryOptions) bool {
+			return opts.Page == 1 && opts.Limit == 20
+		})).Return(&product.ProductListResult{}, nil)
+
+		_, err := qr.ProductList(ctx, nil, nil, nil, nil)
+		assert.NoError(t, err)
+	})
+
+	t.Run("PaginationCap", func(t *testing.T) {
+		mockSvc := new(MockProductService)
+		resolver := &Resolver{ProductSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		// Setup Context
+		opCtx := &graphql.OperationContext{Operation: &ast.OperationDefinition{SelectionSet: ast.SelectionSet{}}}
+		ctx := graphql.WithOperationContext(context.Background(), opCtx)
+		ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{Field: graphql.CollectedField{Field: &ast.Field{Name: "productList", SelectionSet: ast.SelectionSet{}}}})
+
+		limit := int32(150)
+		// Expect capped limit: 100
+		mockSvc.On("GetList", ctx, mock.MatchedBy(func(opts product.ProductQueryOptions) bool {
+			return opts.Limit == 100
+		})).Return(&product.ProductListResult{}, nil)
+
+		_, err := qr.ProductList(ctx, nil, nil, nil, &limit)
+		assert.NoError(t, err)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockProductService)
+		resolver := &Resolver{ProductSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		ctx := graphql.WithOperationContext(context.Background(), &graphql.OperationContext{Operation: &ast.OperationDefinition{}})
+		ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{Field: graphql.CollectedField{Field: &ast.Field{Name: "productList"}}})
+
+		mockSvc.On("GetList", ctx, mock.Anything).Return(nil, errors.New("db error"))
+
+		_, err := qr.ProductList(ctx, nil, nil, nil, nil)
+		assert.Error(t, err)
+	})
 }
 
 func TestQueryResolver_ProductDetail(t *testing.T) {
@@ -222,6 +330,15 @@ func TestQueryResolver_ProductDetail(t *testing.T) {
 		res, err := qr.ProductDetail(context.Background(), "999")
 		assert.NoError(t, err)
 		assert.Nil(t, res)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockProductService)
+		resolver := &Resolver{ProductSvc: mockSvc}
+		qr := &queryResolver{resolver}
+		mockSvc.On("GetProductByID", context.Background(), "123").Return(nil, errors.New("db error"))
+		_, err := qr.ProductDetail(context.Background(), "123")
+		assert.Error(t, err)
 	})
 }
 
@@ -255,5 +372,43 @@ func TestQueryResolver_ProductsHome(t *testing.T) {
 		assert.Len(t, res, 1)
 		assert.Equal(t, "Electronics", *res[0].CategoryName)
 		assert.Equal(t, int32(5), res[0].TotalProducts)
+	})
+
+	t.Run("PaginationDefaults", func(t *testing.T) {
+		mockSvc := new(MockProductService)
+		resolver := &Resolver{ProductSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		// Expect defaults: page=1, limit=20
+		mockSvc.On("GetProductsByGroup", context.Background(), mock.MatchedBy(func(opts product.ProductQueryOptions) bool {
+			return opts.Page == 1 && opts.Limit == 20
+		})).Return([]product.ProductByCategory{}, nil)
+
+		_, err := qr.ProductsHome(context.Background(), nil, nil, nil, nil)
+		assert.NoError(t, err)
+	})
+
+	t.Run("PaginationCap", func(t *testing.T) {
+		mockSvc := new(MockProductService)
+		resolver := &Resolver{ProductSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		limit := int32(100)
+		// Expect capped limit: 50 (as defined in resolver)
+		mockSvc.On("GetProductsByGroup", context.Background(), mock.MatchedBy(func(opts product.ProductQueryOptions) bool {
+			return opts.Limit == 50
+		})).Return([]product.ProductByCategory{}, nil)
+
+		_, err := qr.ProductsHome(context.Background(), nil, nil, nil, &limit)
+		assert.NoError(t, err)
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockProductService)
+		resolver := &Resolver{ProductSvc: mockSvc}
+		qr := &queryResolver{resolver}
+		mockSvc.On("GetProductsByGroup", context.Background(), mock.Anything).Return(nil, errors.New("db error"))
+		_, err := qr.ProductsHome(context.Background(), nil, nil, nil, nil)
+		assert.Error(t, err)
 	})
 }

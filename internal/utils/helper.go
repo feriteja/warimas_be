@@ -82,6 +82,13 @@ func PtrInt32(i *int32) int32 {
 	return *i
 }
 
+func PtrInt64(i *int64) int64 {
+	if i == nil {
+		return 0
+	}
+	return *i
+}
+
 func FormatTimePtr(t *time.Time) *string {
 	if t == nil {
 		return nil
