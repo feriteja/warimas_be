@@ -117,6 +117,17 @@ func TestMutationResolver_CreateAddress(t *testing.T) {
 		assert.Equal(t, "unauthorized", err.Error())
 	})
 
+	t.Run("NilInput", func(t *testing.T) {
+		mockSvc := new(MockAddressService)
+		resolver := &Resolver{AddressSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+
+		_, err := mr.CreateAddress(ctx, model.CreateAddressInput{Address: nil})
+		assert.Error(t, err)
+		assert.Equal(t, "address is required", err.Error())
+	})
+
 	t.Run("ServiceError", func(t *testing.T) {
 		mockSvc := new(MockAddressService)
 		resolver := &Resolver{AddressSvc: mockSvc}
@@ -161,6 +172,27 @@ func TestMutationResolver_UpdateAddress(t *testing.T) {
 		mockSvc.AssertExpectations(t)
 	})
 
+	t.Run("Unauthorized", func(t *testing.T) {
+		mockSvc := new(MockAddressService)
+		resolver := &Resolver{AddressSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		_, err := mr.UpdateAddress(context.Background(), model.UpdateAddressInput{})
+		assert.Error(t, err)
+		assert.Equal(t, "unauthorized", err.Error())
+	})
+
+	t.Run("NilInput", func(t *testing.T) {
+		mockSvc := new(MockAddressService)
+		resolver := &Resolver{AddressSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+
+		_, err := mr.UpdateAddress(ctx, model.UpdateAddressInput{Address: nil})
+		assert.Error(t, err)
+		assert.Equal(t, "address is required", err.Error())
+	})
+
 	t.Run("ServiceError", func(t *testing.T) {
 		mockSvc := new(MockAddressService)
 		resolver := &Resolver{AddressSvc: mockSvc}
@@ -191,6 +223,25 @@ func TestMutationResolver_DeleteAddress(t *testing.T) {
 		mockSvc.AssertExpectations(t)
 	})
 
+	t.Run("Unauthorized", func(t *testing.T) {
+		mockSvc := new(MockAddressService)
+		resolver := &Resolver{AddressSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		_, err := mr.DeleteAddress(context.Background(), model.DeleteAddressInput{})
+		assert.Error(t, err)
+		assert.Equal(t, "unauthorized", err.Error())
+	})
+
+	t.Run("InvalidID", func(t *testing.T) {
+		mockSvc := new(MockAddressService)
+		resolver := &Resolver{AddressSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		_, err := mr.DeleteAddress(ctx, model.DeleteAddressInput{AddressID: "invalid-uuid"})
+		assert.Error(t, err)
+	})
+
 	t.Run("ServiceError", func(t *testing.T) {
 		mockSvc := new(MockAddressService)
 		resolver := &Resolver{AddressSvc: mockSvc}
@@ -219,6 +270,25 @@ func TestMutationResolver_SetDefaultAddress(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, res)
 		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("Unauthorized", func(t *testing.T) {
+		mockSvc := new(MockAddressService)
+		resolver := &Resolver{AddressSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		_, err := mr.SetDefaultAddress(context.Background(), "some-id")
+		assert.Error(t, err)
+		assert.Equal(t, "unauthorized", err.Error())
+	})
+
+	t.Run("InvalidID", func(t *testing.T) {
+		mockSvc := new(MockAddressService)
+		resolver := &Resolver{AddressSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		_, err := mr.SetDefaultAddress(ctx, "invalid-uuid")
+		assert.Error(t, err)
 	})
 
 	t.Run("ServiceError", func(t *testing.T) {
@@ -253,6 +323,15 @@ func TestQueryResolver_Addresses(t *testing.T) {
 		assert.Equal(t, "Home", res[0].Name)
 	})
 
+	t.Run("Unauthorized", func(t *testing.T) {
+		mockSvc := new(MockAddressService)
+		resolver := &Resolver{AddressSvc: mockSvc}
+		qr := &queryResolver{resolver}
+		_, err := qr.Addresses(context.Background())
+		assert.Error(t, err)
+		assert.Equal(t, "unauthorized", err.Error())
+	})
+
 	t.Run("ServiceError", func(t *testing.T) {
 		mockSvc := new(MockAddressService)
 		resolver := &Resolver{AddressSvc: mockSvc}
@@ -281,6 +360,24 @@ func TestQueryResolver_Address(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "Home", res.Name)
 		assert.Equal(t, addrID.String(), res.ID)
+	})
+
+	t.Run("Unauthorized", func(t *testing.T) {
+		mockSvc := new(MockAddressService)
+		resolver := &Resolver{AddressSvc: mockSvc}
+		qr := &queryResolver{resolver}
+		_, err := qr.Address(context.Background(), "some-id")
+		assert.Error(t, err)
+		assert.Equal(t, "unauthorized", err.Error())
+	})
+
+	t.Run("InvalidID", func(t *testing.T) {
+		mockSvc := new(MockAddressService)
+		resolver := &Resolver{AddressSvc: mockSvc}
+		qr := &queryResolver{resolver}
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		_, err := qr.Address(ctx, "invalid-uuid")
+		assert.Error(t, err)
 	})
 
 	t.Run("ServiceError", func(t *testing.T) {

@@ -38,6 +38,16 @@ func TestMutationResolver_CreateVariants(t *testing.T) {
 		assert.Equal(t, "v1", res[0].ID)
 	})
 
+	t.Run("Unauthorized", func(t *testing.T) {
+		mockSvc := new(MockProductService)
+		resolver := &Resolver{ProductSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		_, err := mr.CreateVariants(context.Background(), []*model.NewVariant{})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unauthorized")
+	})
+
 	t.Run("ServiceError", func(t *testing.T) {
 		mockSvc := new(MockProductService)
 		resolver := &Resolver{ProductSvc: mockSvc}
@@ -73,6 +83,16 @@ func TestMutationResolver_UpdateVariants(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, res, 1)
 		assert.Equal(t, "Var 1 Updated", res[0].Name)
+	})
+
+	t.Run("Unauthorized", func(t *testing.T) {
+		mockSvc := new(MockProductService)
+		resolver := &Resolver{ProductSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		_, err := mr.UpdateVariants(context.Background(), []*model.UpdateVariant{})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unauthorized")
 	})
 
 	t.Run("ServiceError", func(t *testing.T) {

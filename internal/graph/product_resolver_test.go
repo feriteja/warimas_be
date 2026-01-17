@@ -249,6 +249,28 @@ func TestQueryResolver_ProductList(t *testing.T) {
 		assert.NotNil(t, res)
 	})
 
+	t.Run("WithSort", func(t *testing.T) {
+		mockSvc := new(MockProductService)
+		resolver := &Resolver{ProductSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		// Setup Context
+		opCtx := &graphql.OperationContext{Operation: &ast.OperationDefinition{SelectionSet: ast.SelectionSet{}}}
+		ctx := graphql.WithOperationContext(context.Background(), opCtx)
+		ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{Field: graphql.CollectedField{Field: &ast.Field{Name: "productList", SelectionSet: ast.SelectionSet{}}}})
+
+		sortInput := &model.ProductSortInput{
+			Field:     model.ProductSortFieldPrice,
+			Direction: model.SortDirectionDesc,
+		}
+
+		// Expect GetList to be called (we assume mapping logic works, just verifying flow)
+		mockSvc.On("GetList", ctx, mock.Anything).Return(&product.ProductListResult{}, nil)
+
+		_, err := qr.ProductList(ctx, nil, sortInput, nil, nil)
+		assert.NoError(t, err)
+	})
+
 	t.Run("PaginationDefaults", func(t *testing.T) {
 		mockSvc := new(MockProductService)
 		resolver := &Resolver{ProductSvc: mockSvc}
@@ -400,6 +422,23 @@ func TestQueryResolver_ProductsHome(t *testing.T) {
 		})).Return([]product.ProductByCategory{}, nil)
 
 		_, err := qr.ProductsHome(context.Background(), nil, nil, nil, &limit)
+		assert.NoError(t, err)
+	})
+
+	t.Run("WithSort", func(t *testing.T) {
+		mockSvc := new(MockProductService)
+		resolver := &Resolver{ProductSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		ctx := context.Background()
+		sortInput := &model.ProductSortInput{
+			Field:     model.ProductSortFieldPrice,
+			Direction: model.SortDirectionAsc,
+		}
+
+		mockSvc.On("GetProductsByGroup", ctx, mock.Anything).Return([]product.ProductByCategory{}, nil)
+
+		_, err := qr.ProductsHome(ctx, nil, sortInput, nil, nil)
 		assert.NoError(t, err)
 	})
 

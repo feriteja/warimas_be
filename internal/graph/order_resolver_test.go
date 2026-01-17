@@ -387,6 +387,29 @@ func TestQueryResolver_OrderList(t *testing.T) {
 		assert.NotNil(t, res)
 	})
 
+	t.Run("WithSort", func(t *testing.T) {
+		mockSvc := new(MockOrderService)
+		resolver := &Resolver{OrderSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		ctx := context.Background()
+		sortInput := &model.OrderSortInput{
+			Field:     model.OrderSortFieldTotal,
+			Direction: model.SortDirectionAsc,
+		}
+
+		// Expect service to be called with mapped sort options
+		mockSvc.On("GetOrders", ctx, mock.Anything, mock.MatchedBy(func(s *order.OrderSortInput) bool {
+			return s.Field == order.OrderSortFieldTotal && s.Direction == order.SortDirectionAsc
+		}), int32(20), int32(1)).
+			Return([]*order.Order{}, int64(0), map[uuid.UUID][]address.Address{}, nil)
+
+		res, err := qr.OrderList(ctx, nil, sortInput, nil)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, res)
+	})
+
 	t.Run("MissingAddress", func(t *testing.T) {
 		mockSvc := new(MockOrderService)
 		resolver := &Resolver{OrderSvc: mockSvc}
