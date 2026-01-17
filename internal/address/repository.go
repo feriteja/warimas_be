@@ -142,13 +142,13 @@ func (r *repository) Create(
 			name, phone,
 			address_line1, address_line2,
 			city, province, postal_code, country,
-			is_default, is_active
+			is_default, is_active, receiver_name
 		) VALUES (
 			$1, $2,
 			$3, $4,
 			$5, $6,
 			$7, $8, $9, $10,
-			$11, $12
+			$11, $12, $13
 		)
 	`
 
@@ -158,7 +158,7 @@ func (r *repository) Create(
 		addr.Name, addr.Phone,
 		addr.Address1, addr.Address2,
 		addr.City, addr.Province, addr.Postal, addr.Country,
-		addr.IsDefault, addr.IsActive,
+		addr.IsDefault, addr.IsActive, addr.ReceiverName,
 	)
 
 	if err != nil {

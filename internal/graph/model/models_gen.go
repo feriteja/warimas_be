@@ -37,6 +37,7 @@ type Address struct {
 
 type AddressInput struct {
 	Name         string  `json:"name"`
+	ReceiverName string  `json:"receiverName"`
 	Phone        string  `json:"phone"`
 	AddressLine1 string  `json:"addressLine1"`
 	AddressLine2 *string `json:"addressLine2,omitempty"`

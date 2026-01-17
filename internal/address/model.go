@@ -26,6 +26,7 @@ type Address struct {
 
 type CreateAddressInput struct {
 	Name         string
+	ReceiverName string
 	Phone        string
 	AddressLine1 string
 	AddressLine2 *string
@@ -39,6 +40,7 @@ type CreateAddressInput struct {
 type UpdateAddressInput struct {
 	AddressID    string
 	Name         string
+	ReceiverName string
 	Phone        string
 	AddressLine1 string
 	AddressLine2 *string

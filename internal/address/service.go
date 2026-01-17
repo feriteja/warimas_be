@@ -98,18 +98,19 @@ func (s *service) Create(
 	}
 
 	addr := &Address{
-		ID:        uuid.New(),
-		UserID:    userID,
-		Name:      input.Name,
-		Phone:     input.Phone,
-		Address1:  input.AddressLine1,
-		Address2:  input.AddressLine2,
-		City:      input.City,
-		Province:  input.Province,
-		Postal:    input.PostalCode,
-		Country:   input.Country,
-		IsActive:  true,
-		IsDefault: input.SetAsDefault,
+		ID:           uuid.New(),
+		UserID:       userID,
+		Name:         input.Name,
+		ReceiverName: input.ReceiverName,
+		Phone:        input.Phone,
+		Address1:     input.AddressLine1,
+		Address2:     input.AddressLine2,
+		City:         input.City,
+		Province:     input.Province,
+		Postal:       input.PostalCode,
+		Country:      input.Country,
+		IsActive:     true,
+		IsDefault:    input.SetAsDefault,
 	}
 
 	if input.SetAsDefault {

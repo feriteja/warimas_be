@@ -6,6 +6,7 @@ func MapAddressToGraphQL(a *Address) *model.Address {
 	return &model.Address{
 		ID:           a.ID.String(),
 		Name:         a.Name,
+		ReceiverName: a.ReceiverName,
 		Phone:        a.Phone,
 		AddressLine1: a.Address1,
 		AddressLine2: a.Address2,

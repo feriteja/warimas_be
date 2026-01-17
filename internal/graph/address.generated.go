@@ -494,7 +494,7 @@ func (ec *executionContext) unmarshalInputAddressInput(ctx context.Context, obj 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "phone", "addressLine1", "addressLine2", "city", "province", "postalCode", "country"}
+	fieldsInOrder := [...]string{"name", "receiverName", "phone", "addressLine1", "addressLine2", "city", "province", "postalCode", "country"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -508,6 +508,13 @@ func (ec *executionContext) unmarshalInputAddressInput(ctx context.Context, obj 
 				return it, err
 			}
 			it.Name = data
+		case "receiverName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("receiverName"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ReceiverName = data
 		case "phone":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("phone"))
 			data, err := ec.unmarshalNString2string(ctx, v)

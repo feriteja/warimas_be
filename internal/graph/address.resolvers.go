@@ -41,6 +41,7 @@ func (r *mutationResolver) CreateAddress(ctx context.Context, input model.Create
 
 	inputAddress := address.CreateAddressInput{
 		Name:         input.Address.Name,
+		ReceiverName: input.Address.ReceiverName,
 		Phone:        input.Address.Phone,
 		AddressLine1: input.Address.AddressLine1,
 		AddressLine2: input.Address.AddressLine2,

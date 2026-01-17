@@ -6,6 +6,7 @@ input UpdateAddressInput {
 
 input AddressInput {
   name: String!
+  receiverName: String!
   phone: String!
 
   addressLine1: String!
