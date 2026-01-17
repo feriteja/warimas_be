@@ -72,14 +72,27 @@ func main() {
 
 	srv := handler.NewDefaultServer(graph.NewSchema(resolver))
 
-	// Routes
-	http.Handle("/", playground.Handler("GraphQL Playground", "/query"))
+	router := setupRouter(srv, webhookHandler.PaymentWebhookHandler)
+
+	logger.L().Info("🚀 Warimas Backend Started",
+		zap.String("env", cfg.AppEnv),
+		zap.String("port", cfg.AppPort),
+	)
+
+	log.Fatal(http.ListenAndServe(":"+cfg.AppPort, router))
+}
+
+func setupRouter(srv *handler.Server, paymentWebhookHandler http.HandlerFunc) *http.ServeMux {
+	mux := http.NewServeMux()
+
+	mux.Handle("/", playground.Handler("GraphQL Playground", "/query"))
+
 	graphqlHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := transport.WithHTTP(r.Context(), r, w)
 		srv.ServeHTTP(w, r.WithContext(ctx))
 	})
 
-	http.Handle("/query",
+	mux.Handle("/query",
 		middleware.CORS(
 			middleware.LoggingMiddleware(
 				middleware.AuthMiddleware(graphqlHandler),
@@ -87,17 +100,12 @@ func main() {
 		),
 	)
 
-	http.HandleFunc("/webhook/payment", webhookHandler.PaymentWebhookHandler)
+	mux.HandleFunc("/webhook/payment", paymentWebhookHandler)
 
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "OK")
 	})
 
-	logger.L().Info("🚀 Warimas Backend Started",
-		zap.String("env", cfg.AppEnv),
-		zap.String("port", cfg.AppPort),
-	)
-
-	log.Fatal(http.ListenAndServe(":"+cfg.AppPort, nil))
+	return mux
 }
