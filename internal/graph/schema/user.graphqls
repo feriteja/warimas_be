@@ -14,6 +14,25 @@ input LoginInput {
   password: String!
 }
 
+input ForgotPasswordInput {
+  email: String!
+}
+
+type ForgotPasswordResponse {
+  success: Boolean!
+  message: String
+}
+
+input ResetPasswordInput {
+  token: String!
+  newPassword: String!
+}
+
+type ResetPasswordResponse {
+  success: Boolean!
+  message: String
+}
+
 extend type AuthResponse {
   user: User!
   token: String
@@ -22,4 +41,6 @@ extend type AuthResponse {
 extend type Mutation {
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
+  forgotPassword(input: ForgotPasswordInput!): ForgotPasswordResponse!
+  resetPassword(input: ResetPasswordInput!): ResetPasswordResponse!
 }

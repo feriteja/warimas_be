@@ -31,6 +31,11 @@ func (m *MockRepository) FindByEmail(ctx context.Context, email string) (*User, 
 	return args.Get(0).(*User), args.Error(1)
 }
 
+func (m *MockRepository) UpdatePassword(ctx context.Context, email, password string) error {
+	args := m.Called(ctx, email, password)
+	return args.Error(0)
+}
+
 // --- Tests ---
 
 func TestService_Register(t *testing.T) {
@@ -167,11 +172,72 @@ func TestService_GetUserByEmail(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewService(mockRepo)
 
-		// Service swallows error and returns the user object (likely empty/partial)
 		mockRepo.On("FindByEmail", ctx, email).Return(nil, errors.New("db error"))
 
 		res, err := svc.GetUserByEmail(ctx, email)
-		assert.NoError(t, err)
+		assert.Error(t, err)
+		assert.Equal(t, "db error", err.Error())
 		assert.Nil(t, res)
+	})
+}
+
+func TestService_ForgotPassword(t *testing.T) {
+	ctx := context.Background()
+	email := "john@example.com"
+	t.Setenv("JWT_SECRET", "testsecret")
+
+	t.Run("Success", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := NewService(mockRepo)
+
+		user := &User{ID: 1, Email: email, Role: RoleUser}
+		mockRepo.On("FindByEmail", ctx, email).Return(user, nil)
+
+		err := svc.ForgotPassword(ctx, email)
+		assert.NoError(t, err)
+		mockRepo.AssertExpectations(t)
+	})
+
+	t.Run("UserNotFound", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := NewService(mockRepo)
+
+		// Should return nil error to prevent email enumeration
+		mockRepo.On("FindByEmail", ctx, email).Return(nil, errors.New("not found"))
+
+		err := svc.ForgotPassword(ctx, email)
+		assert.NoError(t, err)
+		mockRepo.AssertExpectations(t)
+	})
+}
+
+func TestService_ResetPassword(t *testing.T) {
+	ctx := context.Background()
+	email := "john@example.com"
+	newPassword := "newpassword123"
+	t.Setenv("JWT_SECRET", "testsecret")
+
+	// Generate a valid token for testing
+	validToken, _ := GenerateJWT(1, "USER", email, nil)
+
+	t.Run("Success", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := NewService(mockRepo)
+
+		// Expect UpdatePassword with hashed password (any string)
+		mockRepo.On("UpdatePassword", ctx, email, mock.AnythingOfType("string")).Return(nil)
+
+		err := svc.ResetPassword(ctx, validToken, newPassword)
+		assert.NoError(t, err)
+		mockRepo.AssertExpectations(t)
+	})
+
+	t.Run("InvalidToken", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := NewService(mockRepo)
+
+		err := svc.ResetPassword(ctx, "invalid-token", newPassword)
+		assert.Error(t, err)
+		assert.Equal(t, "invalid or expired token", err.Error())
 	})
 }

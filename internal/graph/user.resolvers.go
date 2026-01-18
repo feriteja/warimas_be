@@ -11,6 +11,7 @@ import (
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
 	"warimas-be/internal/transport"
+	"warimas-be/internal/utils"
 
 	"go.uber.org/zap"
 )
@@ -96,5 +97,41 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 			Email: u.Email,
 			Role:  model.Role(u.Role),
 		},
+	}, nil
+}
+
+// ForgotPassword is the resolver for the forgotPassword field.
+func (r *mutationResolver) ForgotPassword(ctx context.Context, input model.ForgotPasswordInput) (*model.ForgotPasswordResponse, error) {
+	log := logger.FromCtx(ctx)
+
+	log.Info("forgot password request received", zap.String("email", input.Email))
+
+	if err := r.UserSvc.ForgotPassword(ctx, input.Email); err != nil {
+		log.Error("forgot password failed", zap.Error(err))
+		return nil, err
+	}
+
+	log.Info("forgot password email sent", zap.String("email", input.Email))
+
+	return &model.ForgotPasswordResponse{
+		Success: true,
+		Message: utils.StrPtr("If your email is registered, you will receive a password reset link shortly."),
+	}, nil
+}
+
+// ResetPassword is the resolver for the resetPassword field.
+func (r *mutationResolver) ResetPassword(ctx context.Context, input model.ResetPasswordInput) (*model.ResetPasswordResponse, error) {
+	log := logger.FromCtx(ctx)
+
+	log.Info("reset password request received")
+
+	if err := r.UserSvc.ResetPassword(ctx, input.Token, input.NewPassword); err != nil {
+		log.Error("reset password failed", zap.Error(err))
+		return nil, err
+	}
+
+	return &model.ResetPasswordResponse{
+		Success: true,
+		Message: utils.StrPtr("Password successfully reset"),
 	}, nil
 }

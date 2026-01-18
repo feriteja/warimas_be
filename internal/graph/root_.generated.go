@@ -149,6 +149,11 @@ type ComplexityRoot struct {
 		Success func(childComplexity int) int
 	}
 
+	ForgotPasswordResponse struct {
+		Message func(childComplexity int) int
+		Success func(childComplexity int) int
+	}
+
 	Mutation struct {
 		AddCategory            func(childComplexity int, name string) int
 		AddSubcategory         func(childComplexity int, categoryID string, name string) int
@@ -160,9 +165,11 @@ type ComplexityRoot struct {
 		CreateProduct          func(childComplexity int, input model.NewProduct) int
 		CreateVariants         func(childComplexity int, input []*model.NewVariant) int
 		DeleteAddress          func(childComplexity int, input model.DeleteAddressInput) int
+		ForgotPassword         func(childComplexity int, input model.ForgotPasswordInput) int
 		Login                  func(childComplexity int, input model.LoginInput) int
 		Register               func(childComplexity int, input model.RegisterInput) int
 		RemoveFromCart         func(childComplexity int, variantIds []string) int
+		ResetPassword          func(childComplexity int, input model.ResetPasswordInput) int
 		SetDefaultAddress      func(childComplexity int, addressID string) int
 		UpdateAddress          func(childComplexity int, input model.UpdateAddressInput) int
 		UpdateCart             func(childComplexity int, input model.UpdateCartInput) int
@@ -372,6 +379,11 @@ type ComplexityRoot struct {
 		ProductList             func(childComplexity int, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) int
 		ProductsHome            func(childComplexity int, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) int
 		Subcategory             func(childComplexity int, filter *string, categoryID string, limit *int32, page *int32) int
+	}
+
+	ResetPasswordResponse struct {
+		Message func(childComplexity int) int
+		Success func(childComplexity int) int
 	}
 
 	Response struct {
@@ -901,6 +913,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.DeleteAddressResponse.Success(childComplexity), true
 
+	case "ForgotPasswordResponse.message":
+		if e.complexity.ForgotPasswordResponse.Message == nil {
+			break
+		}
+
+		return e.complexity.ForgotPasswordResponse.Message(childComplexity), true
+
+	case "ForgotPasswordResponse.success":
+		if e.complexity.ForgotPasswordResponse.Success == nil {
+			break
+		}
+
+		return e.complexity.ForgotPasswordResponse.Success(childComplexity), true
+
 	case "Mutation.addCategory":
 		if e.complexity.Mutation.AddCategory == nil {
 			break
@@ -1021,6 +1047,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.DeleteAddress(childComplexity, args["input"].(model.DeleteAddressInput)), true
 
+	case "Mutation.forgotPassword":
+		if e.complexity.Mutation.ForgotPassword == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_forgotPassword_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ForgotPassword(childComplexity, args["input"].(model.ForgotPasswordInput)), true
+
 	case "Mutation.login":
 		if e.complexity.Mutation.Login == nil {
 			break
@@ -1056,6 +1094,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.RemoveFromCart(childComplexity, args["variantIds"].([]string)), true
+
+	case "Mutation.resetPassword":
+		if e.complexity.Mutation.ResetPassword == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_resetPassword_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ResetPassword(childComplexity, args["input"].(model.ResetPasswordInput)), true
 
 	case "Mutation.setDefaultAddress":
 		if e.complexity.Mutation.SetDefaultAddress == nil {
@@ -2137,6 +2187,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.Subcategory(childComplexity, args["filter"].(*string), args["categoryID"].(string), args["limit"].(*int32), args["page"].(*int32)), true
 
+	case "ResetPasswordResponse.message":
+		if e.complexity.ResetPasswordResponse.Message == nil {
+			break
+		}
+
+		return e.complexity.ResetPasswordResponse.Message(childComplexity), true
+
+	case "ResetPasswordResponse.success":
+		if e.complexity.ResetPasswordResponse.Success == nil {
+			break
+		}
+
+		return e.complexity.ResetPasswordResponse.Success(childComplexity), true
+
 	case "Response.message":
 		if e.complexity.Response.Message == nil {
 			break
@@ -2407,6 +2471,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCreateCheckoutSessionInput,
 		ec.unmarshalInputCreateOrderFromSessionInput,
 		ec.unmarshalInputDeleteAddressInput,
+		ec.unmarshalInputForgotPasswordInput,
 		ec.unmarshalInputLoginInput,
 		ec.unmarshalInputNewProduct,
 		ec.unmarshalInputNewVariant,
@@ -2418,6 +2483,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputProductFilterInput,
 		ec.unmarshalInputProductSortInput,
 		ec.unmarshalInputRegisterInput,
+		ec.unmarshalInputResetPasswordInput,
 		ec.unmarshalInputUpdateAddressInput,
 		ec.unmarshalInputUpdateCartInput,
 		ec.unmarshalInputUpdateOrderStatusInput,

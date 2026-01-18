@@ -168,6 +168,15 @@ type DeleteAddressResponse struct {
 	Success bool `json:"success"`
 }
 
+type ForgotPasswordInput struct {
+	Email string `json:"email"`
+}
+
+type ForgotPasswordResponse struct {
+	Success bool    `json:"success"`
+	Message *string `json:"message,omitempty"`
+}
+
 type LoginInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -431,6 +440,16 @@ type Query struct {
 type RegisterInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type ResetPasswordInput struct {
+	Token       string `json:"token"`
+	NewPassword string `json:"newPassword"`
+}
+
+type ResetPasswordResponse struct {
+	Success bool    `json:"success"`
+	Message *string `json:"message,omitempty"`
 }
 
 type Response struct {
