@@ -11,19 +11,33 @@ import (
 )
 
 func InitDB(cfg *config.Config) *sql.DB {
+	db, err := NewDatabase(cfg)
+	if err != nil {
+		log.Fatalf("Failed to init DB: %v", err)
+	}
+	log.Println("Database connection established")
+	return db
+}
+
+// NewDatabase creates a new database connection.
+// It returns an error instead of exiting, making it testable.
+func NewDatabase(cfg *config.Config) (*sql.DB, error) {
+	return newDatabaseWithDriver(cfg, "postgres")
+}
+
+func newDatabaseWithDriver(cfg *config.Config, driver string) (*sql.DB, error) {
 	dsn := buildDSN(cfg)
 
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open(driver, dsn)
 	if err != nil {
-		log.Fatalf("Failed to connect to DB: %v", err)
+		return nil, fmt.Errorf("failed to connect to DB: %w", err)
 	}
 
 	if err = db.Ping(); err != nil {
-		log.Fatalf("Failed to ping DB: %v", err)
+		return nil, fmt.Errorf("failed to ping DB: %w", err)
 	}
 
-	log.Println("Database connection established")
-	return db
+	return db, nil
 }
 
 func buildDSN(cfg *config.Config) string {
