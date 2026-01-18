@@ -6,12 +6,13 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
+	"warimas-be/internal/logger"
 	"warimas-be/internal/user"
 	"warimas-be/internal/utils"
 
 	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
 )
 
 // Context key types
@@ -45,14 +46,16 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return jwtKey, nil
 		})
 
-		if err != nil || !token.Valid {
-			utils.WriteJSONError(w, "invalid token", http.StatusUnauthorized)
-			return
-		}
+		// Use logger from context to ensure Request ID is present in logs
+		log := logger.FromCtx(r.Context())
 
-		// 3️⃣ Expiration check
-		if claims.ExpiresAt != nil && claims.ExpiresAt.Time.Before(time.Now()) {
-			utils.WriteJSONError(w, "token expired", http.StatusUnauthorized)
+		if err != nil || !token.Valid {
+			if errors.Is(err, jwt.ErrTokenExpired) {
+				log.Warn("auth failed: token expired", zap.Error(err))
+			} else {
+				log.Warn("auth failed: invalid token", zap.Error(err))
+			}
+			utils.WriteJSONError(w, "invalid token", http.StatusUnauthorized)
 			return
 		}
 
@@ -61,7 +64,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		ctx = context.WithValue(ctx, utils.UserIDKey, claims.UserID)
 
 		if claims.SellerID != nil {
-
 			ctx = context.WithValue(ctx, utils.SellerIDKey, *claims.SellerID)
 		}
 		ctx = context.WithValue(ctx, utils.UserEmailKey, claims.Email)

@@ -298,8 +298,8 @@ func (s *service) GetOrderDetail(
 	// Get auth info
 	userID, ok := utils.GetUserIDFromContext(ctx)
 	if !ok {
-		log.Error("failed to get user id from context", zap.Error(err))
-		return nil, nil, err
+		log.Error("failed to get user id from context: unauthenticated")
+		return nil, nil, ErrUnauthorized
 	}
 
 	userRole := utils.GetUserRoleFromContext(ctx)
@@ -365,8 +365,8 @@ func (s *service) GetOrderDetailByExternalID(
 	// Get auth info
 	userID, ok := utils.GetUserIDFromContext(ctx)
 	if !ok {
-		log.Error("failed to get user id from context", zap.Error(err))
-		return nil, nil, err
+		log.Error("failed to get user id from context: unauthenticated")
+		return nil, nil, ErrUnauthorized
 	}
 
 	userRole := utils.GetUserRoleFromContext(ctx)

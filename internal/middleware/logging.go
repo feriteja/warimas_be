@@ -40,6 +40,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 
 		// Put logger into request context
 		ctx := context.WithValue(r.Context(), loggerKey, reqLogger)
+		ctx = logger.WithRequestID(ctx, reqID)
 		r = r.WithContext(ctx)
 
 		// Continue
