@@ -89,3 +89,33 @@ func TestRepository_FindByEmail(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestRepository_UpdatePassword(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRepository(db)
+	ctx := context.Background()
+	email := "john@example.com"
+	newPassword := "new_hashed_password"
+
+	t.Run("Success", func(t *testing.T) {
+		mock.ExpectExec("UPDATE users SET password = \\$1 WHERE email = \\$2").
+			WithArgs(newPassword, email).
+			WillReturnResult(sqlmock.NewResult(0, 1))
+
+		err := repo.UpdatePassword(ctx, email, newPassword)
+		assert.NoError(t, err)
+	})
+
+	t.Run("UserNotFound", func(t *testing.T) {
+		mock.ExpectExec("UPDATE users SET password = \\$1 WHERE email = \\$2").
+			WithArgs(newPassword, email).
+			WillReturnResult(sqlmock.NewResult(0, 0))
+
+		err := repo.UpdatePassword(ctx, email, newPassword)
+		assert.Error(t, err)
+		assert.Equal(t, sql.ErrNoRows, err)
+	})
+}
