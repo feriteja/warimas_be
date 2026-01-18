@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -26,7 +27,18 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	initDBFunc      = db.InitDB
+	startServerFunc = http.ListenAndServe
+)
+
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	env := os.Getenv("APP_ENV") // "development" or "production"
 	logger.Init(env)
 	defer logger.Sync()
@@ -36,10 +48,23 @@ func main() {
 	logger.L().Info("Connecting to database...")
 
 	// Init DB
-	database := db.InitDB(cfg)
+	database := initDBFunc(cfg)
 	defer database.Close()
 
-	// Init repositories
+	router := newServer(cfg, database)
+
+	logger.L().Info("🚀 Warimas Backend Started",
+		zap.String("env", cfg.AppEnv),
+		zap.String("port", cfg.AppPort),
+	)
+
+	return startServerFunc(":"+cfg.AppPort, router)
+}
+
+func newServer(cfg *config.Config, database *sql.DB) *http.ServeMux {
+	// -------------------------------------------------------------------------
+	// Init Repositories
+	// -------------------------------------------------------------------------
 	productRepo := product.NewRepository(database)
 	userRepo := user.NewRepository(database)
 	cartRepo := cart.NewRepository(database)
@@ -48,7 +73,9 @@ func main() {
 	categoryRepo := category.NewRepository(database)
 	addressRepo := address.NewRepository(database)
 
-	// Init services
+	// -------------------------------------------------------------------------
+	// Init Services
+	// -------------------------------------------------------------------------
 	productSvc := product.NewService(productRepo)
 	userSvc := user.NewService(userRepo)
 	cartSvc := cart.NewService(cartRepo, productRepo)
@@ -59,7 +86,9 @@ func main() {
 	orderSvc := order.NewService(orderRepo, paymentRepo, paymentGateway, addressRepo)
 	webhookHandler := webhook.NewWebhookHandler(orderSvc, paymentGateway, paymentRepo)
 
-	// GraphQL resolver
+	// -------------------------------------------------------------------------
+	// GraphQL Resolver & Server
+	// -------------------------------------------------------------------------
 	resolver := &graph.Resolver{
 		DB:          database,
 		ProductSvc:  productSvc,
@@ -72,14 +101,7 @@ func main() {
 
 	srv := handler.NewDefaultServer(graph.NewSchema(resolver))
 
-	router := setupRouter(srv, webhookHandler.PaymentWebhookHandler)
-
-	logger.L().Info("🚀 Warimas Backend Started",
-		zap.String("env", cfg.AppEnv),
-		zap.String("port", cfg.AppPort),
-	)
-
-	log.Fatal(http.ListenAndServe(":"+cfg.AppPort, router))
+	return setupRouter(srv, webhookHandler.PaymentWebhookHandler)
 }
 
 func setupRouter(srv *handler.Server, paymentWebhookHandler http.HandlerFunc) *http.ServeMux {

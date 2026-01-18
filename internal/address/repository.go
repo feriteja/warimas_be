@@ -229,7 +229,10 @@ func (r *repository) SetDefault(
 		zap.String("address_id", addressID.String()),
 	)
 
-	const q = `
+	log.Debug("Start setting default address")
+
+	// 1. Try to set default only if address is active
+	const updateQuery = `
 		UPDATE addresses
 		SET is_default = true
 		WHERE user_id = $1
@@ -237,10 +240,45 @@ func (r *repository) SetDefault(
 		  AND is_active = true
 	`
 
-	log.Debug("Start setting default address")
+	res, err := r.db.ExecContext(ctx, updateQuery, userID, addressID)
+	if err != nil {
+		log.Error("Failed to set default address", zap.Error(err))
+		return err
+	}
 
-	_, err := r.db.ExecContext(ctx, q, userID, addressID)
-	return err
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows > 0 {
+		return nil
+	}
+
+	// 2. If no rows updated, check why
+	const checkActiveQuery = `
+		SELECT is_active
+		FROM addresses
+		WHERE user_id = $1
+		  AND id = $2
+	`
+
+	var isActive bool
+	err = r.db.QueryRowContext(ctx, checkActiveQuery, userID, addressID).
+		Scan(&isActive)
+
+	if err == sql.ErrNoRows {
+		return errors.New("address not found")
+	}
+	if err != nil {
+		return err
+	}
+
+	if !isActive {
+		return errors.New("cannot set default address: address is inactive")
+	}
+
+	return errors.New("failed to set default address")
 }
 
 func (r *repository) GetByIDs(

@@ -118,6 +118,15 @@ func TestService_List(t *testing.T) {
 		assert.Error(t, err)
 		assert.Equal(t, "unauthenticated", err.Error())
 	})
+
+	t.Run("RepoError", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := NewService(mockRepo)
+		mockRepo.On("GetByUserID", ctx, userID).Return(nil, errors.New("db error"))
+
+		_, err := svc.List(ctx)
+		assert.Error(t, err)
+	})
 }
 
 func TestService_Get(t *testing.T) {
@@ -168,6 +177,13 @@ func TestService_Get(t *testing.T) {
 		if assert.Error(t, err) {
 			assert.Equal(t, "address not found", err.Error())
 		}
+	})
+
+	t.Run("Unauthenticated", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := NewService(mockRepo)
+		_, err := svc.Get(context.Background(), addrID)
+		assert.Error(t, err)
 	})
 }
 
@@ -225,6 +241,13 @@ func TestService_Create(t *testing.T) {
 		_, err := svc.Create(ctx, inputNoDefault)
 		assert.Error(t, err)
 	})
+
+	t.Run("Unauthenticated", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := NewService(mockRepo)
+		_, err := svc.Create(context.Background(), input)
+		assert.Error(t, err)
+	})
 }
 
 func TestService_Update(t *testing.T) {
@@ -280,6 +303,32 @@ func TestService_Update(t *testing.T) {
 		assert.Error(t, err)
 		assert.Equal(t, "address not found", err.Error())
 	})
+
+	t.Run("Unauthenticated", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := NewService(mockRepo)
+		_, err := svc.Update(context.Background(), input)
+		assert.Error(t, err)
+	})
+
+	t.Run("DeactivateError_Ignored", func(t *testing.T) {
+		// Ensures flow continues even if Deactivate fails (error is logged but ignored in service)
+		mockRepo := new(MockRepository)
+		svc := NewService(mockRepo)
+		oldAddr := &Address{ID: oldID, UserID: userID, IsActive: true}
+
+		mockRepo.On("GetByID", ctx, oldID).Return(oldAddr, nil)
+		mockRepo.On("Deactivate", ctx, oldID).Return(errors.New("deactivate error"))
+		mockRepo.On("ClearDefault", ctx, userID).Return(nil)
+		mockRepo.On("Create", ctx, mock.MatchedBy(func(a *Address) bool {
+			return a.ID != oldID
+		})).Return(nil)
+
+		res, err := svc.Update(ctx, input)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, res)
+	})
 }
 
 func TestService_Delete(t *testing.T) {
@@ -308,6 +357,21 @@ func TestService_Delete(t *testing.T) {
 		assert.Error(t, err)
 		assert.Equal(t, "address not found", err.Error())
 	})
+
+	t.Run("Unauthenticated", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := NewService(mockRepo)
+		err := svc.Delete(context.Background(), addrID)
+		assert.Error(t, err)
+	})
+
+	t.Run("GetError", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := NewService(mockRepo)
+		mockRepo.On("GetByID", ctx, addrID).Return(nil, errors.New("db error"))
+		err := svc.Delete(ctx, addrID)
+		assert.Error(t, err)
+	})
 }
 
 func TestService_SetDefaultAddress(t *testing.T) {
@@ -331,6 +395,36 @@ func TestService_SetDefaultAddress(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewService(mockRepo)
 		mockRepo.On("GetByID", ctx, addrID).Return(nil, errors.New("not found"))
+		err := svc.SetDefaultAddress(ctx, addrID)
+		assert.Error(t, err)
+	})
+
+	t.Run("Unauthenticated", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := NewService(mockRepo)
+		err := svc.SetDefaultAddress(context.Background(), addrID)
+		assert.Error(t, err)
+	})
+
+	t.Run("OwnershipError", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := NewService(mockRepo)
+		addr := &Address{ID: addrID, UserID: 999} // Different user
+		mockRepo.On("GetByID", ctx, addrID).Return(addr, nil)
+
+		err := svc.SetDefaultAddress(ctx, addrID)
+		assert.Error(t, err)
+		assert.Equal(t, "address not found", err.Error())
+	})
+
+	t.Run("SetDefaultError", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := NewService(mockRepo)
+		addr := &Address{ID: addrID, UserID: userID}
+		mockRepo.On("GetByID", ctx, addrID).Return(addr, nil)
+		mockRepo.On("ClearDefault", ctx, userID).Return(nil)
+		mockRepo.On("SetDefault", ctx, userID, addrID).Return(errors.New("db error"))
+
 		err := svc.SetDefaultAddress(ctx, addrID)
 		assert.Error(t, err)
 	})

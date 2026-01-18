@@ -147,6 +147,14 @@ func TestRepository_Deactivate(t *testing.T) {
 		err := repo.Deactivate(context.Background(), id)
 		assert.NoError(t, err)
 	})
+
+	t.Run("Error", func(t *testing.T) {
+		mock.ExpectExec("UPDATE addresses SET is_active = false").
+			WithArgs(id).
+			WillReturnError(errors.New("db error"))
+		err := repo.Deactivate(context.Background(), id)
+		assert.Error(t, err)
+	})
 }
 
 func TestRepository_ClearDefault(t *testing.T) {
@@ -164,6 +172,14 @@ func TestRepository_ClearDefault(t *testing.T) {
 
 		err := repo.ClearDefault(context.Background(), userID)
 		assert.NoError(t, err)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		mock.ExpectExec("UPDATE addresses SET is_default = false").
+			WithArgs(userID).
+			WillReturnError(errors.New("db error"))
+		err := repo.ClearDefault(context.Background(), userID)
+		assert.Error(t, err)
 	})
 }
 
@@ -183,6 +199,63 @@ func TestRepository_SetDefault(t *testing.T) {
 
 		err := repo.SetDefault(context.Background(), userID, addrID)
 		assert.NoError(t, err)
+	})
+
+	t.Run("UpdateError", func(t *testing.T) {
+		mock.ExpectExec("UPDATE addresses SET is_default = true").
+			WithArgs(userID, addrID).
+			WillReturnError(errors.New("db error"))
+
+		err := repo.SetDefault(context.Background(), userID, addrID)
+		assert.Error(t, err)
+	})
+
+	t.Run("AddressInactive", func(t *testing.T) {
+		// 1. Update returns 0 rows
+		mock.ExpectExec("UPDATE addresses SET is_default = true").
+			WithArgs(userID, addrID).
+			WillReturnResult(sqlmock.NewResult(0, 0))
+
+		// 2. Check active returns false
+		mock.ExpectQuery("SELECT is_active FROM addresses").
+			WithArgs(userID, addrID).
+			WillReturnRows(sqlmock.NewRows([]string{"is_active"}).AddRow(false))
+
+		err := repo.SetDefault(context.Background(), userID, addrID)
+		assert.Error(t, err)
+		assert.Equal(t, "cannot set default address: address is inactive", err.Error())
+	})
+
+	t.Run("AddressNotFound", func(t *testing.T) {
+		// 1. Update returns 0 rows
+		mock.ExpectExec("UPDATE addresses SET is_default = true").
+			WithArgs(userID, addrID).
+			WillReturnResult(sqlmock.NewResult(0, 0))
+
+		// 2. Check active returns NoRows
+		mock.ExpectQuery("SELECT is_active FROM addresses").
+			WithArgs(userID, addrID).
+			WillReturnError(sql.ErrNoRows)
+
+		err := repo.SetDefault(context.Background(), userID, addrID)
+		assert.Error(t, err)
+		assert.Equal(t, "address not found", err.Error())
+	})
+
+	t.Run("GenericFailure", func(t *testing.T) {
+		// 1. Update returns 0 rows
+		mock.ExpectExec("UPDATE addresses SET is_default = true").
+			WithArgs(userID, addrID).
+			WillReturnResult(sqlmock.NewResult(0, 0))
+
+		// 2. Check active returns true (so it should have updated, but didn't for some reason)
+		mock.ExpectQuery("SELECT is_active FROM addresses").
+			WithArgs(userID, addrID).
+			WillReturnRows(sqlmock.NewRows([]string{"is_active"}).AddRow(true))
+
+		err := repo.SetDefault(context.Background(), userID, addrID)
+		assert.Error(t, err)
+		assert.Equal(t, "failed to set default address", err.Error())
 	})
 }
 
@@ -214,5 +287,20 @@ func TestRepository_GetByIDs(t *testing.T) {
 		res, err := repo.GetByIDs(context.Background(), ids)
 		assert.NoError(t, err)
 		assert.Len(t, res, 2)
+	})
+
+	t.Run("EmptyIDs", func(t *testing.T) {
+		res, err := repo.GetByIDs(context.Background(), []uuid.UUID{})
+		assert.NoError(t, err)
+		assert.Empty(t, res)
+	})
+
+	t.Run("QueryError", func(t *testing.T) {
+		mock.ExpectQuery("SELECT .* FROM addresses WHERE id = ANY").
+			WillReturnError(errors.New("db error"))
+
+		res, err := repo.GetByIDs(context.Background(), ids)
+		assert.Error(t, err)
+		assert.Nil(t, res)
 	})
 }
