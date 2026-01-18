@@ -139,8 +139,9 @@ func (s *service) OrderToPaymentProcess(ctx context.Context, sessionExternalID s
 			Price:    int64(s.Price),
 		})
 	}
+	tempUserName := "userName"
 	payResp, err := s.paymentGate.CreateInvoice(externalID,
-		"userEmail",
+		tempUserName,
 		int64(session.TotalPrice),
 		userEmail,
 		items,
