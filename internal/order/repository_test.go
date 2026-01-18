@@ -71,6 +71,12 @@ func TestRepository_FetchOrders_Filters(t *testing.T) {
 	limit := int32(10)
 	offset := int32(0)
 
+	// Helper to create full rows for FetchOrders
+	newFullRows := func() *sqlmock.Rows {
+		return sqlmock.NewRows([]string{"id", "external_id", "invoice_number", "user_id", "currency", "subtotal", "tax", "discount", "shipping_fee", "total_amount", "status", "address_id", "created_at", "updated_at"}).
+			AddRow(1, "ext-1", "INV-1", userID, "IDR", 10000, 1000, 0, 5000, 16000, "PAID", uuid.New(), time.Now(), time.Now())
+	}
+
 	t.Run("SearchAndStatus", func(t *testing.T) {
 		search := "INV-123"
 		status := OrderStatusPaid
@@ -83,7 +89,7 @@ func TestRepository_FetchOrders_Filters(t *testing.T) {
 		// user_id=$1, search=$2, status=$3, limit=$4, offset=$5
 		mock.ExpectQuery(`SELECT .* FROM orders o WHERE o.user_id = \$1 AND \(o.id::text ILIKE \$2 OR o.external_id ILIKE \$2\) AND o.status = \$3 ORDER BY o.created_at DESC LIMIT \$4 OFFSET \$5`).
 			WithArgs(userID, "%"+search+"%", status, limit, offset).
-			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+			WillReturnRows(newFullRows())
 
 		_, err := repo.FetchOrders(ctx, filter, nil, limit, offset)
 		assert.NoError(t, err)
@@ -97,7 +103,7 @@ func TestRepository_FetchOrders_Filters(t *testing.T) {
 
 		mock.ExpectQuery(`SELECT .* FROM orders o WHERE o.user_id = \$1 ORDER BY o.total_amount ASC LIMIT \$2 OFFSET \$3`).
 			WithArgs(userID, limit, offset).
-			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+			WillReturnRows(newFullRows())
 
 		_, err := repo.FetchOrders(ctx, nil, sort, limit, offset)
 		assert.NoError(t, err)
@@ -109,7 +115,7 @@ func TestRepository_FetchOrders_Filters(t *testing.T) {
 
 		mock.ExpectQuery(`SELECT .* FROM orders o WHERE o.user_id = \$1 AND o.created_at >= \$2 AND o.created_at <= \$3`).
 			WithArgs(userID, now, now, limit, offset).
-			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+			WillReturnRows(newFullRows())
 
 		_, err := repo.FetchOrders(ctx, filter, nil, limit, offset)
 		assert.NoError(t, err)

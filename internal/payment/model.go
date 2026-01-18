@@ -59,7 +59,6 @@ type ChannelCode string
 const (
 	ChannelIndomaret ChannelCode = "INDOMARET"
 	ChannelAlfamart  ChannelCode = "ALFAMART"
-	ChannelBCA       ChannelCode = "BCA_VIRTUAL_ACCOUNT"
 )
 
 const (

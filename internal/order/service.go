@@ -145,7 +145,7 @@ func (s *service) OrderToPaymentProcess(ctx context.Context, sessionExternalID s
 		int64(session.TotalPrice),
 		userEmail,
 		items,
-		payment.ChannelBCA)
+		payment.MethodBCAVA)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create payment invoice: %w", err)
