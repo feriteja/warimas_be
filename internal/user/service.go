@@ -14,6 +14,8 @@ type Service interface {
 	Register(ctx context.Context, email, password string) (string, *User, error)
 	Login(ctx context.Context, email, password string) (string, *User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	ForgotPassword(ctx context.Context, email string) error
+	ResetPassword(ctx context.Context, token, newPassword string) error
 }
 
 type service struct {
@@ -102,6 +104,67 @@ func (s *service) Login(ctx context.Context, email, password string) (string, *U
 }
 
 func (s *service) GetUserByEmail(ctx context.Context, email string) (*User, error) {
-	user, _ := s.repo.FindByEmail(ctx, email)
+	log := logger.FromCtx(ctx).With(zap.String("email", email))
+
+	user, err := s.repo.FindByEmail(ctx, email)
+	if err != nil {
+		log.Error("failed to get user by email", zap.Error(err))
+		return nil, err
+	}
 	return user, nil
+}
+
+func (s *service) ForgotPassword(ctx context.Context, email string) error {
+	log := logger.FromCtx(ctx)
+
+	// 1. Check if user exists
+	u, err := s.repo.FindByEmail(ctx, email)
+	if err != nil {
+		// We return nil even if user is not found to prevent email enumeration
+		log.Warn("forgot password: email not found", zap.String("email", email))
+		return nil
+	}
+
+	// 2. Generate reset token (using existing JWT logic for simplicity)
+	// In a real scenario, you might want a shorter expiration or a specific "reset" claim
+	token, err := GenerateJWT(u.ID, string(u.Role), u.Email, u.SellerID)
+	if err != nil {
+		log.Error("failed to generate reset token", zap.Error(err))
+		return err
+	}
+
+	// 3. Send Email (Mocked)
+	// In production, call an email service here.
+	log.Info("==================================================")
+	log.Info("PASSWORD RESET LINK SENT", zap.String("email", email))
+	log.Info("TOKEN: " + token)
+	log.Info("==================================================")
+
+	return nil
+}
+
+func (s *service) ResetPassword(ctx context.Context, token, newPassword string) error {
+	log := logger.FromCtx(ctx)
+
+	claims, err := ParseJWT(token)
+	if err != nil {
+		log.Warn("reset password: invalid token", zap.Error(err))
+		return errors.New("invalid or expired token")
+	}
+
+	log = log.With(zap.String("email", claims.Email))
+
+	hashedPassword, err := HashPassword(newPassword)
+	if err != nil {
+		log.Error("reset password: failed to hash password", zap.Error(err))
+		return err
+	}
+
+	if err := s.repo.UpdatePassword(ctx, claims.Email, hashedPassword); err != nil {
+		log.Error("reset password: failed to update password", zap.Error(err))
+		return err
+	}
+
+	log.Info("password reset successfully")
+	return nil
 }
