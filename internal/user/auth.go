@@ -2,7 +2,6 @@ package user
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"time"
 
@@ -47,7 +46,6 @@ func GenerateJWT(userID int, role, email string, sellerID *string) (string, erro
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	fmt.Println("JWT Secret Key:", string(jwtKey))
 	return token.SignedString(jwtKey)
 }
 
