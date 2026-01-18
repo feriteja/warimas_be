@@ -17,12 +17,19 @@ func MapCartItemToGraphQL(cr []*CartRow) []*model.CartItem {
 
 		status := r.Status
 
+		var updatedAt string
+		if r.UpdatedAt != nil {
+			updatedAt = r.UpdatedAt.Format(time.RFC3339)
+		} else {
+			updatedAt = r.CreatedAt.Format(time.RFC3339)
+		}
+
 		item := &model.CartItem{
 			ID:        r.CartID,
 			UserID:    r.UserID,
 			Quantity:  r.Quantity,
 			CreatedAt: r.CreatedAt.Format(time.RFC3339),
-			UpdatedAt: r.UpdatedAt.Format(time.RFC3339),
+			UpdatedAt: updatedAt,
 			Product: &model.ProductCart{
 				ID:            r.ProductID,
 				Name:          r.ProductName,
