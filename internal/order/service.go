@@ -9,6 +9,7 @@ import (
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
 	"warimas-be/internal/payment"
+	"warimas-be/internal/user"
 	"warimas-be/internal/utils"
 
 	"github.com/google/uuid"
@@ -20,7 +21,7 @@ type Service interface {
 		ctx context.Context,
 		externalID string,
 	) (*Order, error)
-	OrderToPaymentProcess(ctx context.Context, sessionExternalID, externalID string, orderId uint) (*payment.PaymentResponse, error)
+	OrderToPaymentProcess(ctx context.Context, session *CheckoutSession, externalID string, orderId uint) (*payment.PaymentResponse, error)
 	GetOrders(
 		ctx context.Context,
 		filter *OrderFilterInput,
@@ -62,19 +63,25 @@ type Service interface {
 	) (*Order, error)
 }
 
+type UserGateway interface {
+	GetProfile(ctx context.Context, userID uint) (*user.Profile, error)
+}
+
 type service struct {
 	repo        Repository
 	paymentRepo payment.Repository
 	paymentGate payment.Gateway
 	addressRepo address.Repository
+	userRepo    UserGateway
 }
 
-func NewService(repo Repository, payRepo payment.Repository, payGate payment.Gateway, addressRepo address.Repository) Service {
+func NewService(repo Repository, payRepo payment.Repository, payGate payment.Gateway, addressRepo address.Repository, userRepo UserGateway) Service {
 	return &service{
 		repo:        repo,
 		paymentRepo: payRepo,
 		paymentGate: payGate,
 		addressRepo: addressRepo,
+		userRepo:    userRepo,
 	}
 }
 
@@ -127,29 +134,54 @@ func (s *service) CreateFromSession(
 }
 
 // ✅ Create new order from cart
-func (s *service) OrderToPaymentProcess(ctx context.Context, sessionExternalID string, externalID string, orderId uint) (*payment.PaymentResponse, error) {
-	session, err := s.repo.GetCheckoutSession(context.Background(), sessionExternalID)
-	if err != nil {
-		return nil, err
-	}
-
+func (s *service) OrderToPaymentProcess(ctx context.Context, session *CheckoutSession, externalID string, orderId uint) (*payment.PaymentResponse, error) {
 	userEmail := utils.GetUserEmailFromContext(ctx)
 
 	var items []payment.XenditItem
 	for _, s := range session.Items {
 		items = append(items, payment.XenditItem{
-			Name:     s.ProductName + " - " + s.VariantName,
+			Name:     fmt.Sprintf("%s - %s", s.ProductName, s.VariantName),
 			Quantity: s.Quantity,
 			Price:    int64(s.Price),
 		})
 	}
-	tempUserName := "userName"
+
+	var userName string
+	if session.UserID != nil && *session.UserID > 0 {
+		userProfile, err := s.userRepo.GetProfile(ctx, uint(*session.UserID))
+		if err == nil && userProfile != nil {
+			if userProfile.FullName != nil {
+				userName = *userProfile.FullName
+			}
+		} else {
+			logger.FromCtx(ctx).Warn("failed to fetch user profile for invoice", zap.Error(err))
+		}
+	}
+
+	// Fallback to address receiver name if profile name is missing
+	if userName == "" && session.AddressID != nil {
+		addr, err := s.addressRepo.GetByID(ctx, *session.AddressID)
+		if err == nil && addr != nil {
+			userName = addr.ReceiverName
+		}
+	}
+
+	if userName == "" {
+		userName = "Guest"
+	}
+
+	paymentMethod := payment.ChannelCode(payment.MethodGOPAY)
+	if session.PaymentMethod != nil {
+		paymentMethod = payment.ChannelCode(*session.PaymentMethod)
+
+	}
+
 	payResp, err := s.paymentGate.CreateInvoice(externalID,
-		tempUserName,
+		userName,
 		int64(session.TotalPrice),
 		userEmail,
 		items,
-		payment.MethodBCAVA)
+		paymentMethod)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create payment invoice: %w", err)
@@ -889,7 +921,7 @@ func (s *service) ConfirmSession(
 		return nil, err
 	}
 
-	_, err = s.OrderToPaymentProcess(ctx, session.ExternalID, externalOrderID, uint(order.ID))
+	_, err = s.OrderToPaymentProcess(ctx, session, externalOrderID, uint(order.ID))
 
 	log.Info("checkout session confirmed successfully",
 		zap.String("final_status", string(session.Status)),

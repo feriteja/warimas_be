@@ -30,8 +30,8 @@ func (m *MockOrderService) CreateFromSession(ctx context.Context, externalID str
 	return args.Get(0).(*order.Order), args.Error(1)
 }
 
-func (m *MockOrderService) OrderToPaymentProcess(ctx context.Context, sessionExternalID, externalID string, orderId uint) (*payment.PaymentResponse, error) {
-	args := m.Called(ctx, sessionExternalID, externalID, orderId)
+func (m *MockOrderService) OrderToPaymentProcess(ctx context.Context, session *order.CheckoutSession, externalID string, orderId uint) (*payment.PaymentResponse, error) {
+	args := m.Called(ctx, session, externalID, orderId)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}

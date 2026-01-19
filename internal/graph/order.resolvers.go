@@ -385,7 +385,7 @@ func (r *queryResolver) PaymentOrderInfo(ctx context.Context, externalID string)
 			PostalCode:   paymentInfo.ShippingAddress.PostalCode,
 		},
 		Payment: &model.PaymentDetail{
-			Method:       paymentInfo.Payment.Method,
+			Method:       string(paymentInfo.Payment.Method),
 			PaymentCode:  paymentInfo.Payment.PaymentCode,
 			ReferenceID:  paymentInfo.Payment.ReferenceID,
 			Instructions: paymentInfo.Payment.Instructions,

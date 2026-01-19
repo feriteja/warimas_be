@@ -523,7 +523,7 @@ func (m *MockOrderService) MarkAsFailed(ctx context.Context, refID, payReqID, pr
 func (m *MockOrderService) CreateFromSession(ctx context.Context, externalID string) (*order.Order, error) {
 	return nil, nil
 }
-func (m *MockOrderService) OrderToPaymentProcess(ctx context.Context, sessionExternalID, externalID string, orderId uint) (*payment.PaymentResponse, error) {
+func (m *MockOrderService) OrderToPaymentProcess(ctx context.Context, session *order.CheckoutSession, externalID string, orderId uint) (*payment.PaymentResponse, error) {
 	return nil, nil
 }
 func (m *MockOrderService) GetOrders(ctx context.Context, filter *order.OrderFilterInput, sort *order.OrderSortInput, limit int32, page int32) ([]*order.Order, int64, map[uuid.UUID][]address.Address, error) {

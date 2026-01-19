@@ -83,7 +83,7 @@ func newServer(cfg *config.Config, database *sql.DB) *http.ServeMux {
 	addressSvc := address.NewService(addressRepo)
 
 	paymentGateway := payment.NewXenditGateway(cfg.XenditSecretKey)
-	orderSvc := order.NewService(orderRepo, paymentRepo, paymentGateway, addressRepo)
+	orderSvc := order.NewService(orderRepo, paymentRepo, paymentGateway, addressRepo, userRepo)
 	webhookHandler := webhook.NewWebhookHandler(orderSvc, paymentGateway, paymentRepo)
 
 	// -------------------------------------------------------------------------

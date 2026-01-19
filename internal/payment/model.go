@@ -13,7 +13,7 @@ type Payment struct {
 	InvoiceURL        string
 	Amount            int64
 	Status            string
-	PaymentMethod     string
+	PaymentMethod     ChannelCode
 	ChannelCode       string
 	PaymentCode       string
 	Currency          string
@@ -41,7 +41,7 @@ type PaymentResponse struct {
 	ReferenceID       string           `json:"reference_id"`
 	Amount            int64            `json:"amount"`
 	Status            string           `json:"status"`
-	PaymentMethod     string           `json:"payment_method,omitempty"`
+	PaymentMethod     ChannelCode      `json:"payment_method,omitempty"`
 	PaymentCode       string           `json:"payment_code,omitempty"`
 	InvoiceURL        string           `json:"invoice_url,omitempty"`
 	ChannelCode       string           `json:"channel_code,omitempty"`
@@ -59,6 +59,29 @@ type ChannelCode string
 const (
 	ChannelIndomaret ChannelCode = "INDOMARET"
 	ChannelAlfamart  ChannelCode = "ALFAMART"
+
+	// Virtual Account
+	MethodBCAVA     ChannelCode = "BCA_VIRTUAL_ACCOUNT"
+	MethodBNIVA     ChannelCode = "BNI_VIRTUAL_ACCOUNT"
+	MethodMandiriVA ChannelCode = "MANDIRI_VIRTUAL_ACCOUNT"
+
+	// QRIS
+	MethodQRIS ChannelCode = "QRIS"
+	MethodCOD  ChannelCode = "COD"
+
+	// E-Wallet
+	MethodOVO     ChannelCode = "OVO"
+	MethodDANA    ChannelCode = "DANA"
+	MethodLINKAJA ChannelCode = "LINKAJA"
+	MethodSHOPEE  ChannelCode = "SHOPEEPAY"
+	MethodGOPAY   ChannelCode = "GOPAY"
+
+	// Retail Outlet
+	MethodAlfamart  ChannelCode = "ALFAMART"
+	MethodIndomaret ChannelCode = "INDOMARET"
+
+	// Credit Card
+	MethodCreditCard ChannelCode = "CARDS"
 )
 
 const (

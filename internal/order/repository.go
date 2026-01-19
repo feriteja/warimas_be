@@ -981,6 +981,7 @@ func (r *repository) GetCheckoutSession(
 			s.user_id, s.address_id,
 			s.subtotal, s.tax, s.shipping_fee, s.discount,
 			s.total_amount, s.currency, s.confirmed_at,
+			s.payment_method,
 
 			i.id, i.variant_id, i.variant_name, i.product_name,
 			i.imageurl, i.quantity, i.quantity_type,
@@ -1023,6 +1024,7 @@ func (r *repository) GetCheckoutSession(
 			&s.TotalPrice,
 			&s.Currency,
 			&s.ConfirmedAt,
+			&s.PaymentMethod,
 
 			&itemID,
 			&item.VariantID,

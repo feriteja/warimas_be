@@ -11,6 +11,7 @@ import (
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/payment"
 	"warimas-be/internal/product"
+	"warimas-be/internal/user"
 	"warimas-be/internal/utils"
 
 	"github.com/google/uuid"
@@ -244,6 +245,23 @@ func (m *MockPaymentGateway) GetPaymentStatus(externalID string) (*payment.Payme
 	return args.Get(0).(*payment.PaymentStatus), args.Error(1)
 }
 
+type MockUserRepository struct {
+	mock.Mock
+}
+
+func (m *MockUserRepository) GetProfile(ctx context.Context, userID uint) (*user.Profile, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*user.Profile), args.Error(1)
+}
+
+func (m *MockUserRepository) Create(ctx context.Context, u *user.User) error {
+	args := m.Called(ctx, u)
+	return args.Error(0)
+}
+
 func (m *MockPaymentGateway) CancelPayment(externalID string) error {
 	args := m.Called(externalID)
 	return args.Error(0)
@@ -265,7 +283,7 @@ func TestService_GetOrderDetail(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockAddrRepo := new(MockAddressRepository)
-		svc := NewService(mockRepo, nil, nil, mockAddrRepo)
+		svc := NewService(mockRepo, nil, nil, mockAddrRepo, nil)
 
 		ctx := utils.SetUserContext(context.Background(), userID, "test@example.com", "user")
 
@@ -290,7 +308,7 @@ func TestService_GetOrderDetail(t *testing.T) {
 	t.Run("Unauthenticated", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockAddrRepo := new(MockAddressRepository)
-		svc := NewService(mockRepo, nil, nil, mockAddrRepo)
+		svc := NewService(mockRepo, nil, nil, mockAddrRepo, nil)
 
 		// Context without user
 		ctx := context.Background()
@@ -308,7 +326,7 @@ func TestService_GetOrderDetail(t *testing.T) {
 	t.Run("Unauthorized_WrongUser", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockAddrRepo := new(MockAddressRepository)
-		svc := NewService(mockRepo, nil, nil, mockAddrRepo)
+		svc := NewService(mockRepo, nil, nil, mockAddrRepo, nil)
 
 		ctx := utils.SetUserContext(context.Background(), userID, "test@example.com", "user")
 
@@ -329,7 +347,7 @@ func TestService_GetOrderDetail(t *testing.T) {
 	t.Run("NotFound", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockAddrRepo := new(MockAddressRepository)
-		svc := NewService(mockRepo, nil, nil, mockAddrRepo)
+		svc := NewService(mockRepo, nil, nil, mockAddrRepo, nil)
 
 		ctx := utils.SetUserContext(context.Background(), userID, "test@example.com", "user")
 
@@ -344,7 +362,7 @@ func TestService_GetOrderDetail(t *testing.T) {
 	t.Run("AddressRepoError", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockAddrRepo := new(MockAddressRepository)
-		svc := NewService(mockRepo, nil, nil, mockAddrRepo)
+		svc := NewService(mockRepo, nil, nil, mockAddrRepo, nil)
 		ctx := utils.SetUserContext(context.Background(), userID, "test@example.com", "user")
 
 		mockOrder := &Order{ID: int32(orderID), UserID: &userInt32, AddressID: addrID}
@@ -357,7 +375,7 @@ func TestService_GetOrderDetail(t *testing.T) {
 
 	t.Run("InvalidData_NilUserID", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		ctx := utils.SetUserContext(context.Background(), userID, "test@example.com", "user")
 
 		mockOrder := &Order{ID: int32(orderID), UserID: nil} // Invalid
@@ -371,7 +389,7 @@ func TestService_GetOrderDetail(t *testing.T) {
 	t.Run("Success_Admin", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockAddrRepo := new(MockAddressRepository)
-		svc := NewService(mockRepo, nil, nil, mockAddrRepo)
+		svc := NewService(mockRepo, nil, nil, mockAddrRepo, nil)
 
 		// Context with ADMIN role
 		ctx := utils.SetUserContext(context.Background(), userID, "admin@example.com", "ADMIN")
@@ -398,7 +416,7 @@ func TestService_CreateFromSession(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockSession := &CheckoutSession{
 			ID:          sessionID,
@@ -426,7 +444,7 @@ func TestService_CreateFromSession(t *testing.T) {
 
 	t.Run("SessionNotPaid", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockSession := &CheckoutSession{
 			ID:          sessionID,
@@ -445,7 +463,7 @@ func TestService_CreateFromSession(t *testing.T) {
 
 	t.Run("Idempotency_OrderExists", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockSession := &CheckoutSession{
 			ID:          sessionID,
@@ -468,7 +486,7 @@ func TestService_CreateFromSession(t *testing.T) {
 
 	t.Run("SessionNotConfirmed", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockSession := &CheckoutSession{ID: sessionID, ConfirmedAt: nil}
 		mockRepo.On("GetCheckoutSession", ctx, externalID).Return(mockSession, nil)
@@ -482,7 +500,7 @@ func TestService_CreateFromSession(t *testing.T) {
 func TestService_GetOrders(t *testing.T) {
 	mockRepo := new(MockRepository)
 	mockAddrRepo := new(MockAddressRepository)
-	svc := NewService(mockRepo, nil, nil, mockAddrRepo)
+	svc := NewService(mockRepo, nil, nil, mockAddrRepo, nil)
 
 	userID := uint(1)
 	ctx := utils.SetUserContext(context.Background(), userID, "test@example.com", "user")
@@ -530,7 +548,7 @@ func TestService_GetOrders(t *testing.T) {
 
 	t.Run("RepoError", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		filter := &OrderFilterInput{}
 		sort := &OrderSortInput{Field: OrderSortFieldCreatedAt, Direction: SortDirectionDesc}
@@ -543,7 +561,7 @@ func TestService_GetOrders(t *testing.T) {
 
 	t.Run("CountError", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		filter := &OrderFilterInput{}
 		sort := &OrderSortInput{Field: OrderSortFieldCreatedAt, Direction: SortDirectionDesc}
 
@@ -558,7 +576,7 @@ func TestService_GetOrders(t *testing.T) {
 	t.Run("AddressRepoError", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockAddrRepo := new(MockAddressRepository)
-		svc := NewService(mockRepo, nil, nil, mockAddrRepo)
+		svc := NewService(mockRepo, nil, nil, mockAddrRepo, nil)
 		filter := &OrderFilterInput{}
 		sort := &OrderSortInput{Field: OrderSortFieldCreatedAt, Direction: SortDirectionDesc}
 		addrID := uuid.New()
@@ -575,7 +593,7 @@ func TestService_GetOrders(t *testing.T) {
 	t.Run("FetchItemsError", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockAddrRepo := new(MockAddressRepository)
-		svc := NewService(mockRepo, nil, nil, mockAddrRepo)
+		svc := NewService(mockRepo, nil, nil, mockAddrRepo, nil)
 		filter := &OrderFilterInput{}
 		sort := &OrderSortInput{Field: OrderSortFieldCreatedAt, Direction: SortDirectionDesc}
 		addrID := uuid.New()
@@ -650,7 +668,7 @@ func TestService_UpdateOrderStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := new(MockRepository)
-			svc := NewService(mockRepo, nil, nil, nil)
+			svc := NewService(mockRepo, nil, nil, nil, nil)
 
 			mockOrder := &Order{Status: tt.currentStatus}
 			mockRepo.On("GetOrderDetail", ctx, orderID).Return(mockOrder, nil)
@@ -679,7 +697,7 @@ func TestService_UpdateOrderStatus(t *testing.T) {
 
 	t.Run("OrderNotFound", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		mockRepo.On("GetOrderDetail", ctx, orderID).Return(nil, nil) // nil order
 		err := svc.UpdateOrderStatus(ctx, orderID, OrderStatusPaid)
 		assert.Error(t, err)
@@ -688,7 +706,7 @@ func TestService_UpdateOrderStatus(t *testing.T) {
 
 	t.Run("RepoError_GetOrder", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		mockRepo.On("GetOrderDetail", ctx, orderID).Return(nil, errors.New("db error"))
 		err := svc.UpdateOrderStatus(ctx, orderID, OrderStatusPaid)
 		assert.Error(t, err)
@@ -696,7 +714,7 @@ func TestService_UpdateOrderStatus(t *testing.T) {
 
 	t.Run("RepoError_Update", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		mockOrder := &Order{Status: OrderStatusPendingPayment}
 		mockRepo.On("GetOrderDetail", ctx, orderID).Return(mockOrder, nil)
 		mockRepo.On("UpdateOrderStatus", ctx, orderID, OrderStatusPaid, (*string)(nil)).Return(errors.New("update error"))
@@ -718,7 +736,8 @@ func TestService_ConfirmSession(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockPayRepo := new(MockPaymentRepository)
 		mockPayGate := new(MockPaymentGateway)
-		svc := NewService(mockRepo, mockPayRepo, mockPayGate, nil)
+		mockUserRepo := new(MockUserRepository)
+		svc := NewService(mockRepo, mockPayRepo, mockPayGate, nil, mockUserRepo)
 
 		mockSession := &CheckoutSession{
 			ID:         sessionID,
@@ -757,6 +776,9 @@ func TestService_ConfirmSession(t *testing.T) {
 		// 6. Save Payment
 		mockPayRepo.On("SavePayment", ctx, mock.AnythingOfType("*payment.Payment")).Return(nil)
 
+		// 7. Get User Profile
+		mockUserRepo.On("GetProfile", ctx, userID).Return(&user.Profile{FullName: utils.StrPtr("userName")}, nil)
+
 		res, err := svc.ConfirmSession(ctx, externalID)
 
 		assert.NoError(t, err)
@@ -764,11 +786,12 @@ func TestService_ConfirmSession(t *testing.T) {
 		mockRepo.AssertExpectations(t)
 		mockPayGate.AssertExpectations(t)
 		mockPayRepo.AssertExpectations(t)
+		mockUserRepo.AssertExpectations(t)
 	})
 
 	t.Run("OutOfStock", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockSession := &CheckoutSession{
 			ID:         sessionID,
@@ -803,7 +826,7 @@ func TestService_UpdateSessionAddress(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockSession := &CheckoutSession{
 			UserID:    &userInt32,
@@ -829,7 +852,7 @@ func TestService_UpdateSessionAddress(t *testing.T) {
 
 	t.Run("Expired", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockSession := &CheckoutSession{
 			UserID:    &userInt32,
@@ -846,7 +869,7 @@ func TestService_UpdateSessionAddress(t *testing.T) {
 
 	t.Run("NotEditable", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockSession := &CheckoutSession{
 			UserID: &userInt32,
@@ -862,7 +885,7 @@ func TestService_UpdateSessionAddress(t *testing.T) {
 
 	t.Run("Guest_Success", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		ctxGuest := context.Background()
 		guestID := uuid.New()
@@ -887,7 +910,7 @@ func TestService_UpdateSessionAddress(t *testing.T) {
 
 	t.Run("Guest_Forbidden_Mismatch", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		ctxGuest := context.Background()
 		guestID := uuid.New()
@@ -903,7 +926,7 @@ func TestService_UpdateSessionAddress(t *testing.T) {
 
 	t.Run("RepoError_GetSession", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		mockRepo.On("GetCheckoutSession", ctx, externalID).Return(nil, errors.New("db error"))
 		err := svc.UpdateSessionAddress(ctx, externalID, addrIDStr, nil)
 		assert.Error(t, err)
@@ -911,7 +934,7 @@ func TestService_UpdateSessionAddress(t *testing.T) {
 
 	t.Run("RepoError_GetAddress", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		mockSession := &CheckoutSession{UserID: &userInt32, Status: CheckoutSessionStatusPending, ExpiresAt: now}
 		mockRepo.On("GetCheckoutSession", ctx, externalID).Return(mockSession, nil)
 		mockRepo.On("GetUserAddress", ctx, addrIDStr, userID).Return(nil, errors.New("addr error"))
@@ -921,7 +944,7 @@ func TestService_UpdateSessionAddress(t *testing.T) {
 
 	t.Run("RepoError_Update", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		mockSession := &CheckoutSession{UserID: &userInt32, Status: CheckoutSessionStatusPending, ExpiresAt: now}
 		mockRepo.On("GetCheckoutSession", ctx, externalID).Return(mockSession, nil)
 		mockRepo.On("GetUserAddress", ctx, addrIDStr, userID).Return(&address.Address{ID: uuid.MustParse(addrIDStr)}, nil)
@@ -932,7 +955,7 @@ func TestService_UpdateSessionAddress(t *testing.T) {
 
 	t.Run("ShippingFee_Jakarta", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		mockSession := &CheckoutSession{UserID: &userInt32, Status: CheckoutSessionStatusPending, ExpiresAt: now}
 		mockAddr := &address.Address{ID: uuid.MustParse(addrIDStr), City: "Jakarta"}
 
@@ -949,7 +972,7 @@ func TestService_UpdateSessionAddress(t *testing.T) {
 
 	t.Run("ShippingFee_Other", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		mockSession := &CheckoutSession{UserID: &userInt32, Status: CheckoutSessionStatusPending, ExpiresAt: now}
 		mockAddr := &address.Address{ID: uuid.MustParse(addrIDStr), City: "Bandung"}
 
@@ -973,7 +996,7 @@ func TestService_MarkAsPaid(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockOrder := &Order{
 			Status: OrderStatusPendingPayment,
@@ -989,7 +1012,7 @@ func TestService_MarkAsPaid(t *testing.T) {
 
 	t.Run("AlreadyPaid", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockOrder := &Order{Status: OrderStatusPaid}
 		mockRepo.On("GetByReferenceID", ctx, refID).Return(mockOrder, nil)
@@ -1000,7 +1023,7 @@ func TestService_MarkAsPaid(t *testing.T) {
 
 	t.Run("InvalidTransition_FailedToPaid", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockOrder := &Order{Status: OrderStatusFailed}
 		mockRepo.On("GetByReferenceID", ctx, refID).Return(mockOrder, nil)
@@ -1012,7 +1035,7 @@ func TestService_MarkAsPaid(t *testing.T) {
 
 	t.Run("RepoError_GetOrder", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		mockRepo.On("GetByReferenceID", ctx, refID).Return(nil, errors.New("db error"))
 		err := svc.MarkAsPaid(ctx, refID, payReqID, provID)
 		assert.Error(t, err)
@@ -1020,7 +1043,7 @@ func TestService_MarkAsPaid(t *testing.T) {
 
 	t.Run("RepoError_UpdateStatus", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		mockOrder := &Order{Status: OrderStatusPendingPayment}
 		mockRepo.On("GetByReferenceID", ctx, refID).Return(mockOrder, nil)
 		mockRepo.On("UpdateStatusByReferenceID", ctx, refID, payReqID, provID, "PAID").Return(errors.New("update error"))
@@ -1037,7 +1060,7 @@ func TestService_MarkAsFailed(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockOrder := &Order{
 			Status: OrderStatusPendingPayment,
@@ -1053,7 +1076,7 @@ func TestService_MarkAsFailed(t *testing.T) {
 
 	t.Run("AlreadyFailed", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockOrder := &Order{Status: OrderStatusFailed}
 		mockRepo.On("GetByReferenceID", ctx, refID).Return(mockOrder, nil)
@@ -1064,7 +1087,7 @@ func TestService_MarkAsFailed(t *testing.T) {
 
 	t.Run("InvalidTransition_PaidToFailed", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockOrder := &Order{Status: OrderStatusPaid}
 		mockRepo.On("GetByReferenceID", ctx, refID).Return(mockOrder, nil)
@@ -1085,7 +1108,7 @@ func TestService_GetOrderDetailByExternalID(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockAddrRepo := new(MockAddressRepository)
-		svc := NewService(mockRepo, nil, nil, mockAddrRepo)
+		svc := NewService(mockRepo, nil, nil, mockAddrRepo, nil)
 
 		mockOrder := &Order{ID: 1, ExternalID: extID, UserID: &userInt32, AddressID: addrID}
 		mockAddr := &address.Address{ID: addrID}
@@ -1100,7 +1123,7 @@ func TestService_GetOrderDetailByExternalID(t *testing.T) {
 
 	t.Run("NotFound", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockRepo.On("GetOrderDetailByExternalID", ctx, extID).Return(nil, nil)
 
@@ -1111,7 +1134,7 @@ func TestService_GetOrderDetailByExternalID(t *testing.T) {
 
 	t.Run("Unauthenticated", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		ctx := context.Background()
 
 		mockOrder := &Order{ID: 1, ExternalID: extID}
@@ -1124,7 +1147,7 @@ func TestService_GetOrderDetailByExternalID(t *testing.T) {
 
 	t.Run("Unauthorized_WrongUser", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		otherUser := int32(999)
 		mockOrder := &Order{ID: 1, ExternalID: extID, UserID: &otherUser}
@@ -1142,7 +1165,7 @@ func TestService_CreateSession(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		input := model.CreateCheckoutSessionInput{
 			Items: []*model.CheckoutSessionItemInput{
@@ -1174,7 +1197,7 @@ func TestService_CreateSession(t *testing.T) {
 
 	t.Run("InvalidQuantity", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		input := model.CreateCheckoutSessionInput{
 			Items: []*model.CheckoutSessionItemInput{
@@ -1188,7 +1211,7 @@ func TestService_CreateSession(t *testing.T) {
 
 	t.Run("RepoError_CreateSession", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		input := model.CreateCheckoutSessionInput{
 			Items: []*model.CheckoutSessionItemInput{{VariantID: "var-1", Quantity: 1}},
@@ -1203,7 +1226,7 @@ func TestService_CreateSession(t *testing.T) {
 
 	t.Run("GetVariantError", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		input := model.CreateCheckoutSessionInput{
 			Items: []*model.CheckoutSessionItemInput{{VariantID: "var-1", Quantity: 1}},
 		}
@@ -1222,7 +1245,7 @@ func TestService_GetSession(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockSession := &CheckoutSession{
 			UserID:    &userInt32,
@@ -1239,7 +1262,7 @@ func TestService_GetSession(t *testing.T) {
 
 	t.Run("Expired", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		sessionID := uuid.New()
 		mockSession := &CheckoutSession{
@@ -1259,7 +1282,7 @@ func TestService_GetSession(t *testing.T) {
 
 	t.Run("Forbidden", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		otherUser := int32(999)
 		mockSession := &CheckoutSession{UserID: &otherUser}
@@ -1273,7 +1296,7 @@ func TestService_GetSession(t *testing.T) {
 
 	t.Run("RepoError", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		mockRepo.On("GetCheckoutSession", ctx, externalID).Return(nil, errors.New("db error"))
 
 		_, err := svc.GetSession(ctx, externalID)
@@ -1292,7 +1315,7 @@ func TestService_GetPaymentOrderInfo(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockPayRepo := new(MockPaymentRepository)
 		mockAddrRepo := new(MockAddressRepository)
-		svc := NewService(mockRepo, mockPayRepo, nil, mockAddrRepo)
+		svc := NewService(mockRepo, mockPayRepo, nil, mockAddrRepo, nil)
 
 		mockOrder := &Order{
 			ID:          1,
@@ -1323,7 +1346,7 @@ func TestService_GetPaymentOrderInfo(t *testing.T) {
 	t.Run("PaymentNotFound", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockPayRepo := new(MockPaymentRepository)
-		svc := NewService(mockRepo, mockPayRepo, nil, nil)
+		svc := NewService(mockRepo, mockPayRepo, nil, nil, nil)
 
 		mockOrder := &Order{
 			ID:     1,
@@ -1344,7 +1367,7 @@ func TestService_UpdateSessionAddress_Forbidden(t *testing.T) {
 	addrIDStr := uuid.New().String()
 
 	mockRepo := new(MockRepository)
-	svc := NewService(mockRepo, nil, nil, nil)
+	svc := NewService(mockRepo, nil, nil, nil, nil)
 
 	otherUser := int32(999)
 	mockSession := &CheckoutSession{
@@ -1368,7 +1391,7 @@ func TestService_ConfirmSession_EdgeCases(t *testing.T) {
 
 	t.Run("AddressNotSet", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockSession := &CheckoutSession{
 			UserID:    &userInt32,
@@ -1386,7 +1409,7 @@ func TestService_ConfirmSession_EdgeCases(t *testing.T) {
 
 	t.Run("AlreadyConfirmed", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockSession := &CheckoutSession{
 			UserID: &userInt32,
@@ -1402,7 +1425,7 @@ func TestService_ConfirmSession_EdgeCases(t *testing.T) {
 
 	t.Run("Forbidden_Ownership", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		otherUser := int32(999)
 		mockSession := &CheckoutSession{UserID: &otherUser}
@@ -1416,7 +1439,7 @@ func TestService_ConfirmSession_EdgeCases(t *testing.T) {
 
 	t.Run("NoItems", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 
 		mockSession := &CheckoutSession{
 			UserID:    &userInt32,
@@ -1435,7 +1458,7 @@ func TestService_ConfirmSession_EdgeCases(t *testing.T) {
 
 	t.Run("RepoError_Confirm", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		addrID := uuid.New()
 		mockSession := &CheckoutSession{UserID: &userInt32, Status: CheckoutSessionStatusPending, ExpiresAt: now, AddressID: &addrID, Items: []CheckoutSessionItem{{VariantID: "v1", Quantity: 1}}}
 
@@ -1450,7 +1473,7 @@ func TestService_ConfirmSession_EdgeCases(t *testing.T) {
 
 	t.Run("RepoError_GetSession", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		mockRepo.On("GetCheckoutSession", ctx, externalID).Return(nil, errors.New("db error"))
 		_, err := svc.ConfirmSession(ctx, externalID)
 		assert.Error(t, err)
@@ -1458,7 +1481,7 @@ func TestService_ConfirmSession_EdgeCases(t *testing.T) {
 
 	t.Run("RepoError_ValidateStock", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
+		svc := NewService(mockRepo, nil, nil, nil, nil)
 		addrID := uuid.New()
 		mockSession := &CheckoutSession{UserID: &userInt32, Status: CheckoutSessionStatusPending, ExpiresAt: now, AddressID: &addrID, Items: []CheckoutSessionItem{{VariantID: "v1", Quantity: 1}}}
 
@@ -1474,7 +1497,7 @@ func TestService_ConfirmSession_EdgeCases(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockPayGate := new(MockPaymentGateway)
 		mockPayRepo := new(MockPaymentRepository)
-		svc := NewService(mockRepo, mockPayRepo, mockPayGate, nil)
+		svc := NewService(mockRepo, mockPayRepo, mockPayGate, nil, nil)
 		addrID := uuid.New()
 		mockSession := &CheckoutSession{UserID: &userInt32, Status: CheckoutSessionStatusPending, ExpiresAt: now, AddressID: &addrID, Items: []CheckoutSessionItem{{VariantID: "v1", Quantity: 1}}}
 
@@ -1492,10 +1515,9 @@ func TestService_ConfirmSession_EdgeCases(t *testing.T) {
 func TestService_OrderToPaymentProcess_GatewayError(t *testing.T) {
 	mockRepo := new(MockRepository)
 	mockPayGate := new(MockPaymentGateway)
-	svc := NewService(mockRepo, nil, mockPayGate, nil)
+	svc := NewService(mockRepo, nil, mockPayGate, nil, nil)
 
 	ctx := context.Background()
-	sessionExtID := "sess-ext-1"
 	orderExtID := "ord-ext-1"
 	orderID := uint(1)
 
@@ -1504,34 +1526,20 @@ func TestService_OrderToPaymentProcess_GatewayError(t *testing.T) {
 		Items:      []CheckoutSessionItem{{ProductName: "P1", VariantName: "V1", Quantity: 1, Price: 10000}},
 	}
 
-	mockRepo.On("GetCheckoutSession", mock.Anything, sessionExtID).Return(mockSession, nil)
-	mockPayGate.On("CreateInvoice", orderExtID, "userName", int64(10000), mock.Anything, mock.Anything, payment.ChannelCode(payment.MethodBCAVA)).Return(nil, errors.New("gateway error"))
+	mockPayGate.On("CreateInvoice", orderExtID, "Guest", int64(10000), mock.Anything, mock.Anything, payment.ChannelCode(payment.MethodBCAVA)).Return(nil, errors.New("gateway error"))
 
-	_, err := svc.OrderToPaymentProcess(ctx, sessionExtID, orderExtID, orderID)
+	_, err := svc.OrderToPaymentProcess(ctx, mockSession, orderExtID, orderID)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create payment invoice")
-}
-
-func TestService_OrderToPaymentProcess_SessionError(t *testing.T) {
-	mockRepo := new(MockRepository)
-	svc := NewService(mockRepo, nil, nil, nil)
-	ctx := context.Background()
-
-	mockRepo.On("GetCheckoutSession", mock.Anything, "sess-ext").Return(nil, errors.New("db error"))
-
-	_, err := svc.OrderToPaymentProcess(ctx, "sess-ext", "ord-ext", 1)
-	assert.Error(t, err)
-	assert.Equal(t, "db error", err.Error())
 }
 
 func TestService_OrderToPaymentProcess_SavePaymentError(t *testing.T) {
 	mockRepo := new(MockRepository)
 	mockPayRepo := new(MockPaymentRepository)
 	mockPayGate := new(MockPaymentGateway)
-	svc := NewService(mockRepo, mockPayRepo, mockPayGate, nil)
+	svc := NewService(mockRepo, mockPayRepo, mockPayGate, nil, nil)
 
 	ctx := context.Background()
-	sessionExtID := "sess-ext-1"
 	orderExtID := "ord-ext-1"
 	orderID := uint(1)
 
@@ -1541,18 +1549,17 @@ func TestService_OrderToPaymentProcess_SavePaymentError(t *testing.T) {
 	}
 	mockPayResp := &payment.PaymentResponse{ProviderPaymentID: "pay-1", Status: "PENDING"}
 
-	mockRepo.On("GetCheckoutSession", mock.Anything, sessionExtID).Return(mockSession, nil)
-	mockPayGate.On("CreateInvoice", orderExtID, "userName", int64(10000), mock.Anything, mock.Anything, payment.ChannelCode(payment.MethodBCAVA)).Return(mockPayResp, nil)
+	mockPayGate.On("CreateInvoice", orderExtID, "Guest", int64(10000), mock.Anything, mock.Anything, payment.ChannelCode(payment.MethodBCAVA)).Return(mockPayResp, nil)
 	mockPayRepo.On("SavePayment", ctx, mock.Anything).Return(errors.New("db error"))
 
-	_, err := svc.OrderToPaymentProcess(ctx, sessionExtID, orderExtID, orderID)
+	_, err := svc.OrderToPaymentProcess(ctx, mockSession, orderExtID, orderID)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to save payment")
 }
 
 func TestService_GetPaymentOrderInfo_Forbidden(t *testing.T) {
 	mockRepo := new(MockRepository)
-	svc := NewService(mockRepo, nil, nil, nil)
+	svc := NewService(mockRepo, nil, nil, nil, nil)
 	ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
 
 	otherUser := int32(999)
@@ -1568,7 +1575,7 @@ func TestService_GetPaymentOrderInfo_AddressError(t *testing.T) {
 	mockRepo := new(MockRepository)
 	mockPayRepo := new(MockPaymentRepository)
 	mockAddrRepo := new(MockAddressRepository)
-	svc := NewService(mockRepo, mockPayRepo, nil, mockAddrRepo)
+	svc := NewService(mockRepo, mockPayRepo, nil, mockAddrRepo, nil)
 	ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
 
 	userID := int32(1)
