@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,6 +41,15 @@ func TestRepository_Create(t *testing.T) {
 	t.Run("DBError", func(t *testing.T) {
 		mock.ExpectQuery(`INSERT INTO users`).
 			WillReturnError(errors.New("db error"))
+
+		_, err := repo.Create(ctx, email, password, role)
+		assert.Error(t, err)
+	})
+
+	t.Run("ScanError", func(t *testing.T) {
+		// Return fewer columns than expected to trigger Scan error
+		mock.ExpectQuery(`INSERT INTO users`).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
 		_, err := repo.Create(ctx, email, password, role)
 		assert.Error(t, err)
@@ -88,6 +99,16 @@ func TestRepository_FindByEmail(t *testing.T) {
 		_, err := repo.FindByEmail(ctx, email)
 		assert.Error(t, err)
 	})
+
+	t.Run("ScanError", func(t *testing.T) {
+		// Return fewer columns than expected
+		mock.ExpectQuery(`SELECT .* FROM users`).
+			WithArgs(email).
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+		_, err := repo.FindByEmail(ctx, email)
+		assert.Error(t, err)
+	})
 }
 
 func TestRepository_UpdatePassword(t *testing.T) {
@@ -117,5 +138,125 @@ func TestRepository_UpdatePassword(t *testing.T) {
 		err := repo.UpdatePassword(ctx, email, newPassword)
 		assert.Error(t, err)
 		assert.Equal(t, sql.ErrNoRows, err)
+	})
+
+	t.Run("DBError", func(t *testing.T) {
+		mock.ExpectExec("UPDATE users SET password = \\$1 WHERE email = \\$2").
+			WithArgs(newPassword, email).
+			WillReturnError(errors.New("exec error"))
+
+		err := repo.UpdatePassword(ctx, email, newPassword)
+		assert.Error(t, err)
+		assert.Equal(t, "exec error", err.Error())
+	})
+}
+
+func TestRepository_GetProfile(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRepository(db)
+	ctx := context.Background()
+	userID := uint(1)
+
+	t.Run("Success", func(t *testing.T) {
+		rows := sqlmock.NewRows([]string{
+			"id", "user_id", "full_name", "bio", "avatar_url", "phone", "date_of_birth", "created_at", "updated_at",
+		}).AddRow(
+			uuid.New(), userID, "John Doe", "Bio", "http://avatar", "123456", time.Now(), time.Now(), time.Now(),
+		)
+
+		mock.ExpectQuery(`SELECT id, user_id, full_name, bio, avatar_url, phone, date_of_birth, created_at, updated_at FROM profiles WHERE user_id = \$1`).
+			WithArgs(userID).
+			WillReturnRows(rows)
+
+		p, err := repo.GetProfile(ctx, userID)
+		assert.NoError(t, err)
+		assert.NotNil(t, p)
+		assert.Equal(t, userID, p.UserID)
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		mock.ExpectQuery(`SELECT .* FROM profiles`).
+			WithArgs(userID).
+			WillReturnError(sql.ErrNoRows)
+
+		_, err := repo.GetProfile(ctx, userID)
+		assert.Error(t, err)
+		assert.Equal(t, ErrProfileNotFound, err)
+	})
+
+	t.Run("DBError", func(t *testing.T) {
+		mock.ExpectQuery(`SELECT .* FROM profiles`).
+			WithArgs(userID).
+			WillReturnError(errors.New("db error"))
+
+		_, err := repo.GetProfile(ctx, userID)
+		assert.Error(t, err)
+	})
+}
+
+func TestRepository_CreateProfile(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRepository(db)
+	ctx := context.Background()
+	userID := uint(1)
+	profile := &Profile{UserID: userID}
+
+	t.Run("Success", func(t *testing.T) {
+		mock.ExpectQuery(`INSERT INTO profiles \(user_id, full_name, bio, avatar_url, phone, date_of_birth\) VALUES \(\$1, \$2, \$3, \$4, \$5, \$6\) RETURNING id, created_at, updated_at`).
+			WithArgs(userID, nil, nil, nil, nil, nil).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).
+				AddRow(uuid.New(), time.Now(), time.Now()))
+
+		p, err := repo.CreateProfile(ctx, profile)
+		assert.NoError(t, err)
+		assert.NotNil(t, p)
+	})
+
+	t.Run("DBError", func(t *testing.T) {
+		mock.ExpectQuery(`INSERT INTO profiles`).
+			WillReturnError(errors.New("db error"))
+
+		_, err := repo.CreateProfile(ctx, profile)
+		assert.Error(t, err)
+	})
+}
+
+func TestRepository_UpdateProfile(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := NewRepository(db)
+	ctx := context.Background()
+	userID := uint(1)
+	name := "Updated Name"
+	profile := &Profile{UserID: userID, FullName: &name}
+
+	t.Run("Success", func(t *testing.T) {
+		mock.ExpectQuery(`UPDATE profiles SET full_name = COALESCE\(\$2, full_name\), .* WHERE user_id = \$1 RETURNING id, full_name, bio, avatar_url, phone, date_of_birth, created_at, updated_at`).
+			WithArgs(userID, &name, nil, nil, nil, nil).
+			WillReturnRows(sqlmock.NewRows([]string{
+				"id", "full_name", "bio", "avatar_url", "phone", "date_of_birth", "created_at", "updated_at",
+			}).AddRow(
+				uuid.New(), name, nil, nil, nil, nil, time.Now(), time.Now(),
+			))
+
+		p, err := repo.UpdateProfile(ctx, profile)
+		assert.NoError(t, err)
+		assert.Equal(t, name, *p.FullName)
+	})
+
+	t.Run("DBError", func(t *testing.T) {
+		mock.ExpectQuery(`UPDATE profiles`).
+			WillReturnError(errors.New("db error"))
+
+		_, err := repo.UpdateProfile(ctx, profile)
+		assert.Error(t, err)
 	})
 }
