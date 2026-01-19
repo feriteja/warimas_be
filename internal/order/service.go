@@ -30,7 +30,7 @@ type Service interface {
 	) ([]*Order, int64, map[uuid.UUID][]address.Address, error)
 	GetOrderDetail(ctx context.Context, orderID uint) (*Order, *address.Address, error)
 	GetOrderDetailByExternalID(ctx context.Context, externalId string) (*Order, *address.Address, error)
-	UpdateOrderStatus(orderID uint, status OrderStatus) error
+	UpdateOrderStatus(ctx context.Context, orderID uint, status OrderStatus) error
 	MarkAsPaid(ctx context.Context, referenceID, paymentRequestID, paymentProviderID string) error
 	MarkAsFailed(ctx context.Context, referenceID, paymentRequestID, paymentProviderID string) error
 	CreateSession(
@@ -56,6 +56,10 @@ type Service interface {
 		ctx context.Context,
 		externalID string,
 	) (*PaymentOrderInfoResponse, error)
+	GetOrderForWebhook(
+		ctx context.Context,
+		externalID string,
+	) (*Order, error)
 }
 
 type service struct {
@@ -163,7 +167,7 @@ func (s *service) OrderToPaymentProcess(ctx context.Context, sessionExternalID s
 		ExpireAt:          payResp.ExpirationTime,
 	}
 
-	err = s.paymentRepo.SavePayment(p)
+	err = s.paymentRepo.SavePayment(ctx, p)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save payment: %w", err)
 	}
@@ -406,21 +410,85 @@ func (s *service) GetOrderDetailByExternalID(
 }
 
 // ✅ Update order status (admin only)
-func (s *service) UpdateOrderStatus(orderID uint, status OrderStatus) error {
-	validStatuses := map[OrderStatus]bool{
-		OrderStatusPendingPayment: true,
-		OrderStatusPaid:           true,
-		OrderStatusAccepted:       true,
-		OrderStatusShipped:        true,
-		OrderStatusCompleted:      true,
-		OrderStatusCancelled:      true,
+func (s *service) UpdateOrderStatus(ctx context.Context, orderID uint, status OrderStatus) error {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "UpdateOrderStatus"),
+		zap.Uint("order_id", orderID),
+		zap.String("new_status", string(status)),
+	)
+
+	log.Info("update order status started")
+
+	// 1. Fetch current order
+	order, err := s.repo.GetOrderDetail(ctx, orderID)
+	if err != nil {
+		log.Error("failed to fetch order detail", zap.Error(err))
+		return err
+	}
+	if order == nil {
+		log.Warn("order not found")
+		return ErrOrderNotFound
 	}
 
-	if !validStatuses[status] {
-		return fmt.Errorf("invalid status: %s", status)
+	current := order.Status
+	log = log.With(zap.String("current_status", string(current)))
+
+	// Rule 4 & Terminal check: Cannot change status if already completed, cancelled or failed
+	if current == OrderStatusCompleted || current == OrderStatusCancelled || current == OrderStatusFailed {
+		log.Warn("cannot update order with terminal status")
+		return fmt.Errorf("cannot update order with terminal status: %s", current)
 	}
 
-	return s.repo.UpdateOrderStatus(orderID, status)
+	// Rule 6: FAILED is free (can transition TO failed from any non-terminal state)
+	if status == OrderStatusFailed {
+		log.Info("transitioning to FAILED status")
+		if err := s.repo.UpdateOrderStatus(ctx, orderID, status, nil); err != nil {
+			log.Error("failed to update order status to FAILED", zap.Error(err))
+			return err
+		}
+		log.Info("order status updated to FAILED successfully")
+		return nil
+	}
+
+	// Allowed transitions map (Rule 1, 5)
+	allowed := map[OrderStatus]map[OrderStatus]bool{
+		OrderStatusPendingPayment: {
+			OrderStatusPaid:      true,
+			OrderStatusCancelled: true,
+		},
+		OrderStatusPaid: {
+			OrderStatusAccepted:  true,
+			OrderStatusCancelled: true,
+		},
+		OrderStatusAccepted: {
+			OrderStatusShipped:   true,
+			OrderStatusCancelled: true,
+		},
+		OrderStatusShipped: {
+			OrderStatusCompleted: true,
+		},
+	}
+
+	if targets, ok := allowed[current]; !ok || !targets[status] {
+		log.Warn("invalid status transition")
+		return fmt.Errorf("invalid status transition from %s to %s", current, status)
+	}
+
+	var invoiceNumber *string
+	if status == OrderStatusAccepted {
+		inv := utils.GenerateInvoiceNumber()
+		invoiceNumber = &inv
+		log.Info("generated invoice number", zap.String("invoice_number", inv))
+	}
+
+	if err := s.repo.UpdateOrderStatus(ctx, orderID, status, invoiceNumber); err != nil {
+		log.Error("failed to update order status", zap.Error(err))
+		return err
+	}
+
+	log.Info("order status updated successfully")
+	return nil
 }
 
 func (s *service) MarkAsPaid(
@@ -882,7 +950,7 @@ func (s *service) GetPaymentOrderInfo(
 		}
 	}
 
-	paymentData, err := s.paymentRepo.GetPaymentByOrder(uint(order.ID))
+	paymentData, err := s.paymentRepo.GetPaymentByOrder(ctx, uint(order.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -926,4 +994,11 @@ func (s *service) GetPaymentOrderInfo(
 	}
 
 	return paymentInfo, nil
+}
+
+func (s *service) GetOrderForWebhook(
+	ctx context.Context,
+	externalID string,
+) (*Order, error) {
+	return s.repo.GetOrderByExternalID(ctx, externalID)
 }

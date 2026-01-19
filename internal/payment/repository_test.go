@@ -39,7 +39,7 @@ func TestRepository_SavePayment(t *testing.T) {
 			).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
-		err := repo.SavePayment(p)
+		err := repo.SavePayment(context.Background(), p)
 		assert.NoError(t, err)
 	})
 
@@ -47,7 +47,7 @@ func TestRepository_SavePayment(t *testing.T) {
 		mock.ExpectExec(`INSERT INTO payments`).
 			WillReturnError(errors.New("database error"))
 
-		err := repo.SavePayment(p)
+		err := repo.SavePayment(context.Background(), p)
 		assert.Error(t, err)
 	})
 }
@@ -66,7 +66,7 @@ func TestRepository_UpdatePaymentStatus(t *testing.T) {
 			WithArgs(status, extID).
 			WillReturnResult(sqlmock.NewResult(0, 1))
 
-		err := repo.UpdatePaymentStatus(extID, status)
+		err := repo.UpdatePaymentStatus(context.Background(), extID, status)
 		assert.NoError(t, err)
 	})
 
@@ -75,7 +75,7 @@ func TestRepository_UpdatePaymentStatus(t *testing.T) {
 			WithArgs(status, extID).
 			WillReturnError(errors.New("db error"))
 
-		err := repo.UpdatePaymentStatus(extID, status)
+		err := repo.UpdatePaymentStatus(context.Background(), extID, status)
 		assert.Error(t, err)
 	})
 }
@@ -97,7 +97,7 @@ func TestRepository_SavePaymentWebhook(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		mock.ExpectQuery(`INSERT INTO payment_webhooks`).
-			WithArgs(provider, eventID, eventType, extID, valid, payload).
+			WithArgs(provider, eventType, eventID, extID, valid, payload).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(10))
 
 		id, isDup, err := repo.SavePaymentWebhook(ctx, provider, eventID, eventType, extID, payload, valid)
@@ -109,7 +109,7 @@ func TestRepository_SavePaymentWebhook(t *testing.T) {
 	t.Run("Duplicate", func(t *testing.T) {
 		// Simulate ON CONFLICT DO NOTHING returning no rows
 		mock.ExpectQuery(`INSERT INTO payment_webhooks`).
-			WithArgs(provider, eventID, eventType, extID, valid, payload).
+			WithArgs(provider, eventType, eventID, extID, valid, payload).
 			WillReturnError(sql.ErrNoRows)
 
 		id, isDup, err := repo.SavePaymentWebhook(ctx, provider, eventID, eventType, extID, payload, valid)
@@ -196,7 +196,7 @@ func TestRepository_GetPaymentByOrder(t *testing.T) {
 			WithArgs(orderID).
 			WillReturnRows(rows)
 
-		payment, err := repo.GetPaymentByOrder(orderID)
+		payment, err := repo.GetPaymentByOrder(context.Background(), orderID)
 		assert.NoError(t, err)
 		assert.NotNil(t, payment)
 		assert.Equal(t, orderID, payment.OrderID)
@@ -206,7 +206,7 @@ func TestRepository_GetPaymentByOrder(t *testing.T) {
 		mock.ExpectQuery(`SELECT .* FROM payments`).
 			WillReturnError(errors.New("connection refused"))
 
-		_, err := repo.GetPaymentByOrder(orderID)
+		_, err := repo.GetPaymentByOrder(context.Background(), orderID)
 		assert.Error(t, err)
 	})
 
@@ -215,7 +215,7 @@ func TestRepository_GetPaymentByOrder(t *testing.T) {
 			WithArgs(orderID).
 			WillReturnError(sql.ErrNoRows)
 
-		p, err := repo.GetPaymentByOrder(orderID)
+		p, err := repo.GetPaymentByOrder(context.Background(), orderID)
 		assert.Error(t, err)
 		assert.Nil(t, p)
 		assert.Equal(t, sql.ErrNoRows, err)

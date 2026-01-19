@@ -706,14 +706,25 @@ func TestRepository_UpdateOrderStatus(t *testing.T) {
 	defer db.Close()
 
 	repo := NewRepository(db)
+	ctx := context.Background()
 	orderID := uint(1)
 
 	t.Run("Success", func(t *testing.T) {
-		mock.ExpectExec(`UPDATE orders SET status = \$1 WHERE id = \$2`).
+		mock.ExpectExec(`UPDATE orders SET status = \$1, updated_at = NOW\(\) WHERE id = \$2`).
 			WithArgs(OrderStatusPaid, orderID).
 			WillReturnResult(sqlmock.NewResult(0, 1))
 
-		err := repo.UpdateOrderStatus(orderID, OrderStatusPaid)
+		err := repo.UpdateOrderStatus(ctx, orderID, OrderStatusPaid, nil)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Success_WithInvoice", func(t *testing.T) {
+		inv := "INV-123"
+		mock.ExpectExec(`UPDATE orders SET status = \$1, invoice_number = \$2, updated_at = NOW\(\) WHERE id = \$3`).
+			WithArgs(OrderStatusAccepted, inv, orderID).
+			WillReturnResult(sqlmock.NewResult(0, 1))
+
+		err := repo.UpdateOrderStatus(ctx, orderID, OrderStatusAccepted, &inv)
 		assert.NoError(t, err)
 	})
 }

@@ -36,7 +36,7 @@ type Repository interface {
 	) (int64, error)
 	GetOrderDetail(ctx context.Context, orderID uint) (*Order, error)
 	GetOrderDetailByExternalID(ctx context.Context, external string) (*Order, error)
-	UpdateOrderStatus(orderID uint, status OrderStatus) error
+	UpdateOrderStatus(ctx context.Context, orderID uint, status OrderStatus, invoiceNumber *string) error
 	UpdateStatusByReferenceID(ctx context.Context, referenceID, ExternalReference, paymentProviderID, status string) error
 	GetByReferenceID(ctx context.Context, referenceID string) (*Order, error)
 	GetOrderBySessionID(
@@ -591,15 +591,36 @@ func (r *repository) GetOrderDetailByExternalID(
 }
 
 // ✅ Admin: Update order status
-func (r *repository) UpdateOrderStatus(orderID uint, status OrderStatus) error {
-	res, err := r.db.Exec(`UPDATE orders SET status = $1 WHERE id = $2`, status, orderID)
+func (r *repository) UpdateOrderStatus(ctx context.Context, orderID uint, status OrderStatus, invoiceNumber *string) error {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "UpdateOrderStatus"),
+		zap.Uint("order_id", orderID),
+		zap.String("status", string(status)),
+	)
+
+	var res sql.Result
+	var err error
+
+	if invoiceNumber != nil {
+		log.Debug("updating status with invoice number", zap.String("invoice_number", *invoiceNumber))
+		res, err = r.db.ExecContext(ctx, `UPDATE orders SET status = $1, invoice_number = $2, updated_at = NOW() WHERE id = $3`, status, *invoiceNumber, orderID)
+	} else {
+		log.Debug("updating status without invoice number")
+		res, err = r.db.ExecContext(ctx, `UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2`, status, orderID)
+	}
+
 	if err != nil {
+		log.Error("failed to execute update query", zap.Error(err))
 		return err
 	}
 	rowsAffected, _ := res.RowsAffected()
 	if rowsAffected == 0 {
+		log.Warn("order not found or no change")
 		return fmt.Errorf("order not found")
 	}
+
+	log.Info("order status updated in db", zap.Int64("rows_affected", rowsAffected))
 	return nil
 }
 

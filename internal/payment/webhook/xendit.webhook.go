@@ -60,6 +60,10 @@ func (h *Handler) PaymentWebhookHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	jsonPayload, err := json.Marshal(payload)
+
+	log.Info("jsonpayload", zap.Any("payload", json.RawMessage(jsonPayload)))
+
 	// 4. Derive event ID (Xendit sometimes lacks one)
 	eventID := payload.Event + ":" + payload.Data.PaymentID + ":" + payload.Data.Created
 
@@ -123,7 +127,7 @@ func (h *Handler) processPaymentEvent(
 	)
 
 	// Lock payment/order row
-	order, err := h.OrderSvc.GetPaymentOrderInfo(ctx, ref)
+	order, err := h.OrderSvc.GetOrderForWebhook(ctx, ref)
 	if err != nil {
 		log.Error("failed to fetch order payment info",
 			zap.String("reference_id", ref),
@@ -137,7 +141,7 @@ func (h *Handler) processPaymentEvent(
 		log.Error("payment amount mismatch",
 			zap.String("reference_id", ref),
 			zap.Int64("webhook_amount", payload.Data.RequestAmount),
-			zap.Int("db_amount", order.TotalAmount),
+			zap.Uint("db_amount", order.TotalAmount),
 		)
 		return fmt.Errorf(
 			"amount mismatch: webhook=%d db=%d",
@@ -169,14 +173,14 @@ func (h *Handler) processPaymentEvent(
 		if order.Status == "PAID" {
 			log.Info("order already paid, skipping",
 				zap.String("reference_id", ref),
-				zap.String("OrderExternalID", order.OrderExternalID),
+				zap.String("OrderExternalID", order.ExternalID),
 			)
 			return nil
 		}
 
 		log.Info("marking order as PAID",
 			zap.String("reference_id", ref),
-			zap.String("order_id", order.OrderExternalID),
+			zap.String("order_id", order.ExternalID),
 		)
 
 		return h.OrderSvc.MarkAsPaid(
@@ -190,14 +194,14 @@ func (h *Handler) processPaymentEvent(
 		if order.Status == "PAID" {
 			log.Error("invalid payment state transition PAID -> FAILED",
 				zap.String("reference_id", ref),
-				zap.String("order_id", order.OrderExternalID),
+				zap.String("order_id", order.ExternalID),
 			)
 			return fmt.Errorf("invalid transition PAID -> FAILED")
 		}
 
 		log.Info("marking order as FAILED",
 			zap.String("reference_id", ref),
-			zap.String("order_id", order.OrderExternalID),
+			zap.String("order_id", order.ExternalID),
 		)
 
 		return h.OrderSvc.MarkAsFailed(

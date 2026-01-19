@@ -80,8 +80,8 @@ func (m *MockRepository) GetOrderDetailByExternalID(ctx context.Context, externa
 	}
 	return args.Get(0).(*Order), args.Error(1)
 }
-func (m *MockRepository) UpdateOrderStatus(orderID uint, status OrderStatus) error {
-	args := m.Called(orderID, status)
+func (m *MockRepository) UpdateOrderStatus(ctx context.Context, orderID uint, status OrderStatus, invoiceNumber *string) error {
+	args := m.Called(ctx, orderID, status, invoiceNumber)
 	return args.Error(0)
 }
 func (m *MockRepository) GetByReferenceID(ctx context.Context, refID string) (*Order, error) {
@@ -185,16 +185,16 @@ type MockPaymentRepository struct {
 	mock.Mock
 }
 
-func (m *MockPaymentRepository) SavePayment(p *payment.Payment) error {
-	args := m.Called(p)
+func (m *MockPaymentRepository) SavePayment(ctx context.Context, p *payment.Payment) error {
+	args := m.Called(ctx, p)
 	return args.Error(0)
 }
-func (m *MockPaymentRepository) UpdatePaymentStatus(externalID, status string) error {
-	args := m.Called(externalID, status)
+func (m *MockPaymentRepository) UpdatePaymentStatus(ctx context.Context, externalID, status string) error {
+	args := m.Called(ctx, externalID, status)
 	return args.Error(0)
 }
-func (m *MockPaymentRepository) GetPaymentByOrder(orderID uint) (*payment.Payment, error) {
-	args := m.Called(orderID)
+func (m *MockPaymentRepository) GetPaymentByOrder(ctx context.Context, orderID uint) (*payment.Payment, error) {
+	args := m.Called(ctx, orderID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -592,39 +592,116 @@ func TestService_GetOrders(t *testing.T) {
 
 func TestService_UpdateOrderStatus(t *testing.T) {
 	orderID := uint(100)
-	status := OrderStatusPaid
+	ctx := context.Background()
 
-	t.Run("Success", func(t *testing.T) {
+	tests := []struct {
+		name          string
+		currentStatus OrderStatus
+		newStatus     OrderStatus
+		expectError   bool
+		errorMsg      string
+	}{
+		// --- Success Cases ---
+		{"Pending -> Paid", OrderStatusPendingPayment, OrderStatusPaid, false, ""},
+		{"Pending -> Cancelled", OrderStatusPendingPayment, OrderStatusCancelled, false, ""},
+		{"Pending -> Failed", OrderStatusPendingPayment, OrderStatusFailed, false, ""},
+
+		{"Paid -> Accepted", OrderStatusPaid, OrderStatusAccepted, false, ""},
+		{"Paid -> Cancelled", OrderStatusPaid, OrderStatusCancelled, false, ""},
+		{"Paid -> Failed", OrderStatusPaid, OrderStatusFailed, false, ""},
+
+		{"Accepted -> Shipped", OrderStatusAccepted, OrderStatusShipped, false, ""},
+		{"Accepted -> Cancelled", OrderStatusAccepted, OrderStatusCancelled, false, ""},
+		{"Accepted -> Failed", OrderStatusAccepted, OrderStatusFailed, false, ""},
+
+		{"Shipped -> Completed", OrderStatusShipped, OrderStatusCompleted, false, ""},
+		{"Shipped -> Failed", OrderStatusShipped, OrderStatusFailed, false, ""},
+
+		// --- Invalid Transitions (Jumps) ---
+		{"Pending -> Accepted", OrderStatusPendingPayment, OrderStatusAccepted, true, "invalid status transition"},
+		{"Pending -> Shipped", OrderStatusPendingPayment, OrderStatusShipped, true, "invalid status transition"},
+		{"Pending -> Completed", OrderStatusPendingPayment, OrderStatusCompleted, true, "invalid status transition"},
+
+		{"Paid -> Shipped", OrderStatusPaid, OrderStatusShipped, true, "invalid status transition"},
+		{"Paid -> Completed", OrderStatusPaid, OrderStatusCompleted, true, "invalid status transition"},
+
+		{"Accepted -> Completed", OrderStatusAccepted, OrderStatusCompleted, true, "invalid status transition"},
+
+		// --- Invalid Transitions (Backward) ---
+		{"Paid -> Pending", OrderStatusPaid, OrderStatusPendingPayment, true, "invalid status transition"},
+		{"Accepted -> Paid", OrderStatusAccepted, OrderStatusPaid, true, "invalid status transition"},
+		{"Shipped -> Accepted", OrderStatusShipped, OrderStatusAccepted, true, "invalid status transition"},
+
+		// --- Specific Rules ---
+		// Rule 3: status can't be canceled/backward once it's been shipped
+		{"Shipped -> Cancelled", OrderStatusShipped, OrderStatusCancelled, true, "invalid status transition"},
+
+		// --- Terminal Statuses (Rule 4 & 7) ---
+		{"Completed -> Failed", OrderStatusCompleted, OrderStatusFailed, true, "terminal status"},
+		{"Completed -> Pending", OrderStatusCompleted, OrderStatusPendingPayment, true, "terminal status"},
+
+		{"Cancelled -> Paid", OrderStatusCancelled, OrderStatusPaid, true, "terminal status"},
+		{"Cancelled -> Failed", OrderStatusCancelled, OrderStatusFailed, true, "terminal status"},
+
+		{"Failed -> Paid", OrderStatusFailed, OrderStatusPaid, true, "terminal status"},
+		{"Failed -> Pending", OrderStatusFailed, OrderStatusPendingPayment, true, "terminal status"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRepo := new(MockRepository)
+			svc := NewService(mockRepo, nil, nil, nil)
+
+			mockOrder := &Order{Status: tt.currentStatus}
+			mockRepo.On("GetOrderDetail", ctx, orderID).Return(mockOrder, nil)
+
+			if !tt.expectError {
+				var invMatcher interface{}
+				if tt.newStatus == OrderStatusAccepted {
+					invMatcher = mock.AnythingOfType("*string")
+				} else {
+					invMatcher = (*string)(nil)
+				}
+				mockRepo.On("UpdateOrderStatus", ctx, orderID, tt.newStatus, invMatcher).Return(nil)
+			}
+
+			err := svc.UpdateOrderStatus(ctx, orderID, tt.newStatus)
+
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errorMsg)
+			} else {
+				assert.NoError(t, err)
+			}
+			mockRepo.AssertExpectations(t)
+		})
+	}
+
+	t.Run("OrderNotFound", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewService(mockRepo, nil, nil, nil)
-
-		mockRepo.On("UpdateOrderStatus", orderID, status).Return(nil)
-
-		err := svc.UpdateOrderStatus(orderID, status)
-		assert.NoError(t, err)
-		mockRepo.AssertExpectations(t)
-	})
-
-	t.Run("InvalidStatus", func(t *testing.T) {
-		mockRepo := new(MockRepository)
-		svc := NewService(mockRepo, nil, nil, nil)
-
-		err := svc.UpdateOrderStatus(orderID, "INVALID_STATUS")
+		mockRepo.On("GetOrderDetail", ctx, orderID).Return(nil, nil) // nil order
+		err := svc.UpdateOrderStatus(ctx, orderID, OrderStatusPaid)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid status")
+		assert.Equal(t, ErrOrderNotFound, err)
 	})
 
-	t.Run("RepoError", func(t *testing.T) {
+	t.Run("RepoError_GetOrder", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewService(mockRepo, nil, nil, nil)
+		mockRepo.On("GetOrderDetail", ctx, orderID).Return(nil, errors.New("db error"))
+		err := svc.UpdateOrderStatus(ctx, orderID, OrderStatusPaid)
+		assert.Error(t, err)
+	})
 
-		mockRepo.On("UpdateOrderStatus", orderID, status).Return(errors.New("db error"))
-
-		err := svc.UpdateOrderStatus(orderID, status)
-		if assert.Error(t, err) {
-			assert.Equal(t, "db error", err.Error())
-		}
-		mockRepo.AssertExpectations(t)
+	t.Run("RepoError_Update", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := NewService(mockRepo, nil, nil, nil)
+		mockOrder := &Order{Status: OrderStatusPendingPayment}
+		mockRepo.On("GetOrderDetail", ctx, orderID).Return(mockOrder, nil)
+		mockRepo.On("UpdateOrderStatus", ctx, orderID, OrderStatusPaid, (*string)(nil)).Return(errors.New("update error"))
+		err := svc.UpdateOrderStatus(ctx, orderID, OrderStatusPaid)
+		assert.Error(t, err)
 	})
 }
 
@@ -678,7 +755,7 @@ func TestService_ConfirmSession(t *testing.T) {
 		mockPayGate.On("CreateInvoice", mock.AnythingOfType("string"), "userName", int64(50000), "test@example.com", mock.Anything, payment.ChannelCode(payment.MethodBCAVA)).Return(mockPayResp, nil)
 
 		// 6. Save Payment
-		mockPayRepo.On("SavePayment", mock.AnythingOfType("*payment.Payment")).Return(nil)
+		mockPayRepo.On("SavePayment", ctx, mock.AnythingOfType("*payment.Payment")).Return(nil)
 
 		res, err := svc.ConfirmSession(ctx, externalID)
 
@@ -1235,7 +1312,7 @@ func TestService_GetPaymentOrderInfo(t *testing.T) {
 		}
 
 		mockRepo.On("GetOrderByExternalID", ctx, externalID).Return(mockOrder, nil)
-		mockPayRepo.On("GetPaymentByOrder", uint(1)).Return(mockPayment, nil)
+		mockPayRepo.On("GetPaymentByOrder", ctx, uint(1)).Return(mockPayment, nil)
 		mockAddrRepo.On("GetByID", ctx, addrID).Return(mockAddr, nil)
 
 		res, err := svc.GetPaymentOrderInfo(ctx, externalID)
@@ -1253,7 +1330,7 @@ func TestService_GetPaymentOrderInfo(t *testing.T) {
 			UserID: &userInt32,
 		}
 		mockRepo.On("GetOrderByExternalID", ctx, externalID).Return(mockOrder, nil)
-		mockPayRepo.On("GetPaymentByOrder", uint(1)).Return(nil, errors.New("payment not found"))
+		mockPayRepo.On("GetPaymentByOrder", ctx, uint(1)).Return(nil, errors.New("payment not found"))
 
 		_, err := svc.GetPaymentOrderInfo(ctx, externalID)
 		assert.Error(t, err)
@@ -1466,7 +1543,7 @@ func TestService_OrderToPaymentProcess_SavePaymentError(t *testing.T) {
 
 	mockRepo.On("GetCheckoutSession", mock.Anything, sessionExtID).Return(mockSession, nil)
 	mockPayGate.On("CreateInvoice", orderExtID, "userName", int64(10000), mock.Anything, mock.Anything, payment.ChannelCode(payment.MethodBCAVA)).Return(mockPayResp, nil)
-	mockPayRepo.On("SavePayment", mock.Anything).Return(errors.New("db error"))
+	mockPayRepo.On("SavePayment", ctx, mock.Anything).Return(errors.New("db error"))
 
 	_, err := svc.OrderToPaymentProcess(ctx, sessionExtID, orderExtID, orderID)
 	assert.Error(t, err)
@@ -1497,7 +1574,7 @@ func TestService_GetPaymentOrderInfo_AddressError(t *testing.T) {
 	userID := int32(1)
 	mockOrder := &Order{ID: 1, UserID: &userID, AddressID: uuid.New()}
 	mockRepo.On("GetOrderByExternalID", ctx, "ext-id").Return(mockOrder, nil)
-	mockPayRepo.On("GetPaymentByOrder", uint(1)).Return(&payment.Payment{}, nil)
+	mockPayRepo.On("GetPaymentByOrder", ctx, uint(1)).Return(&payment.Payment{}, nil)
 	mockAddrRepo.On("GetByID", ctx, mockOrder.AddressID).Return(nil, errors.New("addr error"))
 
 	_, err := svc.GetPaymentOrderInfo(ctx, "ext-id")
