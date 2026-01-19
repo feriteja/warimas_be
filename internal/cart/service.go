@@ -23,6 +23,7 @@ type Service interface {
 		filter *model.CartFilterInput,
 		sort *model.CartSortInput,
 		limit, page *uint16) ([]*CartRow, int64, error)
+	GetCartCount(ctx context.Context, userID uint) (int64, error)
 	UpdateCartQuantity(ctx context.Context, params UpdateToCartParams) error
 	RemoveFromCart(ctx context.Context, variantIDs []string) error
 	ClearCart(ctx context.Context) error
@@ -187,6 +188,23 @@ func (s *service) GetCart(
 	log.Info("get cart success")
 
 	return rows, total, nil
+}
+
+// GetCartCount returns the number of items in the user's cart
+func (s *service) GetCartCount(ctx context.Context, userID uint) (int64, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "GetCartCount"),
+		zap.Uint("user_id", userID),
+	)
+
+	count, err := s.repo.CountCartItems(ctx, userID, nil)
+	if err != nil {
+		log.Error("failed to count cart items", zap.Error(err))
+		return 0, err
+	}
+
+	return count, nil
 }
 
 // UpdateCartQuantity updates the quantity of a specific product in the user's cart

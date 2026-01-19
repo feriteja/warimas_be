@@ -270,3 +270,24 @@ func (r *queryResolver) MyCart(ctx context.Context, filter *model.CartFilterInpu
 		},
 	}, nil
 }
+
+// Get cart item count
+func (r *queryResolver) MyCartCount(ctx context.Context) (int32, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "MyCartCount"),
+	)
+
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		log.Warn("unauthorized access")
+		return 0, errors.New("unauthorized")
+	}
+
+	count, err := r.CartSvc.GetCartCount(ctx, userID)
+	if err != nil {
+		return 0, errors.New("failed to get cart count")
+	}
+
+	return int32(count), nil
+}

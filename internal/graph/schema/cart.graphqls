@@ -51,6 +51,7 @@ extend type Query {
     limit: Int = 20
     page: Int = 1
   ): CartListResponse @auth(role: USER)
+  myCartCount: Int! @auth(role: USER)
 }
 
 extend type Mutation {
