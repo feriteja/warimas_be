@@ -50,6 +50,11 @@ func (m *MockCartService) GetCart(ctx context.Context, userID uint, filter *mode
 	return args.Get(0).([]*cart.CartRow), args.Get(1).(int64), args.Error(2)
 }
 
+func (m *MockCartService) GetCartCount(ctx context.Context, userID uint) (int64, error) {
+	args := m.Called(ctx, userID)
+	return args.Get(0).(int64), args.Error(1)
+}
+
 // --- Tests ---
 
 func TestMutationResolver_AddToCart(t *testing.T) {
@@ -316,5 +321,45 @@ func TestQueryResolver_MyCart(t *testing.T) {
 		_, err := qr.MyCart(ctx, nil, nil, &limit, nil)
 		assert.Error(t, err)
 		assert.Equal(t, "limit too large", err.Error())
+	})
+}
+
+func TestQueryResolver_MyCartCount(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		mockSvc := new(MockCartService)
+		resolver := &Resolver{CartSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+
+		mockSvc.On("GetCartCount", ctx, uint(1)).Return(int64(5), nil)
+
+		count, err := qr.MyCartCount(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, int32(5), count)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("Unauthorized", func(t *testing.T) {
+		mockSvc := new(MockCartService)
+		resolver := &Resolver{CartSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		_, err := qr.MyCartCount(context.Background())
+		assert.Error(t, err)
+		assert.Equal(t, "unauthorized", err.Error())
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockCartService)
+		resolver := &Resolver{CartSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+
+		mockSvc.On("GetCartCount", ctx, uint(1)).Return(int64(0), errors.New("db error"))
+
+		_, err := qr.MyCartCount(ctx)
+		assert.Error(t, err)
 	})
 }

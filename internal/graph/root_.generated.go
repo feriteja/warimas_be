@@ -385,6 +385,7 @@ type ComplexityRoot struct {
 		Category                func(childComplexity int, filter *string, limit *int32, page *int32) int
 		CheckoutSession         func(childComplexity int, externalID string) int
 		MyCart                  func(childComplexity int, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) int
+		MyCartCount             func(childComplexity int) int
 		MyProfile               func(childComplexity int) int
 		OrderDetail             func(childComplexity int, orderID string) int
 		OrderDetailByExternalID func(childComplexity int, externalID string) int
@@ -2192,6 +2193,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.MyCart(childComplexity, args["filter"].(*model.CartFilterInput), args["sort"].(*model.CartSortInput), args["limit"].(*int32), args["page"].(*int32)), true
+
+	case "Query.myCartCount":
+		if e.complexity.Query.MyCartCount == nil {
+			break
+		}
+
+		return e.complexity.Query.MyCartCount(childComplexity), true
 
 	case "Query.myProfile":
 		if e.complexity.Query.MyProfile == nil {
