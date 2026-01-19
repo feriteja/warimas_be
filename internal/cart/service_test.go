@@ -281,6 +281,72 @@ func TestService_AddToCart(t *testing.T) {
 		mockProductRepo.AssertExpectations(t)
 		mockRepo.AssertExpectations(t)
 	})
+
+	t.Run("Error - GetProductVariantByID fails", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockProductRepo := new(MockProductRepository)
+		svc := NewService(mockRepo, mockProductRepo)
+
+		mockProductRepo.On("GetProductVariantByID", ctx, mock.Anything).Return(nil, errors.New("db error")).Once()
+
+		_, err := svc.AddToCart(ctx, params)
+
+		assert.Error(t, err)
+		assert.Equal(t, "db error", err.Error())
+		mockProductRepo.AssertExpectations(t)
+	})
+
+	t.Run("Error - GetCartItemByUserAndVariant fails", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockProductRepo := new(MockProductRepository)
+		svc := NewService(mockRepo, mockProductRepo)
+
+		mockProductRepo.On("GetProductVariantByID", ctx, mock.Anything).Return(&product.Variant{Stock: 10}, nil).Once()
+		mockRepo.On("GetCartItemByUserAndVariant", ctx, userID, variantID).Return(nil, errors.New("db error")).Once()
+
+		_, err := svc.AddToCart(ctx, params)
+
+		assert.Error(t, err)
+		assert.Equal(t, "db error", err.Error())
+		mockProductRepo.AssertExpectations(t)
+		mockRepo.AssertExpectations(t)
+	})
+
+	t.Run("Error - CreateCartItem fails", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockProductRepo := new(MockProductRepository)
+		svc := NewService(mockRepo, mockProductRepo)
+
+		mockProductRepo.On("GetProductVariantByID", ctx, mock.Anything).Return(&product.Variant{Stock: 10}, nil).Once()
+		mockRepo.On("GetCartItemByUserAndVariant", ctx, userID, variantID).Return(nil, nil).Once()
+		mockRepo.On("CreateCartItem", ctx, mock.Anything).Return(nil, errors.New("db error")).Once()
+
+		_, err := svc.AddToCart(ctx, params)
+
+		assert.Error(t, err)
+		assert.Equal(t, "db error", err.Error())
+		mockProductRepo.AssertExpectations(t)
+		mockRepo.AssertExpectations(t)
+	})
+
+	t.Run("Error - UpdateCartItemQuantity fails", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockProductRepo := new(MockProductRepository)
+		svc := NewService(mockRepo, mockProductRepo)
+
+		existingItem := &CartItem{ID: "cart-1", Quantity: 1}
+
+		mockProductRepo.On("GetProductVariantByID", ctx, mock.Anything).Return(&product.Variant{Stock: 10}, nil).Once()
+		mockRepo.On("GetCartItemByUserAndVariant", ctx, userID, variantID).Return(existingItem, nil).Once()
+		mockRepo.On("UpdateCartItemQuantity", ctx, "cart-1", uint32(3)).Return(nil, errors.New("db error")).Once()
+
+		_, err := svc.AddToCart(ctx, params)
+
+		assert.Error(t, err)
+		assert.Equal(t, "db error", err.Error())
+		mockProductRepo.AssertExpectations(t)
+		mockRepo.AssertExpectations(t)
+	})
 }
 
 func TestService_GetCart(t *testing.T) {
@@ -373,6 +439,45 @@ func TestService_UpdateCartQuantity(t *testing.T) {
 		assert.Error(t, err)
 		assert.Equal(t, "user ID is required", err.Error())
 	})
+
+	t.Run("Error - Missing Variant ID", func(t *testing.T) {
+		svc := &service{}
+		err := svc.UpdateCartQuantity(ctx, UpdateToCartParams{Quantity: 1}) // Empty VariantID
+		assert.Error(t, err)
+		assert.Equal(t, "variant ID is required", err.Error())
+	})
+
+	t.Run("Error - RemoveFromCart fails (qty <= 0)", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := &service{repo: mockRepo}
+		params := UpdateToCartParams{VariantID: "v1", Quantity: 0}
+
+		mockRepo.On("RemoveFromCart", ctx, mock.MatchedBy(func(p DeleteFromCartParams) bool {
+			return p.UserID == uint32(userID) && p.VariantID[0] == "v1"
+		})).Return(errors.New("db error")).Once()
+
+		err := svc.UpdateCartQuantity(ctx, params)
+
+		assert.Error(t, err)
+		assert.Equal(t, "db error", err.Error())
+		mockRepo.AssertExpectations(t)
+	})
+
+	t.Run("Error - UpdateCartQuantity fails", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := &service{repo: mockRepo}
+		params := UpdateToCartParams{VariantID: "v1", Quantity: 5}
+
+		mockRepo.On("UpdateCartQuantity", ctx, mock.MatchedBy(func(p UpdateToCartParams) bool {
+			return p.UserID == uint32(userID) && p.VariantID == "v1"
+		})).Return(errors.New("db error")).Once()
+
+		err := svc.UpdateCartQuantity(ctx, params)
+
+		assert.Error(t, err)
+		assert.Equal(t, "db error", err.Error())
+		mockRepo.AssertExpectations(t)
+	})
 }
 
 func TestService_RemoveFromCart(t *testing.T) {
@@ -407,6 +512,20 @@ func TestService_RemoveFromCart(t *testing.T) {
 		assert.Error(t, err)
 		assert.Equal(t, ErrUserNotAuthenticated, err)
 	})
+
+	t.Run("Error - Repo fails", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := &service{repo: mockRepo}
+		variantIDs := []string{"v1"}
+
+		mockRepo.On("RemoveFromCart", ctx, mock.Anything).Return(errors.New("db error")).Once()
+
+		err := svc.RemoveFromCart(ctx, variantIDs)
+
+		assert.Error(t, err)
+		assert.Equal(t, "db error", err.Error())
+		mockRepo.AssertExpectations(t)
+	})
 }
 
 func TestService_ClearCart(t *testing.T) {
@@ -430,5 +549,18 @@ func TestService_ClearCart(t *testing.T) {
 		err := svc.ClearCart(context.Background())
 		assert.Error(t, err)
 		assert.Equal(t, ErrUserNotAuthenticated, err)
+	})
+
+	t.Run("Error - Repo fails", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := &service{repo: mockRepo}
+
+		mockRepo.On("ClearCart", ctx, userID).Return(errors.New("db error")).Once()
+
+		err := svc.ClearCart(ctx)
+
+		assert.Error(t, err)
+		assert.Equal(t, ErrFailedClearCart, err)
+		mockRepo.AssertExpectations(t)
 	})
 }
