@@ -51,12 +51,12 @@ func TestHandler_PaymentWebhookHandler(t *testing.T) {
 			Return(int64(1), false, nil)
 
 		// 2. Get Order Info for Validation
-		mockOrderInfo := &order.PaymentOrderInfoResponse{
+		mockOrderInfo := &order.Order{
 			TotalAmount: 100000,
 			Currency:    "IDR",
 			Status:      "PENDING",
 		}
-		mockOrderSvc.On("GetPaymentOrderInfo", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
+		mockOrderSvc.On("GetOrderForWebhook", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
 
 		// 3. Mark as Paid
 		mockOrderSvc.On("MarkAsPaid", mock.Anything, "ord-ref-1", "pay-req-1", "pay-id-1").Return(nil)
@@ -97,12 +97,12 @@ func TestHandler_PaymentWebhookHandler(t *testing.T) {
 		mockPayRepo.On("SavePaymentWebhook", mock.Anything, "XENDIT", mock.Anything, "payment.failed", "ord-ref-1", mock.Anything, true).
 			Return(int64(2), false, nil)
 
-		mockOrderInfo := &order.PaymentOrderInfoResponse{
+		mockOrderInfo := &order.Order{
 			TotalAmount: 100000,
 			Currency:    "IDR",
 			Status:      "PENDING",
 		}
-		mockOrderSvc.On("GetPaymentOrderInfo", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
+		mockOrderSvc.On("GetOrderForWebhook", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
 
 		mockOrderSvc.On("MarkAsFailed", mock.Anything, "ord-ref-1", "pay-req-1", "pay-id-1").Return(nil)
 		mockPayRepo.On("MarkWebhookProcessed", mock.Anything, int64(2)).Return(nil)
@@ -178,11 +178,11 @@ func TestHandler_PaymentWebhookHandler(t *testing.T) {
 		mockPayRepo.On("SavePaymentWebhook", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, true).
 			Return(int64(3), false, nil)
 
-		mockOrderInfo := &order.PaymentOrderInfoResponse{
+		mockOrderInfo := &order.Order{
 			TotalAmount: 100000, // Expected
 			Currency:    "IDR",
 		}
-		mockOrderSvc.On("GetPaymentOrderInfo", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
+		mockOrderSvc.On("GetOrderForWebhook", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
 
 		mockPayRepo.On("MarkWebhookFailed", mock.Anything, int64(3), mock.MatchedBy(func(reason string) bool {
 			return reason == "amount mismatch: webhook=50000 db=100000"
@@ -216,12 +216,12 @@ func TestHandler_PaymentWebhookHandler(t *testing.T) {
 		mockPayRepo.On("SavePaymentWebhook", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, true).
 			Return(int64(4), false, nil)
 
-		mockOrderInfo := &order.PaymentOrderInfoResponse{
+		mockOrderInfo := &order.Order{
 			TotalAmount: 100000,
 			Currency:    "IDR",
 			Status:      "PAID", // Already Paid
 		}
-		mockOrderSvc.On("GetPaymentOrderInfo", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
+		mockOrderSvc.On("GetOrderForWebhook", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
 
 		mockPayRepo.On("MarkWebhookFailed", mock.Anything, int64(4), "invalid transition PAID -> FAILED").Return(nil)
 
@@ -256,12 +256,12 @@ func TestHandler_PaymentWebhookHandler(t *testing.T) {
 		mockPayRepo.On("SavePaymentWebhook", mock.Anything, "XENDIT", mock.Anything, "payment.capture", "ord-ref-1", mock.Anything, true).
 			Return(int64(3), false, nil)
 
-		mockOrderInfo := &order.PaymentOrderInfoResponse{
+		mockOrderInfo := &order.Order{
 			TotalAmount: 100000,
 			Currency:    "IDR",
 			Status:      "PENDING",
 		}
-		mockOrderSvc.On("GetPaymentOrderInfo", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
+		mockOrderSvc.On("GetOrderForWebhook", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
 
 		mockOrderSvc.On("MarkAsPaid", mock.Anything, "ord-ref-1", "pay-req-1", "pay-id-1").Return(errors.New("db error"))
 
@@ -297,12 +297,12 @@ func TestHandler_PaymentWebhookHandler(t *testing.T) {
 		mockPayRepo.On("SavePaymentWebhook", mock.Anything, "XENDIT", mock.Anything, "payment.created", "ord-ref-1", mock.Anything, true).
 			Return(int64(5), false, nil)
 
-		mockOrderInfo := &order.PaymentOrderInfoResponse{
+		mockOrderInfo := &order.Order{
 			TotalAmount: 100000,
 			Currency:    "IDR",
 			Status:      "PENDING",
 		}
-		mockOrderSvc.On("GetPaymentOrderInfo", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
+		mockOrderSvc.On("GetOrderForWebhook", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
 		mockPayRepo.On("MarkWebhookProcessed", mock.Anything, int64(5)).Return(nil)
 
 		h.PaymentWebhookHandler(w, req)
@@ -374,7 +374,7 @@ func TestHandler_PaymentWebhookHandler(t *testing.T) {
 		mockPayRepo.On("SavePaymentWebhook", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, true).
 			Return(int64(10), false, nil)
 
-		mockOrderSvc.On("GetPaymentOrderInfo", mock.Anything, "ord-ref-1").Return(nil, errors.New("order not found"))
+		mockOrderSvc.On("GetOrderForWebhook", mock.Anything, "ord-ref-1").Return(nil, errors.New("order not found"))
 
 		mockPayRepo.On("MarkWebhookFailed", mock.Anything, int64(10), "order not found").Return(nil)
 
@@ -407,11 +407,11 @@ func TestHandler_PaymentWebhookHandler(t *testing.T) {
 		mockPayRepo.On("SavePaymentWebhook", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, true).
 			Return(int64(11), false, nil)
 
-		mockOrderInfo := &order.PaymentOrderInfoResponse{
+		mockOrderInfo := &order.Order{
 			TotalAmount: 100000,
 			Currency:    "IDR",
 		}
-		mockOrderSvc.On("GetPaymentOrderInfo", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
+		mockOrderSvc.On("GetOrderForWebhook", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
 
 		mockPayRepo.On("MarkWebhookFailed", mock.Anything, int64(11), "currency mismatch").Return(nil)
 
@@ -445,12 +445,12 @@ func TestHandler_PaymentWebhookHandler(t *testing.T) {
 		mockPayRepo.On("SavePaymentWebhook", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, true).
 			Return(int64(12), false, nil)
 
-		mockOrderInfo := &order.PaymentOrderInfoResponse{
+		mockOrderInfo := &order.Order{
 			TotalAmount: 100000,
 			Currency:    "IDR",
 			Status:      "PENDING",
 		}
-		mockOrderSvc.On("GetPaymentOrderInfo", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
+		mockOrderSvc.On("GetOrderForWebhook", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
 
 		// Should NOT call MarkAsPaid
 		mockPayRepo.On("MarkWebhookProcessed", mock.Anything, int64(12)).Return(nil)
@@ -486,12 +486,12 @@ func TestHandler_PaymentWebhookHandler(t *testing.T) {
 		mockPayRepo.On("SavePaymentWebhook", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, true).
 			Return(int64(13), false, nil)
 
-		mockOrderInfo := &order.PaymentOrderInfoResponse{
+		mockOrderInfo := &order.Order{
 			TotalAmount: 100000,
 			Currency:    "IDR",
 			Status:      "PAID",
 		}
-		mockOrderSvc.On("GetPaymentOrderInfo", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
+		mockOrderSvc.On("GetOrderForWebhook", mock.Anything, "ord-ref-1").Return(mockOrderInfo, nil)
 
 		// Should NOT call MarkAsPaid
 		mockPayRepo.On("MarkWebhookProcessed", mock.Anything, int64(13)).Return(nil)
@@ -535,7 +535,7 @@ func (m *MockOrderService) GetOrderDetail(ctx context.Context, orderID uint) (*o
 func (m *MockOrderService) GetOrderDetailByExternalID(ctx context.Context, externalId string) (*order.Order, *address.Address, error) {
 	return nil, nil, nil
 }
-func (m *MockOrderService) UpdateOrderStatus(orderID uint, status order.OrderStatus) error {
+func (m *MockOrderService) UpdateOrderStatus(ctx context.Context, orderID uint, status order.OrderStatus) error {
 	return nil
 }
 func (m *MockOrderService) CreateSession(ctx context.Context, input model.CreateCheckoutSessionInput) (*order.CheckoutSession, error) {
@@ -556,6 +556,13 @@ func (m *MockOrderService) GetPaymentOrderInfo(ctx context.Context, externalID s
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*order.PaymentOrderInfoResponse), args.Error(1)
+}
+func (m *MockOrderService) GetOrderForWebhook(ctx context.Context, externalID string) (*order.Order, error) {
+	args := m.Called(ctx, externalID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*order.Order), args.Error(1)
 }
 
 type MockPaymentRepository struct {
@@ -578,9 +585,13 @@ func (m *MockPaymentRepository) MarkWebhookFailed(ctx context.Context, id int64,
 }
 
 // Stubs
-func (m *MockPaymentRepository) SavePayment(p *payment.Payment) error         { return nil }
-func (m *MockPaymentRepository) UpdatePaymentStatus(eid, status string) error { return nil }
-func (m *MockPaymentRepository) GetPaymentByOrder(oid uint) (*payment.Payment, error) {
+func (m *MockPaymentRepository) SavePayment(ctx context.Context, p *payment.Payment) error {
+	return nil
+}
+func (m *MockPaymentRepository) UpdatePaymentStatus(ctx context.Context, eid, status string) error {
+	return nil
+}
+func (m *MockPaymentRepository) GetPaymentByOrder(ctx context.Context, oid uint) (*payment.Payment, error) {
 	return nil, nil
 }
 

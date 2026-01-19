@@ -71,7 +71,7 @@ func (r *mutationResolver) UpdateOrderStatus(ctx context.Context, input model.Up
 
 	status := order.OrderStatus(input.Status.String())
 
-	err = r.OrderSvc.UpdateOrderStatus(orderID, status)
+	err = r.OrderSvc.UpdateOrderStatus(ctx, orderID, status)
 	if err != nil {
 		log.Error("failed to update order status", zap.Error(err))
 		return &model.CreateOrderResponse{

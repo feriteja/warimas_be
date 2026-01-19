@@ -8,9 +8,9 @@ import (
 )
 
 type Repository interface {
-	SavePayment(p *Payment) error
-	UpdatePaymentStatus(externalID, status string) error
-	GetPaymentByOrder(orderID uint) (*Payment, error)
+	SavePayment(ctx context.Context, p *Payment) error
+	UpdatePaymentStatus(ctx context.Context, externalID, status string) error
+	GetPaymentByOrder(ctx context.Context, orderID uint) (*Payment, error)
 	SavePaymentWebhook(
 		ctx context.Context,
 		provider string,
@@ -33,8 +33,8 @@ func NewRepository(db *sql.DB) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) SavePayment(p *Payment) error {
-	_, err := r.db.Exec(`
+func (r *repository) SavePayment(ctx context.Context, p *Payment) error {
+	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO payments (order_id, 
 		external_reference, 
 		invoice_url, 
@@ -54,15 +54,15 @@ func (r *repository) SavePayment(p *Payment) error {
 	return err
 }
 
-func (r *repository) UpdatePaymentStatus(externalID, status string) error {
-	_, err := r.db.Exec(`
+func (r *repository) UpdatePaymentStatus(ctx context.Context, externalID, status string) error {
+	_, err := r.db.ExecContext(ctx, `
 		UPDATE payments SET status = $1 WHERE external_id = $2
 	`, status, externalID)
 	return err
 }
 
-func (r *repository) GetPaymentByOrder(orderID uint) (*Payment, error) {
-	row := r.db.QueryRow(`
+func (r *repository) GetPaymentByOrder(ctx context.Context, orderID uint) (*Payment, error) {
+	row := r.db.QueryRowContext(ctx, `
 		SELECT id, order_id, external_reference, invoice_url, amount, status, payment_method, created_at, updated_at, payment_code, expire_at
 		FROM payments WHERE order_id = $1
 	`, orderID)
@@ -108,8 +108,8 @@ func (r *repository) SavePaymentWebhook(
 		ctx,
 		q,
 		provider,
-		eventID,
 		eventType,
+		eventID,
 		externalID,
 		signatureValid,
 		payload,

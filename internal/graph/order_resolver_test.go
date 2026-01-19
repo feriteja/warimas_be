@@ -38,8 +38,8 @@ func (m *MockOrderService) OrderToPaymentProcess(ctx context.Context, sessionExt
 	return args.Get(0).(*payment.PaymentResponse), args.Error(1)
 }
 
-func (m *MockOrderService) UpdateOrderStatus(orderID uint, status order.OrderStatus) error {
-	args := m.Called(orderID, status)
+func (m *MockOrderService) UpdateOrderStatus(ctx context.Context, orderID uint, status order.OrderStatus) error {
+	args := m.Called(ctx, orderID, status)
 	return args.Error(0)
 }
 
@@ -112,6 +112,14 @@ func (m *MockOrderService) GetPaymentOrderInfo(ctx context.Context, externalID s
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*order.PaymentOrderInfoResponse), args.Error(1)
+}
+
+func (m *MockOrderService) GetOrderForWebhook(ctx context.Context, externalID string) (*order.Order, error) {
+	args := m.Called(ctx, externalID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*order.Order), args.Error(1)
 }
 
 // --- Tests ---
@@ -239,7 +247,7 @@ func TestMutationResolver_UpdateOrderStatus(t *testing.T) {
 			Status:  model.OrderStatusPaid,
 		}
 
-		mockSvc.On("UpdateOrderStatus", uint(10), order.OrderStatusPaid).Return(nil)
+		mockSvc.On("UpdateOrderStatus", ctx, uint(10), order.OrderStatusPaid).Return(nil)
 
 		res, err := mr.UpdateOrderStatus(ctx, input)
 
@@ -266,7 +274,7 @@ func TestMutationResolver_UpdateOrderStatus(t *testing.T) {
 		mr := &mutationResolver{resolver}
 
 		input := model.UpdateOrderStatusInput{OrderID: "10", Status: model.OrderStatusPaid}
-		mockSvc.On("UpdateOrderStatus", uint(10), order.OrderStatusPaid).Return(errors.New("db error"))
+		mockSvc.On("UpdateOrderStatus", context.Background(), uint(10), order.OrderStatusPaid).Return(errors.New("db error"))
 		res, _ := mr.UpdateOrderStatus(context.Background(), input)
 		assert.False(t, res.Success)
 		assert.Equal(t, "db error", *res.Message)
