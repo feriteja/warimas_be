@@ -544,6 +544,9 @@ func (m *MockOrderService) CreateSession(ctx context.Context, input model.Create
 func (m *MockOrderService) UpdateSessionAddress(ctx context.Context, externalID string, addressID string, guestID *string) error {
 	return nil
 }
+func (m *MockOrderService) UpdateSessionPaymentMethod(ctx context.Context, externalID string, paymentMethod payment.ChannelCode, guestID *string) error {
+	return nil
+}
 func (m *MockOrderService) ConfirmSession(ctx context.Context, sessionID string) (*string, error) {
 	return nil, nil
 }

@@ -66,6 +66,11 @@ func (m *MockOrderService) UpdateSessionAddress(ctx context.Context, externalID 
 	return args.Error(0)
 }
 
+func (m *MockOrderService) UpdateSessionPaymentMethod(ctx context.Context, externalID string, paymentMethod payment.ChannelCode, guestID *string) error {
+	args := m.Called(ctx, externalID, paymentMethod, guestID)
+	return args.Error(0)
+}
+
 func (m *MockOrderService) ConfirmSession(ctx context.Context, externalID string) (*string, error) {
 	args := m.Called(ctx, externalID)
 	if args.Get(0) == nil {
@@ -232,6 +237,24 @@ func TestMutationResolver_UpdateSessionAddress(t *testing.T) {
 		mockSvc.On("UpdateSessionAddress", ctx, "sess_123", "addr_1", (*string)(nil)).Return(errors.New("db error"))
 		_, err := mr.UpdateSessionAddress(ctx, input)
 		assert.Error(t, err)
+	})
+}
+
+func TestMutationResolver_UpdateSessionPaymentMethod(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		mockSvc := new(MockOrderService)
+		resolver := &Resolver{OrderSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		ctx := context.Background()
+		input := model.UpdateSessionPaymentMethodInput{ExternalID: "sess_123", PaymentMethod: "BCA_VIRTUAL_ACCOUNT"}
+
+		mockSvc.On("UpdateSessionPaymentMethod", ctx, "sess_123", payment.ChannelCode("BCA_VIRTUAL_ACCOUNT"), (*string)(nil)).Return(nil)
+
+		res, err := mr.UpdateSessionPaymentMethod(ctx, input)
+
+		assert.NoError(t, err)
+		assert.True(t, res.Success)
 	})
 }
 

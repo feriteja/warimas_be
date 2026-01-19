@@ -118,6 +118,12 @@ func (m *MockRepository) UpdateSessionAddressAndPricing(ctx context.Context, ses
 	args := m.Called(ctx, session)
 	return args.Error(0)
 }
+
+func (m *MockRepository) UpdateSessionPaymentMethod(ctx context.Context, sessionID uuid.UUID, paymentMethod payment.ChannelCode) error {
+	args := m.Called(ctx, sessionID, paymentMethod)
+	return args.Error(0)
+}
+
 func (m *MockRepository) ValidateVariantStock(ctx context.Context, variantID string, qty int) (bool, error) {
 	args := m.Called(ctx, variantID, qty)
 	return args.Bool(0), args.Error(1)
@@ -739,6 +745,8 @@ func TestService_ConfirmSession(t *testing.T) {
 		mockUserRepo := new(MockUserRepository)
 		svc := NewService(mockRepo, mockPayRepo, mockPayGate, nil, mockUserRepo)
 
+		pm := payment.MethodBCAVA
+
 		mockSession := &CheckoutSession{
 			ID:         sessionID,
 			ExternalID: externalID,
@@ -750,22 +758,25 @@ func TestService_ConfirmSession(t *testing.T) {
 			Items: []CheckoutSessionItem{
 				{VariantID: "v1", Quantity: 1, Price: 50000, ProductName: "P1", VariantName: "V1"},
 			},
+			PaymentMethod: &pm,
 		}
 
-		// 1. Get Session (Called twice: once in ConfirmSession, once in OrderToPaymentProcess)
-		// Note: OrderToPaymentProcess uses context.Background(), so we use mock.Anything for context
-		mockRepo.On("GetCheckoutSession", mock.Anything, externalID).Return(mockSession, nil).Times(2)
+		// 1. Get Session
+		mockRepo.On("GetCheckoutSession", mock.Anything, externalID).Return(mockSession, nil).Times(1)
 
 		// 2. Validate Stock
 		mockRepo.On("ValidateVariantStock", ctx, "v1", 1).Return(true, nil)
 
-		// 3. Create Order Tx
+		// 3. Idempotency Check (No existing order)
+		mockRepo.On("GetOrderBySessionID", ctx, sessionID).Return(nil, nil)
+
+		// 4. Create Order Tx
 		mockRepo.On("CreateOrderTx", ctx, mock.AnythingOfType("*order.Order"), mockSession).Return(nil)
 
-		// 4. Confirm Session
+		// 5. Confirm Session
 		mockRepo.On("ConfirmCheckoutSession", ctx, mockSession).Return(nil)
 
-		// 5. Payment Gateway (Create Invoice)
+		// 6. Payment Gateway (Create Invoice)
 		mockPayResp := &payment.PaymentResponse{
 			ProviderPaymentID: "pay-1",
 			InvoiceURL:        "http://invoice",
@@ -773,10 +784,10 @@ func TestService_ConfirmSession(t *testing.T) {
 		}
 		mockPayGate.On("CreateInvoice", mock.AnythingOfType("string"), "userName", int64(50000), "test@example.com", mock.Anything, payment.ChannelCode(payment.MethodBCAVA)).Return(mockPayResp, nil)
 
-		// 6. Save Payment
+		// 7. Save Payment
 		mockPayRepo.On("SavePayment", ctx, mock.AnythingOfType("*payment.Payment")).Return(nil)
 
-		// 7. Get User Profile
+		// 8. Get User Profile
 		mockUserRepo.On("GetProfile", ctx, userID).Return(&user.Profile{FullName: utils.StrPtr("userName")}, nil)
 
 		res, err := svc.ConfirmSession(ctx, externalID)
@@ -1459,11 +1470,13 @@ func TestService_ConfirmSession_EdgeCases(t *testing.T) {
 	t.Run("RepoError_Confirm", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewService(mockRepo, nil, nil, nil, nil)
+		sessID := uuid.New()
 		addrID := uuid.New()
-		mockSession := &CheckoutSession{UserID: &userInt32, Status: CheckoutSessionStatusPending, ExpiresAt: now, AddressID: &addrID, Items: []CheckoutSessionItem{{VariantID: "v1", Quantity: 1}}}
+		mockSession := &CheckoutSession{ID: sessID, UserID: &userInt32, Status: CheckoutSessionStatusPending, ExpiresAt: now, AddressID: &addrID, Items: []CheckoutSessionItem{{VariantID: "v1", Quantity: 1}}}
 
 		mockRepo.On("GetCheckoutSession", ctx, externalID).Return(mockSession, nil)
 		mockRepo.On("ValidateVariantStock", ctx, "v1", 1).Return(true, nil)
+		mockRepo.On("GetOrderBySessionID", ctx, sessID).Return(nil, nil)
 		mockRepo.On("CreateOrderTx", ctx, mock.Anything, mock.Anything).Return(errors.New("tx error"))
 
 		_, err := svc.ConfirmSession(ctx, externalID)
@@ -1498,11 +1511,13 @@ func TestService_ConfirmSession_EdgeCases(t *testing.T) {
 		mockPayGate := new(MockPaymentGateway)
 		mockPayRepo := new(MockPaymentRepository)
 		svc := NewService(mockRepo, mockPayRepo, mockPayGate, nil, nil)
+		sessID := uuid.New()
 		addrID := uuid.New()
-		mockSession := &CheckoutSession{UserID: &userInt32, Status: CheckoutSessionStatusPending, ExpiresAt: now, AddressID: &addrID, Items: []CheckoutSessionItem{{VariantID: "v1", Quantity: 1}}}
+		mockSession := &CheckoutSession{ID: sessID, UserID: &userInt32, Status: CheckoutSessionStatusPending, ExpiresAt: now, AddressID: &addrID, Items: []CheckoutSessionItem{{VariantID: "v1", Quantity: 1}}}
 
 		mockRepo.On("GetCheckoutSession", ctx, externalID).Return(mockSession, nil)
 		mockRepo.On("ValidateVariantStock", ctx, "v1", 1).Return(true, nil)
+		mockRepo.On("GetOrderBySessionID", ctx, sessID).Return(nil, nil)
 		mockRepo.On("CreateOrderTx", ctx, mock.Anything, mock.Anything).Return(nil)
 		mockRepo.On("ConfirmCheckoutSession", ctx, mockSession).Return(errors.New("confirm error"))
 
@@ -1521,9 +1536,11 @@ func TestService_OrderToPaymentProcess_GatewayError(t *testing.T) {
 	orderExtID := "ord-ext-1"
 	orderID := uint(1)
 
+	pm := payment.MethodBCAVA
 	mockSession := &CheckoutSession{
-		TotalPrice: 10000,
-		Items:      []CheckoutSessionItem{{ProductName: "P1", VariantName: "V1", Quantity: 1, Price: 10000}},
+		TotalPrice:    10000,
+		Items:         []CheckoutSessionItem{{ProductName: "P1", VariantName: "V1", Quantity: 1, Price: 10000}},
+		PaymentMethod: &pm,
 	}
 
 	mockPayGate.On("CreateInvoice", orderExtID, "Guest", int64(10000), mock.Anything, mock.Anything, payment.ChannelCode(payment.MethodBCAVA)).Return(nil, errors.New("gateway error"))
@@ -1543,9 +1560,11 @@ func TestService_OrderToPaymentProcess_SavePaymentError(t *testing.T) {
 	orderExtID := "ord-ext-1"
 	orderID := uint(1)
 
+	pm := payment.MethodBCAVA
 	mockSession := &CheckoutSession{
-		TotalPrice: 10000,
-		Items:      []CheckoutSessionItem{{ProductName: "P1", VariantName: "V1", Quantity: 1, Price: 10000}},
+		TotalPrice:    10000,
+		Items:         []CheckoutSessionItem{{ProductName: "P1", VariantName: "V1", Quantity: 1, Price: 10000}},
+		PaymentMethod: &pm,
 	}
 	mockPayResp := &payment.PaymentResponse{ProviderPaymentID: "pay-1", Status: "PENDING"}
 
