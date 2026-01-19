@@ -6,7 +6,9 @@ import (
 	"testing"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/user"
+	"warimas-be/internal/utils"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -49,6 +51,22 @@ func (m *MockUserService) ForgotPassword(ctx context.Context, email string) erro
 func (m *MockUserService) ResetPassword(ctx context.Context, token, newPassword string) error {
 	args := m.Called(ctx, token, newPassword)
 	return args.Error(0)
+}
+
+func (m *MockUserService) GetOrCreateProfile(ctx context.Context, userID uint) (*user.Profile, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*user.Profile), args.Error(1)
+}
+
+func (m *MockUserService) UpdateProfile(ctx context.Context, params user.UpdateProfileParams) (*user.Profile, error) {
+	args := m.Called(ctx, params)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*user.Profile), args.Error(1)
 }
 
 // --- Tests ---
@@ -204,5 +222,89 @@ func TestMutationResolver_ResetPassword(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Equal(t, "invalid token", err.Error())
+	})
+}
+
+func TestMutationResolver_UpdateProfile(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		mockSvc := new(MockUserService)
+		resolver := &Resolver{UserSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		name := "John Doe"
+		input := model.UpdateProfileInput{FullName: &name}
+
+		expectedProfile := &user.Profile{
+			ID:       uuid.New(),
+			UserID:   1,
+			FullName: &name,
+		}
+
+		mockSvc.On("UpdateProfile", ctx, mock.MatchedBy(func(p user.UpdateProfileParams) bool {
+			return p.UserID == 1 && *p.FullName == "John Doe"
+		})).Return(expectedProfile, nil)
+
+		res, err := mr.UpdateProfile(ctx, input)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "John Doe", *res.FullName)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("Unauthorized", func(t *testing.T) {
+		mockSvc := new(MockUserService)
+		resolver := &Resolver{UserSvc: mockSvc}
+		mr := &mutationResolver{resolver}
+
+		_, err := mr.UpdateProfile(context.Background(), model.UpdateProfileInput{})
+		assert.Error(t, err)
+		assert.Equal(t, "unauthorized", err.Error())
+	})
+}
+
+func TestQueryResolver_MyProfile(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		mockSvc := new(MockUserService)
+		resolver := &Resolver{UserSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		name := "John Doe"
+		expectedProfile := &user.Profile{
+			ID:       uuid.New(),
+			UserID:   1,
+			FullName: &name,
+		}
+
+		mockSvc.On("GetOrCreateProfile", ctx, uint(1)).Return(expectedProfile, nil)
+
+		res, err := qr.MyProfile(ctx)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "John Doe", *res.FullName)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("Unauthorized", func(t *testing.T) {
+		mockSvc := new(MockUserService)
+		resolver := &Resolver{UserSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		_, err := qr.MyProfile(context.Background())
+		assert.Error(t, err)
+		assert.Equal(t, "unauthorized", err.Error())
+	})
+
+	t.Run("ServiceError", func(t *testing.T) {
+		mockSvc := new(MockUserService)
+		resolver := &Resolver{UserSvc: mockSvc}
+		qr := &queryResolver{resolver}
+
+		ctx := utils.SetUserContext(context.Background(), 1, "test@example.com", "user")
+		mockSvc.On("GetOrCreateProfile", ctx, uint(1)).Return(nil, errors.New("db error"))
+
+		_, err := qr.MyProfile(ctx)
+		assert.Error(t, err)
 	})
 }

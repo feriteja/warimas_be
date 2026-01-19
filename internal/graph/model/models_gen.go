@@ -434,6 +434,18 @@ type ProductSortInput struct {
 	Direction SortDirection    `json:"direction"`
 }
 
+type Profile struct {
+	ID          string  `json:"id"`
+	UserID      string  `json:"userId"`
+	FullName    *string `json:"fullName,omitempty"`
+	Bio         *string `json:"bio,omitempty"`
+	AvatarURL   *string `json:"avatarUrl,omitempty"`
+	Phone       *string `json:"phone,omitempty"`
+	DateOfBirth *string `json:"dateOfBirth,omitempty"`
+	CreatedAt   *string `json:"createdAt,omitempty"`
+	UpdatedAt   *string `json:"updatedAt,omitempty"`
+}
+
 type Query struct {
 }
 
@@ -507,6 +519,14 @@ type UpdateProduct struct {
 	CategoryID    *string `json:"categoryId,omitempty"`
 	SubcategoryID *string `json:"subcategoryID,omitempty"`
 	Status        *string `json:"status,omitempty"`
+}
+
+type UpdateProfileInput struct {
+	FullName    *string `json:"fullName,omitempty"`
+	Bio         *string `json:"bio,omitempty"`
+	AvatarURL   *string `json:"avatarUrl,omitempty"`
+	Phone       *string `json:"phone,omitempty"`
+	DateOfBirth *string `json:"dateOfBirth,omitempty"`
 }
 
 type UpdateSessionAddressInput struct {

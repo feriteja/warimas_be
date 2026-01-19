@@ -167,6 +167,7 @@ type ComplexityRoot struct {
 		DeleteAddress          func(childComplexity int, input model.DeleteAddressInput) int
 		ForgotPassword         func(childComplexity int, input model.ForgotPasswordInput) int
 		Login                  func(childComplexity int, input model.LoginInput) int
+		Logout                 func(childComplexity int) int
 		Register               func(childComplexity int, input model.RegisterInput) int
 		RemoveFromCart         func(childComplexity int, variantIds []string) int
 		ResetPassword          func(childComplexity int, input model.ResetPasswordInput) int
@@ -175,6 +176,7 @@ type ComplexityRoot struct {
 		UpdateCart             func(childComplexity int, input model.UpdateCartInput) int
 		UpdateOrderStatus      func(childComplexity int, input model.UpdateOrderStatusInput) int
 		UpdateProduct          func(childComplexity int, input model.UpdateProduct) int
+		UpdateProfile          func(childComplexity int, input model.UpdateProfileInput) int
 		UpdateSessionAddress   func(childComplexity int, input model.UpdateSessionAddressInput) int
 		UpdateVariants         func(childComplexity int, input []*model.UpdateVariant) int
 	}
@@ -364,12 +366,25 @@ type ComplexityRoot struct {
 		TotalPages func(childComplexity int) int
 	}
 
+	Profile struct {
+		AvatarURL   func(childComplexity int) int
+		Bio         func(childComplexity int) int
+		CreatedAt   func(childComplexity int) int
+		DateOfBirth func(childComplexity int) int
+		FullName    func(childComplexity int) int
+		ID          func(childComplexity int) int
+		Phone       func(childComplexity int) int
+		UpdatedAt   func(childComplexity int) int
+		UserID      func(childComplexity int) int
+	}
+
 	Query struct {
 		Address                 func(childComplexity int, addressID string) int
 		Addresses               func(childComplexity int) int
 		Category                func(childComplexity int, filter *string, limit *int32, page *int32) int
 		CheckoutSession         func(childComplexity int, externalID string) int
 		MyCart                  func(childComplexity int, filter *model.CartFilterInput, sort *model.CartSortInput, limit *int32, page *int32) int
+		MyProfile               func(childComplexity int) int
 		OrderDetail             func(childComplexity int, orderID string) int
 		OrderDetailByExternalID func(childComplexity int, externalID string) int
 		OrderList               func(childComplexity int, filter *model.OrderFilterInput, sort *model.OrderSortInput, pagination *model.PaginationInput) int
@@ -1071,6 +1086,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.Login(childComplexity, args["input"].(model.LoginInput)), true
 
+	case "Mutation.logout":
+		if e.complexity.Mutation.Logout == nil {
+			break
+		}
+
+		return e.complexity.Mutation.Logout(childComplexity), true
+
 	case "Mutation.register":
 		if e.complexity.Mutation.Register == nil {
 			break
@@ -1166,6 +1188,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.UpdateProduct(childComplexity, args["input"].(model.UpdateProduct)), true
+
+	case "Mutation.updateProfile":
+		if e.complexity.Mutation.UpdateProfile == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateProfile_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateProfile(childComplexity, args["input"].(model.UpdateProfileInput)), true
 
 	case "Mutation.updateSessionAddress":
 		if e.complexity.Mutation.UpdateSessionAddress == nil {
@@ -2024,6 +2058,69 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ProductPage.TotalPages(childComplexity), true
 
+	case "Profile.avatarUrl":
+		if e.complexity.Profile.AvatarURL == nil {
+			break
+		}
+
+		return e.complexity.Profile.AvatarURL(childComplexity), true
+
+	case "Profile.bio":
+		if e.complexity.Profile.Bio == nil {
+			break
+		}
+
+		return e.complexity.Profile.Bio(childComplexity), true
+
+	case "Profile.createdAt":
+		if e.complexity.Profile.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.Profile.CreatedAt(childComplexity), true
+
+	case "Profile.dateOfBirth":
+		if e.complexity.Profile.DateOfBirth == nil {
+			break
+		}
+
+		return e.complexity.Profile.DateOfBirth(childComplexity), true
+
+	case "Profile.fullName":
+		if e.complexity.Profile.FullName == nil {
+			break
+		}
+
+		return e.complexity.Profile.FullName(childComplexity), true
+
+	case "Profile.id":
+		if e.complexity.Profile.ID == nil {
+			break
+		}
+
+		return e.complexity.Profile.ID(childComplexity), true
+
+	case "Profile.phone":
+		if e.complexity.Profile.Phone == nil {
+			break
+		}
+
+		return e.complexity.Profile.Phone(childComplexity), true
+
+	case "Profile.updatedAt":
+		if e.complexity.Profile.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.Profile.UpdatedAt(childComplexity), true
+
+	case "Profile.userId":
+		if e.complexity.Profile.UserID == nil {
+			break
+		}
+
+		return e.complexity.Profile.UserID(childComplexity), true
+
 	case "Query.address":
 		if e.complexity.Query.Address == nil {
 			break
@@ -2078,6 +2175,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.MyCart(childComplexity, args["filter"].(*model.CartFilterInput), args["sort"].(*model.CartSortInput), args["limit"].(*int32), args["page"].(*int32)), true
+
+	case "Query.myProfile":
+		if e.complexity.Query.MyProfile == nil {
+			break
+		}
+
+		return e.complexity.Query.MyProfile(childComplexity), true
 
 	case "Query.orderDetail":
 		if e.complexity.Query.OrderDetail == nil {
@@ -2488,6 +2592,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputUpdateCartInput,
 		ec.unmarshalInputUpdateOrderStatusInput,
 		ec.unmarshalInputUpdateProduct,
+		ec.unmarshalInputUpdateProfileInput,
 		ec.unmarshalInputUpdateSessionAddressInput,
 		ec.unmarshalInputUpdateVariant,
 	)

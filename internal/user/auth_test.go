@@ -3,6 +3,7 @@ package user
 import (
 	"testing"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -79,5 +80,26 @@ func TestParseJWT(t *testing.T) {
 		_, err := ParseJWT(token)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "signature is invalid")
+	})
+
+	t.Run("InvalidSigningMethod", func(t *testing.T) {
+		// Create a token with "none" method
+		token := jwt.New(jwt.SigningMethodNone)
+		tokenStr, _ := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+
+		_, err := ParseJWT(tokenStr)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unexpected signing method")
+	})
+
+	t.Run("InvalidClaimsType", func(t *testing.T) {
+		// Generate token with MapClaims instead of CustomClaims
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"foo": "bar"})
+		tokenStr, _ := token.SignedString([]byte("testsecret"))
+
+		_, err := ParseJWT(tokenStr)
+		if assert.Error(t, err) {
+			assert.Equal(t, "invalid token", err.Error())
+		}
 	})
 }
