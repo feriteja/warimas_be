@@ -2802,6 +2802,35 @@ func (ec *executionContext) fieldContext_UpdateSessionAddressResponse_success(_ 
 	return fc, nil
 }
 
+func (ec *executionContext) _UpdateSessionPaymentMethodResponse_success(ctx context.Context, field graphql.CollectedField, obj *model.UpdateSessionPaymentMethodResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UpdateSessionPaymentMethodResponse_success,
+		func(ctx context.Context) (any, error) {
+			return obj.Success, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UpdateSessionPaymentMethodResponse_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UpdateSessionPaymentMethodResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _UserRef_id(ctx context.Context, field graphql.CollectedField, obj *model.UserRef) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -3255,6 +3284,47 @@ func (ec *executionContext) unmarshalInputUpdateSessionAddressInput(ctx context.
 				return it, err
 			}
 			it.AddressID = data
+		case "guestId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("guestId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.GuestID = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUpdateSessionPaymentMethodInput(ctx context.Context, obj any) (model.UpdateSessionPaymentMethodInput, error) {
+	var it model.UpdateSessionPaymentMethodInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"externalId", "paymentMethod", "guestId"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "externalId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("externalId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ExternalID = data
+		case "paymentMethod":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("paymentMethod"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PaymentMethod = data
 		case "guestId":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("guestId"))
 			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
@@ -4294,6 +4364,45 @@ func (ec *executionContext) _UpdateSessionAddressResponse(ctx context.Context, s
 	return out
 }
 
+var updateSessionPaymentMethodResponseImplementors = []string{"UpdateSessionPaymentMethodResponse"}
+
+func (ec *executionContext) _UpdateSessionPaymentMethodResponse(ctx context.Context, sel ast.SelectionSet, obj *model.UpdateSessionPaymentMethodResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, updateSessionPaymentMethodResponseImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UpdateSessionPaymentMethodResponse")
+		case "success":
+			out.Values[i] = ec._UpdateSessionPaymentMethodResponse_success(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var userRefImplementors = []string{"UserRef"}
 
 func (ec *executionContext) _UserRef(ctx context.Context, sel ast.SelectionSet, obj *model.UserRef) graphql.Marshaler {
@@ -4791,6 +4900,25 @@ func (ec *executionContext) marshalNUpdateSessionAddressResponse2ᚖwarimasᚑbe
 		return graphql.Null
 	}
 	return ec._UpdateSessionAddressResponse(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNUpdateSessionPaymentMethodInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐUpdateSessionPaymentMethodInput(ctx context.Context, v any) (model.UpdateSessionPaymentMethodInput, error) {
+	res, err := ec.unmarshalInputUpdateSessionPaymentMethodInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNUpdateSessionPaymentMethodResponse2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐUpdateSessionPaymentMethodResponse(ctx context.Context, sel ast.SelectionSet, v model.UpdateSessionPaymentMethodResponse) graphql.Marshaler {
+	return ec._UpdateSessionPaymentMethodResponse(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNUpdateSessionPaymentMethodResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐUpdateSessionPaymentMethodResponse(ctx context.Context, sel ast.SelectionSet, v *model.UpdateSessionPaymentMethodResponse) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._UpdateSessionPaymentMethodResponse(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNUserRef2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐUserRef(ctx context.Context, sel ast.SelectionSet, v *model.UserRef) graphql.Marshaler {

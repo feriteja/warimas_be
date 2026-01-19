@@ -539,6 +539,16 @@ type UpdateSessionAddressResponse struct {
 	Success bool `json:"success"`
 }
 
+type UpdateSessionPaymentMethodInput struct {
+	ExternalID    string  `json:"externalId"`
+	PaymentMethod string  `json:"paymentMethod"`
+	GuestID       *string `json:"guestId,omitempty"`
+}
+
+type UpdateSessionPaymentMethodResponse struct {
+	Success bool `json:"success"`
+}
+
 type UpdateVariant struct {
 	ID           string   `json:"id"`
 	ProductID    string   `json:"productId"`

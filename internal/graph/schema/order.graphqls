@@ -59,6 +59,12 @@ input UpdateSessionAddressInput {
   guestId: ID
 }
 
+input UpdateSessionPaymentMethodInput {
+  externalId: ID!
+  paymentMethod: String!
+  guestId: ID
+}
+
 input ConfirmCheckoutSessionInput {
   externalId: ID!
 }
@@ -209,6 +215,10 @@ type UpdateSessionAddressResponse {
   success: Boolean!
 }
 
+type UpdateSessionPaymentMethodResponse {
+  success: Boolean!
+}
+
 type ConfirmCheckoutSessionResponse {
   success: Boolean!
   message: String
@@ -274,6 +284,10 @@ extend type Mutation {
   updateSessionAddress(
     input: UpdateSessionAddressInput!
   ): UpdateSessionAddressResponse!
+
+  updateSessionPaymentMethod(
+    input: UpdateSessionPaymentMethodInput!
+  ): UpdateSessionPaymentMethodResponse!
 
   confirmCheckoutSession(
     input: ConfirmCheckoutSessionInput!

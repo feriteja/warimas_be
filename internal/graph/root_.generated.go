@@ -155,30 +155,31 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddCategory            func(childComplexity int, name string) int
-		AddSubcategory         func(childComplexity int, categoryID string, name string) int
-		AddToCart              func(childComplexity int, input model.AddToCartInput) int
-		ConfirmCheckoutSession func(childComplexity int, input model.ConfirmCheckoutSessionInput) int
-		CreateAddress          func(childComplexity int, input model.CreateAddressInput) int
-		CreateCheckoutSession  func(childComplexity int, input model.CreateCheckoutSessionInput) int
-		CreateOrderFromSession func(childComplexity int, input model.CreateOrderFromSessionInput) int
-		CreateProduct          func(childComplexity int, input model.NewProduct) int
-		CreateVariants         func(childComplexity int, input []*model.NewVariant) int
-		DeleteAddress          func(childComplexity int, input model.DeleteAddressInput) int
-		ForgotPassword         func(childComplexity int, input model.ForgotPasswordInput) int
-		Login                  func(childComplexity int, input model.LoginInput) int
-		Logout                 func(childComplexity int) int
-		Register               func(childComplexity int, input model.RegisterInput) int
-		RemoveFromCart         func(childComplexity int, variantIds []string) int
-		ResetPassword          func(childComplexity int, input model.ResetPasswordInput) int
-		SetDefaultAddress      func(childComplexity int, addressID string) int
-		UpdateAddress          func(childComplexity int, input model.UpdateAddressInput) int
-		UpdateCart             func(childComplexity int, input model.UpdateCartInput) int
-		UpdateOrderStatus      func(childComplexity int, input model.UpdateOrderStatusInput) int
-		UpdateProduct          func(childComplexity int, input model.UpdateProduct) int
-		UpdateProfile          func(childComplexity int, input model.UpdateProfileInput) int
-		UpdateSessionAddress   func(childComplexity int, input model.UpdateSessionAddressInput) int
-		UpdateVariants         func(childComplexity int, input []*model.UpdateVariant) int
+		AddCategory                func(childComplexity int, name string) int
+		AddSubcategory             func(childComplexity int, categoryID string, name string) int
+		AddToCart                  func(childComplexity int, input model.AddToCartInput) int
+		ConfirmCheckoutSession     func(childComplexity int, input model.ConfirmCheckoutSessionInput) int
+		CreateAddress              func(childComplexity int, input model.CreateAddressInput) int
+		CreateCheckoutSession      func(childComplexity int, input model.CreateCheckoutSessionInput) int
+		CreateOrderFromSession     func(childComplexity int, input model.CreateOrderFromSessionInput) int
+		CreateProduct              func(childComplexity int, input model.NewProduct) int
+		CreateVariants             func(childComplexity int, input []*model.NewVariant) int
+		DeleteAddress              func(childComplexity int, input model.DeleteAddressInput) int
+		ForgotPassword             func(childComplexity int, input model.ForgotPasswordInput) int
+		Login                      func(childComplexity int, input model.LoginInput) int
+		Logout                     func(childComplexity int) int
+		Register                   func(childComplexity int, input model.RegisterInput) int
+		RemoveFromCart             func(childComplexity int, variantIds []string) int
+		ResetPassword              func(childComplexity int, input model.ResetPasswordInput) int
+		SetDefaultAddress          func(childComplexity int, addressID string) int
+		UpdateAddress              func(childComplexity int, input model.UpdateAddressInput) int
+		UpdateCart                 func(childComplexity int, input model.UpdateCartInput) int
+		UpdateOrderStatus          func(childComplexity int, input model.UpdateOrderStatusInput) int
+		UpdateProduct              func(childComplexity int, input model.UpdateProduct) int
+		UpdateProfile              func(childComplexity int, input model.UpdateProfileInput) int
+		UpdateSessionAddress       func(childComplexity int, input model.UpdateSessionAddressInput) int
+		UpdateSessionPaymentMethod func(childComplexity int, input model.UpdateSessionPaymentMethodInput) int
+		UpdateVariants             func(childComplexity int, input []*model.UpdateVariant) int
 	}
 
 	Order struct {
@@ -433,6 +434,10 @@ type ComplexityRoot struct {
 	}
 
 	UpdateSessionAddressResponse struct {
+		Success func(childComplexity int) int
+	}
+
+	UpdateSessionPaymentMethodResponse struct {
 		Success func(childComplexity int) int
 	}
 
@@ -1212,6 +1217,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.UpdateSessionAddress(childComplexity, args["input"].(model.UpdateSessionAddressInput)), true
+
+	case "Mutation.updateSessionPaymentMethod":
+		if e.complexity.Mutation.UpdateSessionPaymentMethod == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateSessionPaymentMethod_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateSessionPaymentMethod(childComplexity, args["input"].(model.UpdateSessionPaymentMethodInput)), true
 
 	case "Mutation.updateVariants":
 		if e.complexity.Mutation.UpdateVariants == nil {
@@ -2424,6 +2441,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.UpdateSessionAddressResponse.Success(childComplexity), true
 
+	case "UpdateSessionPaymentMethodResponse.success":
+		if e.complexity.UpdateSessionPaymentMethodResponse.Success == nil {
+			break
+		}
+
+		return e.complexity.UpdateSessionPaymentMethodResponse.Success(childComplexity), true
+
 	case "User.email":
 		if e.complexity.User.Email == nil {
 			break
@@ -2594,6 +2618,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputUpdateProduct,
 		ec.unmarshalInputUpdateProfileInput,
 		ec.unmarshalInputUpdateSessionAddressInput,
+		ec.unmarshalInputUpdateSessionPaymentMethodInput,
 		ec.unmarshalInputUpdateVariant,
 	)
 	first := true

@@ -45,6 +45,12 @@ type Service interface {
 		addressID string,
 		guestID *string,
 	) error
+	UpdateSessionPaymentMethod(
+		ctx context.Context,
+		externalID string,
+		paymentMethod payment.ChannelCode,
+		guestID *string,
+	) error
 	ConfirmSession(
 		ctx context.Context,
 		sessionID string,
@@ -790,6 +796,62 @@ func (s *service) UpdateSessionAddress(
 	return s.repo.UpdateSessionAddressAndPricing(ctx, session)
 }
 
+func (s *service) UpdateSessionPaymentMethod(
+	ctx context.Context,
+	externalID string,
+	paymentMethod payment.ChannelCode,
+	guestID *string,
+) error {
+
+	switch paymentMethod {
+	case payment.MethodBCAVA,
+		payment.MethodBNIVA,
+		payment.MethodMandiriVA,
+		payment.MethodQRIS,
+		payment.MethodCOD,
+		payment.MethodOVO,
+		payment.MethodDANA,
+		payment.MethodLINKAJA,
+		payment.MethodSHOPEE,
+		payment.MethodGOPAY,
+		payment.MethodAlfamart,
+		payment.MethodIndomaret,
+		payment.MethodCreditCard:
+		// valid
+	default:
+		return fmt.Errorf("invalid payment method: %s", paymentMethod)
+	}
+
+	session, err := s.repo.GetCheckoutSession(ctx, externalID)
+	if err != nil {
+		return err
+	}
+
+	userID, _ := utils.GetUserIDFromContext(ctx)
+
+	if guestID != nil {
+		guestUUID := uuid.MustParse(*guestID)
+		if session.GuestID == nil || *session.GuestID != guestUUID {
+			return errors.New("forbidden: guest ID mismatch")
+		}
+	} else {
+		if session.UserID == nil || *session.UserID != int32(userID) {
+			return errors.New("forbidden: cannot update others' sessions")
+		}
+	}
+
+	if session.Status != CheckoutSessionStatusPending {
+		return errors.New("checkout session is not editable")
+	}
+
+	if time.Now().After(session.ExpiresAt) {
+		return errors.New("checkout session expired")
+	}
+
+	// Persist changes
+	return s.repo.UpdateSessionPaymentMethod(ctx, session.ID, paymentMethod)
+}
+
 func (s *service) calculateShippingFee(
 	address *address.Address,
 	items []CheckoutSessionItem,
@@ -895,33 +957,53 @@ func (s *service) ConfirmSession(
 
 	log.Info("stock validation passed")
 
-	externalOrderID := utils.ExternalIDFromSession("pay", session.ID.String())
-
-	order := &Order{
-		UserID:      session.UserID,
-		TotalAmount: uint(session.TotalPrice),
-		Currency:    session.Currency,
-		Status:      OrderStatus(model.OrderStatusPendingPayment),
-		ExternalID:  externalOrderID,
-	}
-
-	err = s.repo.CreateOrderTx(
-		ctx,
-		order,
-		session,
-	)
+	// Idempotency check: see if an order already exists for this session.
+	// This handles retries if the payment gateway call fails after order creation.
+	order, err := s.repo.GetOrderBySessionID(ctx, session.ID)
 	if err != nil {
+		// This is an actual DB error, not a "not found" case.
+		log.Error("failed to check for existing order by session ID", zap.Error(err))
 		return nil, err
 	}
 
-	// 7. Persist changes
-	err = s.repo.ConfirmCheckoutSession(ctx, session)
-	if err != nil {
-		log.Error("failed to confirm checkout session", zap.Error(err))
-		return nil, err
+	var externalOrderID string
+
+	if order == nil {
+		// Order does not exist, this is the first attempt.
+		log.Info("creating new order for session")
+		externalOrderID = utils.ExternalIDFromSession("pay", session.ID.String())
+
+		order = &Order{
+			UserID:      session.UserID,
+			TotalAmount: uint(session.TotalPrice),
+			Currency:    session.Currency,
+			Status:      OrderStatus(model.OrderStatusPendingPayment),
+			ExternalID:  externalOrderID,
+		}
+
+		if err := s.repo.CreateOrderTx(ctx, order, session); err != nil {
+			log.Error("failed to create order in transaction", zap.Error(err))
+			return nil, err
+		}
+
+		if err := s.repo.ConfirmCheckoutSession(ctx, session); err != nil {
+			log.Error("failed to confirm checkout session", zap.Error(err))
+			// Note: At this point, an order exists but the session isn't marked as confirmed.
+			// The idempotency check at the start of this function will handle retries correctly.
+			return nil, err
+		}
+	} else {
+		// Order already exists, this is a retry.
+		log.Info("order already exists for this session, retrying payment process", zap.Int32("order_id", order.ID))
+		externalOrderID = order.ExternalID
 	}
 
+	// 7. Process payment
 	_, err = s.OrderToPaymentProcess(ctx, session, externalOrderID, uint(order.ID))
+	if err != nil {
+		log.Error("failed to process order to payment", zap.Error(err))
+		return nil, err
+	}
 
 	log.Info("checkout session confirmed successfully",
 		zap.String("final_status", string(session.Status)),
