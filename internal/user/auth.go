@@ -77,5 +77,9 @@ func ParseJWT(tokenStr string) (*CustomClaims, error) {
 		return nil, errors.New("invalid token")
 	}
 
+	if claims.UserID == 0 {
+		return nil, errors.New("invalid token")
+	}
+
 	return claims, nil
 }
