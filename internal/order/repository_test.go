@@ -310,12 +310,12 @@ func TestRepository_GetCheckoutSession(t *testing.T) {
 		rows := sqlmock.NewRows([]string{
 			"id", "external_id", "status", "expires_at", "created_at",
 			"user_id", "address_id", "subtotal", "tax", "shipping_fee", "discount",
-			"total_amount", "currency", "confirmed_at",
+			"total_amount", "currency", "confirmed_at", "payment_method",
 			"item_id", "variant_id", "variant_name", "product_name",
 			"imageurl", "quantity", "quantity_type", "unit_price", "item_subtotal",
 		}).AddRow(
 			sessionID, extID, "PENDING", time.Now(), time.Now(),
-			1, nil, 10000, 0, 0, 0, 10000, "IDR", nil,
+			1, nil, 10000, 0, 0, 0, 10000, "IDR", nil, nil,
 			itemID, "var-1", "V1", "P1", "img", 1, "pcs", 10000, 10000,
 		)
 
@@ -762,10 +762,10 @@ func TestRepository_GetOrderBySessionID(t *testing.T) {
 	sessID := uuid.New()
 
 	t.Run("Success", func(t *testing.T) {
-		rows := sqlmock.NewRows([]string{"id", "status", "total_amount"}).
-			AddRow(1, "PENDING", 10000)
+		rows := sqlmock.NewRows([]string{"id", "status", "total_amount", "external_id"}).
+			AddRow(1, "PENDING", 10000, "ext-1")
 
-		mock.ExpectQuery(`SELECT id, status, total_amount FROM orders WHERE checkout_session_id = \$1`).
+		mock.ExpectQuery(`SELECT id, status, total_amount, external_id FROM orders WHERE checkout_session_id = \$1`).
 			WithArgs(sessID).
 			WillReturnRows(rows)
 

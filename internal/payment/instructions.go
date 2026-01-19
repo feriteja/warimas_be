@@ -2,31 +2,7 @@ package payment
 
 import "strings"
 
-const (
-	// Virtual Account
-	MethodBCAVA     = "BCA_VIRTUAL_ACCOUNT"
-	MethodBNIVA     = "BNI_VIRTUAL_ACCOUNT"
-	MethodMandiriVA = "MANDIRI_VIRTUAL_ACCOUNT"
-
-	// QRIS
-	MethodQRIS = "QRIS"
-	MethodCOD  = "COD"
-
-	// E-Wallet
-	MethodOVO     = "OVO"
-	MethodDANA    = "DANA"
-	MethodLINKAJA = "LINKAJA"
-	MethodSHOPEE  = "SHOPEEPAY"
-
-	// Retail Outlet
-	MethodAlfamart  = "ALFAMART"
-	MethodIndomaret = "INDOMARET"
-
-	// Credit Card
-	MethodCreditCard = "CREDIT_CARD"
-)
-
-var InstructionMap = map[string][]string{
+var InstructionMap = map[ChannelCode][]string{
 	MethodCOD: {
 		"Pesanan akan dikirim ke alamat tujuan",
 		"Siapkan uang tunai sebesar {{amount}} saat kurir tiba",
@@ -135,7 +111,7 @@ var InstructionMap = map[string][]string{
 	},
 }
 
-func GetInstructions(method string) []string {
+func GetInstructions(method ChannelCode) []string {
 	if steps, ok := InstructionMap[method]; ok {
 		return steps
 	}

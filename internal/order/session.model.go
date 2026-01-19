@@ -2,6 +2,7 @@ package order
 
 import (
 	"time"
+	"warimas-be/internal/payment"
 
 	"github.com/google/uuid"
 )
@@ -40,12 +41,13 @@ type CheckoutSession struct {
 	Items []CheckoutSessionItem
 
 	// Pricing (server-calculated only)
-	Subtotal    int
-	Tax         int
-	ShippingFee int
-	Discount    int
-	TotalPrice  int
-	Currency    string
+	Subtotal      int
+	Tax           int
+	ShippingFee   int
+	Discount      int
+	TotalPrice    int
+	Currency      string
+	PaymentMethod *payment.ChannelCode
 }
 
 type CheckoutSessionItem struct {
@@ -86,9 +88,9 @@ type ShippingAddress struct {
 }
 
 type PaymentDetail struct {
-	Method       string   `json:"method"`
-	Bank         *string  `json:"bank,omitempty"`        // Pointer because it might be null for some methods
-	PaymentCode  *string  `json:"paymentCode,omitempty"` // Pointer because it might be null
-	ReferenceID  string   `json:"referenceId"`
-	Instructions []string `json:"instructions"`
+	Method       payment.ChannelCode `json:"method"`
+	Bank         *string             `json:"bank,omitempty"`        // Pointer because it might be null for some methods
+	PaymentCode  *string             `json:"paymentCode,omitempty"` // Pointer because it might be null
+	ReferenceID  string              `json:"referenceId"`
+	Instructions []string            `json:"instructions"`
 }

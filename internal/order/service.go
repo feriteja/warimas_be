@@ -9,6 +9,7 @@ import (
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
 	"warimas-be/internal/payment"
+	"warimas-be/internal/user"
 	"warimas-be/internal/utils"
 
 	"github.com/google/uuid"
@@ -20,7 +21,7 @@ type Service interface {
 		ctx context.Context,
 		externalID string,
 	) (*Order, error)
-	OrderToPaymentProcess(ctx context.Context, sessionExternalID, externalID string, orderId uint) (*payment.PaymentResponse, error)
+	OrderToPaymentProcess(ctx context.Context, session *CheckoutSession, externalID string, orderId uint) (*payment.PaymentResponse, error)
 	GetOrders(
 		ctx context.Context,
 		filter *OrderFilterInput,
@@ -44,6 +45,12 @@ type Service interface {
 		addressID string,
 		guestID *string,
 	) error
+	UpdateSessionPaymentMethod(
+		ctx context.Context,
+		externalID string,
+		paymentMethod payment.ChannelCode,
+		guestID *string,
+	) error
 	ConfirmSession(
 		ctx context.Context,
 		sessionID string,
@@ -62,19 +69,25 @@ type Service interface {
 	) (*Order, error)
 }
 
+type UserGateway interface {
+	GetProfile(ctx context.Context, userID uint) (*user.Profile, error)
+}
+
 type service struct {
 	repo        Repository
 	paymentRepo payment.Repository
 	paymentGate payment.Gateway
 	addressRepo address.Repository
+	userRepo    UserGateway
 }
 
-func NewService(repo Repository, payRepo payment.Repository, payGate payment.Gateway, addressRepo address.Repository) Service {
+func NewService(repo Repository, payRepo payment.Repository, payGate payment.Gateway, addressRepo address.Repository, userRepo UserGateway) Service {
 	return &service{
 		repo:        repo,
 		paymentRepo: payRepo,
 		paymentGate: payGate,
 		addressRepo: addressRepo,
+		userRepo:    userRepo,
 	}
 }
 
@@ -127,29 +140,54 @@ func (s *service) CreateFromSession(
 }
 
 // ✅ Create new order from cart
-func (s *service) OrderToPaymentProcess(ctx context.Context, sessionExternalID string, externalID string, orderId uint) (*payment.PaymentResponse, error) {
-	session, err := s.repo.GetCheckoutSession(context.Background(), sessionExternalID)
-	if err != nil {
-		return nil, err
-	}
-
+func (s *service) OrderToPaymentProcess(ctx context.Context, session *CheckoutSession, externalID string, orderId uint) (*payment.PaymentResponse, error) {
 	userEmail := utils.GetUserEmailFromContext(ctx)
 
 	var items []payment.XenditItem
 	for _, s := range session.Items {
 		items = append(items, payment.XenditItem{
-			Name:     s.ProductName + " - " + s.VariantName,
+			Name:     fmt.Sprintf("%s - %s", s.ProductName, s.VariantName),
 			Quantity: s.Quantity,
 			Price:    int64(s.Price),
 		})
 	}
-	tempUserName := "userName"
+
+	var userName string
+	if session.UserID != nil && *session.UserID > 0 {
+		userProfile, err := s.userRepo.GetProfile(ctx, uint(*session.UserID))
+		if err == nil && userProfile != nil {
+			if userProfile.FullName != nil {
+				userName = *userProfile.FullName
+			}
+		} else {
+			logger.FromCtx(ctx).Warn("failed to fetch user profile for invoice", zap.Error(err))
+		}
+	}
+
+	// Fallback to address receiver name if profile name is missing
+	if userName == "" && session.AddressID != nil {
+		addr, err := s.addressRepo.GetByID(ctx, *session.AddressID)
+		if err == nil && addr != nil {
+			userName = addr.ReceiverName
+		}
+	}
+
+	if userName == "" {
+		userName = "Guest"
+	}
+
+	paymentMethod := payment.ChannelCode(payment.MethodGOPAY)
+	if session.PaymentMethod != nil {
+		paymentMethod = payment.ChannelCode(*session.PaymentMethod)
+
+	}
+
 	payResp, err := s.paymentGate.CreateInvoice(externalID,
-		tempUserName,
+		userName,
 		int64(session.TotalPrice),
 		userEmail,
 		items,
-		payment.MethodBCAVA)
+		paymentMethod)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create payment invoice: %w", err)
@@ -758,6 +796,62 @@ func (s *service) UpdateSessionAddress(
 	return s.repo.UpdateSessionAddressAndPricing(ctx, session)
 }
 
+func (s *service) UpdateSessionPaymentMethod(
+	ctx context.Context,
+	externalID string,
+	paymentMethod payment.ChannelCode,
+	guestID *string,
+) error {
+
+	switch paymentMethod {
+	case payment.MethodBCAVA,
+		payment.MethodBNIVA,
+		payment.MethodMandiriVA,
+		payment.MethodQRIS,
+		payment.MethodCOD,
+		payment.MethodOVO,
+		payment.MethodDANA,
+		payment.MethodLINKAJA,
+		payment.MethodSHOPEE,
+		payment.MethodGOPAY,
+		payment.MethodAlfamart,
+		payment.MethodIndomaret,
+		payment.MethodCreditCard:
+		// valid
+	default:
+		return fmt.Errorf("invalid payment method: %s", paymentMethod)
+	}
+
+	session, err := s.repo.GetCheckoutSession(ctx, externalID)
+	if err != nil {
+		return err
+	}
+
+	userID, _ := utils.GetUserIDFromContext(ctx)
+
+	if guestID != nil {
+		guestUUID := uuid.MustParse(*guestID)
+		if session.GuestID == nil || *session.GuestID != guestUUID {
+			return errors.New("forbidden: guest ID mismatch")
+		}
+	} else {
+		if session.UserID == nil || *session.UserID != int32(userID) {
+			return errors.New("forbidden: cannot update others' sessions")
+		}
+	}
+
+	if session.Status != CheckoutSessionStatusPending {
+		return errors.New("checkout session is not editable")
+	}
+
+	if time.Now().After(session.ExpiresAt) {
+		return errors.New("checkout session expired")
+	}
+
+	// Persist changes
+	return s.repo.UpdateSessionPaymentMethod(ctx, session.ID, paymentMethod)
+}
+
 func (s *service) calculateShippingFee(
 	address *address.Address,
 	items []CheckoutSessionItem,
@@ -863,33 +957,53 @@ func (s *service) ConfirmSession(
 
 	log.Info("stock validation passed")
 
-	externalOrderID := utils.ExternalIDFromSession("pay", session.ID.String())
-
-	order := &Order{
-		UserID:      session.UserID,
-		TotalAmount: uint(session.TotalPrice),
-		Currency:    session.Currency,
-		Status:      OrderStatus(model.OrderStatusPendingPayment),
-		ExternalID:  externalOrderID,
-	}
-
-	err = s.repo.CreateOrderTx(
-		ctx,
-		order,
-		session,
-	)
+	// Idempotency check: see if an order already exists for this session.
+	// This handles retries if the payment gateway call fails after order creation.
+	order, err := s.repo.GetOrderBySessionID(ctx, session.ID)
 	if err != nil {
+		// This is an actual DB error, not a "not found" case.
+		log.Error("failed to check for existing order by session ID", zap.Error(err))
 		return nil, err
 	}
 
-	// 7. Persist changes
-	err = s.repo.ConfirmCheckoutSession(ctx, session)
-	if err != nil {
-		log.Error("failed to confirm checkout session", zap.Error(err))
-		return nil, err
+	var externalOrderID string
+
+	if order == nil {
+		// Order does not exist, this is the first attempt.
+		log.Info("creating new order for session")
+		externalOrderID = utils.ExternalIDFromSession("pay", session.ID.String())
+
+		order = &Order{
+			UserID:      session.UserID,
+			TotalAmount: uint(session.TotalPrice),
+			Currency:    session.Currency,
+			Status:      OrderStatus(model.OrderStatusPendingPayment),
+			ExternalID:  externalOrderID,
+		}
+
+		if err := s.repo.CreateOrderTx(ctx, order, session); err != nil {
+			log.Error("failed to create order in transaction", zap.Error(err))
+			return nil, err
+		}
+
+		if err := s.repo.ConfirmCheckoutSession(ctx, session); err != nil {
+			log.Error("failed to confirm checkout session", zap.Error(err))
+			// Note: At this point, an order exists but the session isn't marked as confirmed.
+			// The idempotency check at the start of this function will handle retries correctly.
+			return nil, err
+		}
+	} else {
+		// Order already exists, this is a retry.
+		log.Info("order already exists for this session, retrying payment process", zap.Int32("order_id", order.ID))
+		externalOrderID = order.ExternalID
 	}
 
-	_, err = s.OrderToPaymentProcess(ctx, session.ExternalID, externalOrderID, uint(order.ID))
+	// 7. Process payment
+	_, err = s.OrderToPaymentProcess(ctx, session, externalOrderID, uint(order.ID))
+	if err != nil {
+		log.Error("failed to process order to payment", zap.Error(err))
+		return nil, err
+	}
 
 	log.Info("checkout session confirmed successfully",
 		zap.String("final_status", string(session.Status)),

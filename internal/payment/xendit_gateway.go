@@ -76,9 +76,12 @@ func (x *xenditGateway) CreateInvoice(
 		},
 		"channel_code": string(channelCode),
 		"channel_properties": map[string]interface{}{
-			"expires_at":   expiry,
-			"payer_name":   buyerName,
-			"display_name": buyerName,
+			"failure_return_url": os.Getenv("FAILURE_URL"),
+			"success_return_url": os.Getenv("SUCCESS_URL"),
+			"cancel_return_url":  os.Getenv("CANCEL_RETURN_URL"),
+			"expires_at":         expiry,
+			"payer_name":         buyerName,
+			"display_name":       buyerName,
 		},
 	}
 
@@ -134,18 +137,24 @@ func (x *xenditGateway) CreateInvoice(
 	// Prevent panic if Actions is empty
 	var paymentCode string
 	for _, a := range res.Actions {
-		if a.Descriptor == "VIRTUAL_ACCOUNT_NUMBER" {
+		if a.Descriptor == "VIRTUAL_ACCOUNT_NUMBER" || a.Descriptor == "DEEPLINK_URL" {
 			paymentCode = a.Value
 			break
 		}
 	}
+
+	resjson := json.RawMessage(bodyBytes)
+
+	log.Info(" raw data 11111111111111",
+		zap.Any("body raw json", resjson),
+	)
 
 	return &PaymentResponse{
 		ProviderPaymentID: res.PaymentRequestID,
 		ReferenceID:       res.ReferenceID,
 		Amount:            res.RequestAmount,
 		Status:            res.Status,
-		PaymentMethod:     res.ChannelCode,
+		PaymentMethod:     ChannelCode(res.ChannelCode),
 		PaymentCode:       paymentCode,
 		ChannelCode:       res.ChannelCode,
 		ExpirationTime:    res.ChannelProperties.ExpiresAt,

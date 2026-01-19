@@ -9,6 +9,7 @@ import (
 	"time"
 	"warimas-be/internal/address"
 	"warimas-be/internal/logger"
+	"warimas-be/internal/payment"
 	"warimas-be/internal/product"
 	"warimas-be/internal/utils"
 
@@ -83,6 +84,12 @@ type Repository interface {
 		session *CheckoutSession,
 	) error
 
+	UpdateSessionPaymentMethod(
+		ctx context.Context,
+		sessionID uuid.UUID,
+		paymentMethod payment.ChannelCode,
+	) error
+
 	ConfirmCheckoutSession(
 		ctx context.Context,
 		session *CheckoutSession,
@@ -114,14 +121,14 @@ func (r *repository) GetOrderBySessionID(
 ) (*Order, error) {
 
 	query := `
-		SELECT id, status, total_amount
+		SELECT id, status, total_amount, external_id
 		FROM orders
 		WHERE checkout_session_id = $1
 	`
 
 	var o Order
 	err := r.db.QueryRowContext(ctx, query, sessionID).
-		Scan(&o.ID, &o.Status, &o.TotalAmount)
+		Scan(&o.ID, &o.Status, &o.TotalAmount, &o.ExternalID)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -981,6 +988,7 @@ func (r *repository) GetCheckoutSession(
 			s.user_id, s.address_id,
 			s.subtotal, s.tax, s.shipping_fee, s.discount,
 			s.total_amount, s.currency, s.confirmed_at,
+			s.payment_method,
 
 			i.id, i.variant_id, i.variant_name, i.product_name,
 			i.imageurl, i.quantity, i.quantity_type,
@@ -1023,6 +1031,7 @@ func (r *repository) GetCheckoutSession(
 			&s.TotalPrice,
 			&s.Currency,
 			&s.ConfirmedAt,
+			&s.PaymentMethod,
 
 			&itemID,
 			&item.VariantID,
@@ -1135,6 +1144,20 @@ func (r *repository) UpdateSessionAddressAndPricing(
 		session.ID,
 	)
 
+	return err
+}
+
+func (r *repository) UpdateSessionPaymentMethod(
+	ctx context.Context,
+	sessionID uuid.UUID,
+	paymentMethod payment.ChannelCode,
+) error {
+	query := `
+		UPDATE checkout_sessions
+		SET payment_method = $1
+		WHERE id = $2
+	`
+	_, err := r.db.ExecContext(ctx, query, paymentMethod, sessionID)
 	return err
 }
 

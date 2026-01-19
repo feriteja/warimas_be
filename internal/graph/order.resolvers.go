@@ -12,6 +12,7 @@ import (
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
 	"warimas-be/internal/order"
+	"warimas-be/internal/payment"
 	"warimas-be/internal/utils"
 
 	"go.uber.org/zap"
@@ -155,6 +156,39 @@ func (r *mutationResolver) UpdateSessionAddress(ctx context.Context, input model
 	log.Info("session address updated successfully")
 
 	return &model.UpdateSessionAddressResponse{
+		Success: true,
+	}, nil
+}
+
+// UpdateSessionPaymentMethod is the resolver for the updateSessionPaymentMethod field.
+func (r *mutationResolver) UpdateSessionPaymentMethod(ctx context.Context, input model.UpdateSessionPaymentMethodInput) (*model.UpdateSessionPaymentMethodResponse, error) {
+	logFields := []zap.Field{
+		zap.String("layer", "resolver"),
+		zap.String("method", "UpdateSessionPaymentMethod"),
+		zap.String("session_id", input.ExternalID),
+		zap.String("payment_method", input.PaymentMethod),
+	}
+
+	if input.GuestID != nil {
+		logFields = append(logFields, zap.String("guest_id", *input.GuestID))
+	}
+
+	log := logger.FromCtx(ctx).With(logFields...)
+
+	err := r.OrderSvc.UpdateSessionPaymentMethod(
+		ctx,
+		input.ExternalID,
+		payment.ChannelCode(input.PaymentMethod),
+		input.GuestID,
+	)
+	if err != nil {
+		log.Error("failed to update session payment method", zap.Error(err))
+		return nil, err
+	}
+
+	log.Info("session payment method updated successfully")
+
+	return &model.UpdateSessionPaymentMethodResponse{
 		Success: true,
 	}, nil
 }
@@ -385,7 +419,7 @@ func (r *queryResolver) PaymentOrderInfo(ctx context.Context, externalID string)
 			PostalCode:   paymentInfo.ShippingAddress.PostalCode,
 		},
 		Payment: &model.PaymentDetail{
-			Method:       paymentInfo.Payment.Method,
+			Method:       string(paymentInfo.Payment.Method),
 			PaymentCode:  paymentInfo.Payment.PaymentCode,
 			ReferenceID:  paymentInfo.Payment.ReferenceID,
 			Instructions: paymentInfo.Payment.Instructions,

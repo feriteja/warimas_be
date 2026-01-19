@@ -30,6 +30,7 @@ type MutationResolver interface {
 	UpdateOrderStatus(ctx context.Context, input model.UpdateOrderStatusInput) (*model.CreateOrderResponse, error)
 	CreateCheckoutSession(ctx context.Context, input model.CreateCheckoutSessionInput) (*model.CheckoutSessionResponse, error)
 	UpdateSessionAddress(ctx context.Context, input model.UpdateSessionAddressInput) (*model.UpdateSessionAddressResponse, error)
+	UpdateSessionPaymentMethod(ctx context.Context, input model.UpdateSessionPaymentMethodInput) (*model.UpdateSessionPaymentMethodResponse, error)
 	ConfirmCheckoutSession(ctx context.Context, input model.ConfirmCheckoutSessionInput) (*model.ConfirmCheckoutSessionResponse, error)
 	CreateProduct(ctx context.Context, input model.NewProduct) (*model.Product, error)
 	UpdateProduct(ctx context.Context, input model.UpdateProduct) (*model.Product, error)
@@ -304,6 +305,17 @@ func (ec *executionContext) field_Mutation_updateSessionAddress_args(ctx context
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNUpdateSessionAddressInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐUpdateSessionAddressInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateSessionPaymentMethod_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNUpdateSessionPaymentMethodInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐUpdateSessionPaymentMethodInput)
 	if err != nil {
 		return nil, err
 	}
@@ -1316,6 +1328,51 @@ func (ec *executionContext) fieldContext_Mutation_updateSessionAddress(ctx conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_updateSessionAddress_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateSessionPaymentMethod(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_updateSessionPaymentMethod,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().UpdateSessionPaymentMethod(ctx, fc.Args["input"].(model.UpdateSessionPaymentMethodInput))
+		},
+		nil,
+		ec.marshalNUpdateSessionPaymentMethodResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐUpdateSessionPaymentMethodResponse,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateSessionPaymentMethod(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "success":
+				return ec.fieldContext_UpdateSessionPaymentMethodResponse_success(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type UpdateSessionPaymentMethodResponse", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateSessionPaymentMethod_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -3098,6 +3155,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "updateSessionAddress":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateSessionAddress(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateSessionPaymentMethod":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateSessionPaymentMethod(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
