@@ -43,4 +43,30 @@ extend type Mutation {
   login(input: LoginInput!): AuthResponse!
   forgotPassword(input: ForgotPasswordInput!): ForgotPasswordResponse!
   resetPassword(input: ResetPasswordInput!): ResetPasswordResponse!
+  logout: Boolean!
+  updateProfile(input: UpdateProfileInput!): Profile!
+}
+
+input UpdateProfileInput {
+  fullName: String
+  bio: String
+  avatarUrl: String
+  phone: String
+  dateOfBirth: String
+}
+
+type Profile {
+  id: ID!
+  userId: ID!
+  fullName: String
+  bio: String
+  avatarUrl: String
+  phone: String
+  dateOfBirth: String
+  createdAt: String
+  updatedAt: String
+}
+
+extend type Query {
+  myProfile: Profile
 }

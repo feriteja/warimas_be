@@ -8,9 +8,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 	"warimas-be/internal/graph/model"
 	"warimas-be/internal/logger"
 	"warimas-be/internal/transport"
+	"warimas-be/internal/user"
 	"warimas-be/internal/utils"
 
 	"go.uber.org/zap"
@@ -134,4 +136,103 @@ func (r *mutationResolver) ResetPassword(ctx context.Context, input model.ResetP
 		Success: true,
 		Message: utils.StrPtr("Password successfully reset"),
 	}, nil
+}
+
+// Logout is the resolver for the logout field.
+func (r *mutationResolver) Logout(ctx context.Context) (bool, error) {
+	log := logger.FromCtx(ctx)
+
+	w := transport.GetResponseWriter(ctx)
+	if w != nil {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "access_token",
+			Value:    "",
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteNoneMode,
+			MaxAge:   -1,
+		})
+	}
+
+	log.Info("user logged out")
+
+	return true, nil
+}
+
+// UpdateProfile is the resolver for the updateProfile field.
+// UpdateProfile is the resolver for the updateProfile field.
+func (r *mutationResolver) UpdateProfile(ctx context.Context, input model.UpdateProfileInput) (*model.Profile, error) {
+	log := logger.FromCtx(ctx)
+
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	var dob *time.Time
+	if input.DateOfBirth != nil {
+		parsed, err := time.Parse("2006-01-02", *input.DateOfBirth)
+		if err != nil {
+			log.Error("invalid date format", zap.String("date", *input.DateOfBirth), zap.Error(err))
+			return nil, fmt.Errorf("invalid date format, expected YYYY-MM-DD")
+		}
+		dob = &parsed
+	}
+
+	params := user.UpdateProfileParams{
+		UserID:      userID,
+		FullName:    input.FullName,
+		Bio:         input.Bio,
+		AvatarURL:   input.AvatarURL,
+		Phone:       input.Phone,
+		DateOfBirth: dob,
+	}
+
+	updated, err := r.UserSvc.UpdateProfile(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return mapProfileToGraphQL(updated), nil
+}
+
+// MyProfile is the resolver for the myProfile field.
+func (r *queryResolver) MyProfile(ctx context.Context) (*model.Profile, error) {
+	log := logger.FromCtx(ctx)
+
+	userID, ok := utils.GetUserIDFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	// Assuming UserSvc has GetOrCreateProfile method
+	// You need to implement GetOrCreateProfile in your user service
+	profile, err := r.UserSvc.GetOrCreateProfile(ctx, userID)
+	if err != nil {
+		log.Error("failed to get or create profile", zap.Error(err))
+		return nil, err
+	}
+
+	return mapProfileToGraphQL(profile), nil
+}
+
+func mapProfileToGraphQL(profile *user.Profile) *model.Profile {
+	var dob *string
+	if profile.DateOfBirth != nil {
+		d := profile.DateOfBirth.Format("2006-01-02")
+		dob = &d
+	}
+
+	return &model.Profile{
+		ID:          profile.ID.String(),
+		UserID:      fmt.Sprint(profile.UserID),
+		FullName:    profile.FullName,
+		Bio:         profile.Bio,
+		AvatarURL:   profile.AvatarURL,
+		Phone:       profile.Phone,
+		DateOfBirth: dob,
+		CreatedAt:   utils.StrPtr(profile.CreatedAt.Format(time.RFC3339)),
+		UpdatedAt:   utils.StrPtr(profile.UpdatedAt.Format(time.RFC3339)),
+	}
 }

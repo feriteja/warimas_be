@@ -10,12 +10,16 @@ import (
 	"go.uber.org/zap"
 )
 
+var ErrProfileNotFound = errors.New("profile not found")
+
 type Service interface {
 	Register(ctx context.Context, email, password string) (string, *User, error)
 	Login(ctx context.Context, email, password string) (string, *User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	ForgotPassword(ctx context.Context, email string) error
 	ResetPassword(ctx context.Context, token, newPassword string) error
+	GetOrCreateProfile(ctx context.Context, userID uint) (*Profile, error)
+	UpdateProfile(ctx context.Context, params UpdateProfileParams) (*Profile, error)
 }
 
 type service struct {
@@ -27,8 +31,9 @@ func NewService(repo Repository) Service {
 }
 
 func (s *service) Register(ctx context.Context, email, password string) (string, *User, error) {
-	log := logger.FromCtx(ctx)
+	log := logger.FromCtx(ctx).With(zap.String("email", email))
 
+	log.Info("register service starting")
 	hashed, err := HashPassword(password)
 	if err != nil {
 		log.Error("failed to hash password", zap.Error(err))
@@ -44,9 +49,9 @@ func (s *service) Register(ctx context.Context, email, password string) (string,
 		return "", nil, err
 	}
 
-	token, err := GenerateJWT(u.ID, string(u.Role), email, nil)
+	token, err := GenerateJWT(u.ID, string(u.Role), email, u.SellerID)
 	if err != nil {
-		log.Error("failed to generate jwt", zap.String("user_id", fmt.Sprint(u.ID)), zap.Error(err))
+		log.Error("failed to generate jwt", zap.Error(err))
 		return "", nil, err
 	}
 
@@ -59,7 +64,7 @@ func (s *service) Register(ctx context.Context, email, password string) (string,
 }
 
 func (s *service) Login(ctx context.Context, email, password string) (string, *User, error) {
-	log := logger.FromCtx(ctx)
+	log := logger.FromCtx(ctx).With(zap.String("email", email))
 
 	log.Info("Login attempt",
 		zap.String("email", email),
@@ -67,7 +72,7 @@ func (s *service) Login(ctx context.Context, email, password string) (string, *U
 
 	u, err := s.repo.FindByEmail(ctx, email)
 	if err != nil {
-		log.Warn("Login failed: email not found",
+		log.Warn("email not found",
 			zap.String("email", email),
 			zap.Error(err),
 		)
@@ -76,26 +81,20 @@ func (s *service) Login(ctx context.Context, email, password string) (string, *U
 
 	// Check password
 	if !CheckPasswordHash(password, u.Password) {
-		log.Warn("Login failed: incorrect password",
-			zap.String("email", email),
-			zap.Int("user_id", u.ID),
-		)
+		log.Warn("incorrect password")
 		return "", nil, errors.New("invalid credentials")
 	}
 
 	// Generate token
 	token, err := GenerateJWT(u.ID, string(u.Role), email, u.SellerID)
 	if err != nil {
-		log.Error("JWT generation failed",
-			zap.String("email", email),
-			zap.Int("user_id", u.ID),
+		log.Error("failed to generate jwt",
 			zap.Error(err),
 		)
 		return "", nil, errors.New("internal error")
 	}
 
 	log.Info("Login successful",
-		zap.String("email", email),
 		zap.Int("user_id", u.ID),
 		zap.String("role", string(u.Role)),
 	)
@@ -115,13 +114,13 @@ func (s *service) GetUserByEmail(ctx context.Context, email string) (*User, erro
 }
 
 func (s *service) ForgotPassword(ctx context.Context, email string) error {
-	log := logger.FromCtx(ctx)
+	log := logger.FromCtx(ctx).With(zap.String("email", email))
 
 	// 1. Check if user exists
 	u, err := s.repo.FindByEmail(ctx, email)
 	if err != nil {
 		// We return nil even if user is not found to prevent email enumeration
-		log.Warn("forgot password: email not found", zap.String("email", email))
+		log.Warn("email not found")
 		return nil
 	}
 
@@ -144,7 +143,7 @@ func (s *service) ForgotPassword(ctx context.Context, email string) error {
 }
 
 func (s *service) ResetPassword(ctx context.Context, token, newPassword string) error {
-	log := logger.FromCtx(ctx)
+	log := logger.FromCtx(ctx).With(zap.String("token", token))
 
 	claims, err := ParseJWT(token)
 	if err != nil {
@@ -153,10 +152,9 @@ func (s *service) ResetPassword(ctx context.Context, token, newPassword string) 
 	}
 
 	log = log.With(zap.String("email", claims.Email))
-
 	hashedPassword, err := HashPassword(newPassword)
 	if err != nil {
-		log.Error("reset password: failed to hash password", zap.Error(err))
+		log.Error("failed to hash password", zap.Error(err))
 		return err
 	}
 
@@ -165,6 +163,62 @@ func (s *service) ResetPassword(ctx context.Context, token, newPassword string) 
 		return err
 	}
 
-	log.Info("password reset successfully")
+	log.Info("password reset")
 	return nil
+}
+
+func (s *service) GetOrCreateProfile(ctx context.Context, userID uint) (*Profile, error) {
+	log := logger.FromCtx(ctx).With(zap.Uint("user_id", userID))
+
+	// 1. Try to get existing profile
+	profile, err := s.repo.GetProfile(ctx, userID)
+	if err != nil {
+		// If error is anything other than "not found", return it
+		// Assuming repository returns a specific error or we check the error string/type
+		// For now, we'll assume a specific error string or nil profile means not found if err is nil
+		if !errors.Is(err, ErrProfileNotFound) {
+			log.Error("failed to get profile", zap.Error(err))
+			return nil, err
+		}
+		// If "profile not found", proceed to create
+	}
+
+	if profile != nil {
+		return profile, nil
+	}
+
+	// 2. Create new profile
+	log.Info("profile not found, creating profile")
+	newProfile := &Profile{UserID: userID}
+
+	createdProfile, err := s.repo.CreateProfile(ctx, newProfile)
+	if err != nil {
+		log.Error("failed to create profile", zap.Error(err))
+		return nil, err
+	}
+
+	return createdProfile, nil
+}
+
+func (s *service) UpdateProfile(ctx context.Context, params UpdateProfileParams) (*Profile, error) {
+	log := logger.FromCtx(ctx).With(zap.Uint("user_id", params.UserID))
+
+	// Construct profile object with fields to update
+	p := &Profile{
+		UserID:      params.UserID,
+		FullName:    params.FullName,
+		Bio:         params.Bio,
+		AvatarURL:   params.AvatarURL,
+		Phone:       params.Phone,
+		DateOfBirth: params.DateOfBirth,
+	}
+
+	updatedProfile, err := s.repo.UpdateProfile(ctx, p)
+	if err != nil {
+		log.Error("failed to update profile", zap.Error(err))
+		return nil, err
+	}
+
+	log.Info("profile updated successfully")
+	return updatedProfile, nil
 }

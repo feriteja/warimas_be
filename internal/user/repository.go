@@ -12,6 +12,9 @@ type Repository interface {
 	Create(ctx context.Context, email, password, role string) (*User, error)
 	FindByEmail(ctx context.Context, email string) (*User, error)
 	UpdatePassword(ctx context.Context, email, password string) error
+	GetProfile(ctx context.Context, userID uint) (*Profile, error)
+	CreateProfile(ctx context.Context, p *Profile) (*Profile, error)
+	UpdateProfile(ctx context.Context, p *Profile) (*Profile, error)
 }
 
 type repository struct {
