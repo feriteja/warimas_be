@@ -160,6 +160,7 @@ type CheckoutSession {
   shippingFee: Int!
   discount: Int!
   totalPrice: Int!
+  paymentMethod: String!
 }
 
 type CheckoutSessionItem {

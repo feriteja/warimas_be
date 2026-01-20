@@ -95,18 +95,19 @@ type ComplexityRoot struct {
 	}
 
 	CheckoutSession struct {
-		AddressID   func(childComplexity int) int
-		CreatedAt   func(childComplexity int) int
-		Discount    func(childComplexity int) int
-		ExpiresAt   func(childComplexity int) int
-		ExternalID  func(childComplexity int) int
-		ID          func(childComplexity int) int
-		Items       func(childComplexity int) int
-		ShippingFee func(childComplexity int) int
-		Status      func(childComplexity int) int
-		Subtotal    func(childComplexity int) int
-		Tax         func(childComplexity int) int
-		TotalPrice  func(childComplexity int) int
+		AddressID     func(childComplexity int) int
+		CreatedAt     func(childComplexity int) int
+		Discount      func(childComplexity int) int
+		ExpiresAt     func(childComplexity int) int
+		ExternalID    func(childComplexity int) int
+		ID            func(childComplexity int) int
+		Items         func(childComplexity int) int
+		PaymentMethod func(childComplexity int) int
+		ShippingFee   func(childComplexity int) int
+		Status        func(childComplexity int) int
+		Subtotal      func(childComplexity int) int
+		Tax           func(childComplexity int) int
+		TotalPrice    func(childComplexity int) int
 	}
 
 	CheckoutSessionItem struct {
@@ -744,6 +745,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.CheckoutSession.Items(childComplexity), true
+
+	case "CheckoutSession.paymentMethod":
+		if e.complexity.CheckoutSession.PaymentMethod == nil {
+			break
+		}
+
+		return e.complexity.CheckoutSession.PaymentMethod(childComplexity), true
 
 	case "CheckoutSession.shippingFee":
 		if e.complexity.CheckoutSession.ShippingFee == nil {

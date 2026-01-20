@@ -397,6 +397,35 @@ func (ec *executionContext) fieldContext_CheckoutSession_totalPrice(_ context.Co
 	return fc, nil
 }
 
+func (ec *executionContext) _CheckoutSession_paymentMethod(ctx context.Context, field graphql.CollectedField, obj *model.CheckoutSession) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CheckoutSession_paymentMethod,
+		func(ctx context.Context) (any, error) {
+			return obj.PaymentMethod, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CheckoutSession_paymentMethod(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CheckoutSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _CheckoutSessionItem_id(ctx context.Context, field graphql.CollectedField, obj *model.CheckoutSessionItem) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -3411,6 +3440,11 @@ func (ec *executionContext) _CheckoutSession(ctx context.Context, sel ast.Select
 			}
 		case "totalPrice":
 			out.Values[i] = ec._CheckoutSession_totalPrice(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "paymentMethod":
+			out.Values[i] = ec._CheckoutSession_paymentMethod(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

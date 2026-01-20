@@ -88,18 +88,19 @@ type CategoryPage struct {
 }
 
 type CheckoutSession struct {
-	ID          string                 `json:"id"`
-	ExternalID  string                 `json:"externalId"`
-	Status      CheckoutSessionStatus  `json:"status"`
-	ExpiresAt   time.Time              `json:"expiresAt"`
-	CreatedAt   time.Time              `json:"createdAt"`
-	AddressID   *string                `json:"addressId,omitempty"`
-	Items       []*CheckoutSessionItem `json:"items"`
-	Subtotal    int32                  `json:"subtotal"`
-	Tax         int32                  `json:"tax"`
-	ShippingFee int32                  `json:"shippingFee"`
-	Discount    int32                  `json:"discount"`
-	TotalPrice  int32                  `json:"totalPrice"`
+	ID            string                 `json:"id"`
+	ExternalID    string                 `json:"externalId"`
+	Status        CheckoutSessionStatus  `json:"status"`
+	ExpiresAt     time.Time              `json:"expiresAt"`
+	CreatedAt     time.Time              `json:"createdAt"`
+	AddressID     *string                `json:"addressId,omitempty"`
+	Items         []*CheckoutSessionItem `json:"items"`
+	Subtotal      int32                  `json:"subtotal"`
+	Tax           int32                  `json:"tax"`
+	ShippingFee   int32                  `json:"shippingFee"`
+	Discount      int32                  `json:"discount"`
+	TotalPrice    int32                  `json:"totalPrice"`
+	PaymentMethod string                 `json:"paymentMethod"`
 }
 
 type CheckoutSessionItem struct {
