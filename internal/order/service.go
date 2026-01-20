@@ -2,6 +2,7 @@ package order
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -113,7 +114,10 @@ func (s *service) CreateFromSession(
 
 	// 3. IDEMPOTENCY CHECK
 	existing, err := s.repo.GetOrderBySessionID(ctx, session.ID)
-	if err == nil && existing != nil {
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
 		return existing, nil
 	}
 
@@ -329,7 +333,9 @@ func (s *service) GetOrderDetail(
 	// Fetch order
 	order, err := s.repo.GetOrderDetail(ctx, orderID)
 	if err != nil {
-		log.Error("failed to fetch order detail", zap.Error(err))
+		if !errors.Is(err, ErrOrderNotFound) {
+			log.Error("failed to fetch order detail", zap.Error(err))
+		}
 		return nil, nil, err
 	}
 
@@ -396,7 +402,9 @@ func (s *service) GetOrderDetailByExternalID(
 	// Fetch order
 	order, err := s.repo.GetOrderDetailByExternalID(ctx, externalID)
 	if err != nil {
-		log.Error("failed to fetch order detail", zap.Error(err))
+		if !errors.Is(err, ErrOrderNotFound) {
+			log.Error("failed to fetch order detail", zap.Error(err))
+		}
 		return nil, nil, err
 	}
 
@@ -662,11 +670,14 @@ func (s *service) CreateSession(
 
 		variant, product, err := s.repo.GetVariantForCheckout(ctx, item.VariantID)
 		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, fmt.Errorf("variant not found: %s", item.VariantID)
+			}
 			logItem.Error(
 				"failed to get variant for checkout",
 				zap.Error(err),
 			)
-			return nil, err
+			return nil, errors.New("failed to get variant")
 		}
 
 		itemSubtotal := int32(variant.Price) * item.Quantity
@@ -1071,15 +1082,32 @@ func (s *service) GetSession(
 	externalID string,
 ) (*CheckoutSession, error) {
 
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "GetSession"),
+		zap.String("external_id", externalID),
+	)
+
+	log.Info("get checkout session started")
+
 	userID, ok := utils.GetUserIDFromContext(ctx)
 	session, err := s.repo.GetCheckoutSession(ctx, externalID)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Warn("checkout session not found")
+			return nil, errors.New("checkout session not found")
+		}
+		log.Error("failed to get checkout session", zap.Error(err))
+		return nil, errors.New("failed to get checkout session")
 	}
 
 	// Ownership check (if session is tied to a user)
 	if session.UserID != nil && ok {
 		if *session.UserID != int32(userID) {
+			log.Warn("forbidden access to checkout session",
+				zap.Int32("session_user_id", *session.UserID),
+				zap.Uint("request_user_id", userID),
+			)
 			return nil, errors.New("forbidden")
 		}
 	}
@@ -1088,10 +1116,15 @@ func (s *service) GetSession(
 	if time.Now().After(session.ExpiresAt) &&
 		session.Status == CheckoutSessionStatusPending {
 
+		log.Info("marking session as expired", zap.String("session_id", session.ID.String()))
 		// Optional: mark expired lazily
-		_ = s.repo.MarkSessionExpired(ctx, session.ID)
+		if err := s.repo.MarkSessionExpired(ctx, session.ID); err != nil {
+			log.Error("failed to mark session expired", zap.Error(err))
+		}
 		session.Status = CheckoutSessionStatusExpired
 	}
+
+	log.Info("checkout session retrieved successfully")
 
 	return session, nil
 }
@@ -1101,31 +1134,52 @@ func (s *service) GetPaymentOrderInfo(
 	externalID string,
 ) (*PaymentOrderInfoResponse, error) {
 
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "GetPaymentOrderInfo"),
+		zap.String("external_id", externalID),
+	)
+
+	log.Info("get payment order info started")
+
 	userID, ok := utils.GetUserIDFromContext(ctx)
 
 	order, err := s.repo.GetOrderByExternalID(ctx, externalID)
 	if err != nil {
-		return nil, err
+		log.Error("failed to get order", zap.Error(err))
+		return nil, errors.New("failed to get order")
+	}
+
+	if order == nil {
+		log.Warn("order not found")
+		return nil, ErrOrderNotFound
 	}
 
 	// Ownership check
 	if order.UserID != nil {
 		if !ok {
+			log.Warn("unauthorized access to payment info")
 			return nil, errors.New("forbidden")
 		}
 		if *order.UserID != int32(userID) {
+			log.Warn("forbidden access to payment info",
+				zap.Int32("order_user_id", *order.UserID),
+				zap.Uint("request_user_id", userID),
+			)
 			return nil, errors.New("forbidden")
 		}
 	}
 
 	paymentData, err := s.paymentRepo.GetPaymentByOrder(ctx, uint(order.ID))
 	if err != nil {
-		return nil, err
+		log.Error("failed to get payment data", zap.Error(err))
+		return nil, errors.New("failed to get payment data")
 	}
 
 	address, err := s.addressRepo.GetByID(ctx, order.AddressID)
 	if err != nil {
-		return nil, err
+		log.Error("failed to get address", zap.Error(err))
+		return nil, errors.New("failed to get address")
 	}
 
 	instructions := payment.GetInstructions(paymentData.PaymentMethod)
@@ -1161,6 +1215,8 @@ func (s *service) GetPaymentOrderInfo(
 		},
 	}
 
+	log.Info("payment order info retrieved successfully")
+
 	return paymentInfo, nil
 }
 
@@ -1168,5 +1224,20 @@ func (s *service) GetOrderForWebhook(
 	ctx context.Context,
 	externalID string,
 ) (*Order, error) {
-	return s.repo.GetOrderByExternalID(ctx, externalID)
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "GetOrderForWebhook"),
+		zap.String("external_id", externalID),
+	)
+
+	order, err := s.repo.GetOrderByExternalID(ctx, externalID)
+	if err != nil {
+		log.Error("failed to get order for webhook", zap.Error(err))
+		return nil, errors.New("failed to get order")
+	}
+	if order == nil {
+		log.Warn("order not found for webhook")
+		return nil, ErrOrderNotFound
+	}
+	return order, nil
 }
