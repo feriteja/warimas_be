@@ -100,18 +100,25 @@ func MapCheckoutSessionToGraphQL(
 		id := s.AddressID.String()
 		addressID = &id
 	}
+
+	var paymentMethod string
+	if s.PaymentMethod != nil {
+		method := string(*s.PaymentMethod)
+		paymentMethod = method
+	}
 	return &model.CheckoutSession{
-		ID:          s.ID.String(),
-		ExternalID:  s.ExternalID,
-		Status:      model.CheckoutSessionStatus(s.Status),
-		ExpiresAt:   s.ExpiresAt,
-		CreatedAt:   s.CreatedAt,
-		AddressID:   addressID, //field AddressID *string `json:"addressId,omitempty"`
-		Items:       items,
-		Subtotal:    int32(s.Subtotal),
-		Tax:         int32(s.Tax),
-		ShippingFee: int32(s.ShippingFee),
-		Discount:    int32(s.Discount),
-		TotalPrice:  int32(s.TotalPrice),
+		ID:            s.ID.String(),
+		ExternalID:    s.ExternalID,
+		Status:        model.CheckoutSessionStatus(s.Status),
+		ExpiresAt:     s.ExpiresAt,
+		CreatedAt:     s.CreatedAt,
+		AddressID:     addressID, //field AddressID *string `json:"addressId,omitempty"`
+		Items:         items,
+		Subtotal:      int32(s.Subtotal),
+		Tax:           int32(s.Tax),
+		ShippingFee:   int32(s.ShippingFee),
+		Discount:      int32(s.Discount),
+		TotalPrice:    int32(s.TotalPrice),
+		PaymentMethod: paymentMethod,
 	}
 }

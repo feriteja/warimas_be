@@ -751,35 +751,56 @@ func (s *service) UpdateSessionAddress(
 	addressID string,
 	guestID *string,
 ) error {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "UpdateSessionAddress"),
+		zap.String("external_id", externalID),
+		zap.String("address_id", addressID),
+	)
+
+	log.Info("update session address started")
 
 	session, err := s.repo.GetCheckoutSession(ctx, externalID)
 	if err != nil {
+		log.Error("failed to get checkout session", zap.Error(err))
 		return err
 	}
 
 	userID, _ := utils.GetUserIDFromContext(ctx)
 
 	if guestID != nil {
-		guestUUID := uuid.MustParse(*guestID)
+		guestUUID, err := uuid.Parse(*guestID)
+		if err != nil {
+			log.Warn("invalid guest id format", zap.String("guest_id", *guestID), zap.Error(err))
+			return errors.New("invalid guest id")
+		}
 		if session.GuestID == nil || *session.GuestID != guestUUID {
+			log.Warn("forbidden: guest ID mismatch")
 			return errors.New("forbidden: guest ID mismatch")
 		}
 	} else {
 		if session.UserID == nil || *session.UserID != int32(userID) {
+			log.Warn("forbidden: cannot update others' sessions",
+				zap.Int32("session_user_id", *session.UserID),
+				zap.Uint("request_user_id", userID),
+			)
 			return errors.New("forbidden: cannot update others' sessions")
 		}
 	}
 
 	if session.Status != CheckoutSessionStatusPending {
+		log.Warn("checkout session is not editable", zap.String("status", string(session.Status)))
 		return errors.New("checkout session is not editable")
 	}
 
 	if time.Now().After(session.ExpiresAt) {
+		log.Warn("checkout session expired", zap.Time("expires_at", session.ExpiresAt))
 		return errors.New("checkout session expired")
 	}
 
 	address, err := s.repo.GetUserAddress(ctx, addressID, userID)
 	if err != nil {
+		log.Error("failed to get user address", zap.Error(err))
 		return err
 	}
 
@@ -793,7 +814,13 @@ func (s *service) UpdateSessionAddress(
 	session.TotalPrice = session.Subtotal + tax + shippingFee - session.Discount
 
 	// 5. Persist changes
-	return s.repo.UpdateSessionAddressAndPricing(ctx, session)
+	if err := s.repo.UpdateSessionAddressAndPricing(ctx, session); err != nil {
+		log.Error("failed to update session address and pricing", zap.Error(err))
+		return err
+	}
+
+	log.Info("session address updated successfully")
+	return nil
 }
 
 func (s *service) UpdateSessionPaymentMethod(
@@ -802,6 +829,14 @@ func (s *service) UpdateSessionPaymentMethod(
 	paymentMethod payment.ChannelCode,
 	guestID *string,
 ) error {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "UpdateSessionPaymentMethod"),
+		zap.String("external_id", externalID),
+		zap.String("payment_method", string(paymentMethod)),
+	)
+
+	log.Info("update session payment method started")
 
 	switch paymentMethod {
 	case payment.MethodBCAVA,
@@ -819,37 +854,56 @@ func (s *service) UpdateSessionPaymentMethod(
 		payment.MethodCreditCard:
 		// valid
 	default:
+		log.Warn("invalid payment method", zap.String("payment_method", string(paymentMethod)))
 		return fmt.Errorf("invalid payment method: %s", paymentMethod)
 	}
 
 	session, err := s.repo.GetCheckoutSession(ctx, externalID)
 	if err != nil {
+		log.Error("failed to get checkout session", zap.Error(err))
 		return err
 	}
 
 	userID, _ := utils.GetUserIDFromContext(ctx)
 
 	if guestID != nil {
-		guestUUID := uuid.MustParse(*guestID)
+		guestUUID, err := uuid.Parse(*guestID)
+		if err != nil {
+			log.Warn("invalid guest id format", zap.String("guest_id", *guestID), zap.Error(err))
+			return errors.New("invalid guest id")
+		}
 		if session.GuestID == nil || *session.GuestID != guestUUID {
+			log.Warn("forbidden: guest ID mismatch")
 			return errors.New("forbidden: guest ID mismatch")
 		}
 	} else {
 		if session.UserID == nil || *session.UserID != int32(userID) {
+			log.Warn("forbidden: cannot update others' sessions",
+				zap.Int32("session_user_id", *session.UserID),
+				zap.Uint("request_user_id", userID),
+			)
 			return errors.New("forbidden: cannot update others' sessions")
 		}
 	}
 
 	if session.Status != CheckoutSessionStatusPending {
+		log.Warn("checkout session is not editable", zap.String("status", string(session.Status)))
 		return errors.New("checkout session is not editable")
 	}
 
 	if time.Now().After(session.ExpiresAt) {
+		log.Warn("checkout session expired", zap.Time("expires_at", session.ExpiresAt))
 		return errors.New("checkout session expired")
 	}
 
 	// Persist changes
-	return s.repo.UpdateSessionPaymentMethod(ctx, session.ID, paymentMethod)
+	if err := s.repo.UpdateSessionPaymentMethod(ctx, session.ID, paymentMethod); err != nil {
+		log.Error("failed to update session payment method", zap.Error(err))
+		return err
+	}
+
+	log.Info("session payment method updated successfully")
+	return nil
 }
 
 func (s *service) calculateShippingFee(

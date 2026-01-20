@@ -2633,6 +2633,8 @@ func (ec *executionContext) fieldContext_Query_checkoutSession(ctx context.Conte
 				return ec.fieldContext_CheckoutSession_discount(ctx, field)
 			case "totalPrice":
 				return ec.fieldContext_CheckoutSession_totalPrice(ctx, field)
+			case "paymentMethod":
+				return ec.fieldContext_CheckoutSession_paymentMethod(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type CheckoutSession", field.Name)
 		},
