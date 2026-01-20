@@ -422,6 +422,7 @@ func (r *queryResolver) PaymentOrderInfo(ctx context.Context, externalID string)
 			Method:       string(paymentInfo.Payment.Method),
 			PaymentCode:  paymentInfo.Payment.PaymentCode,
 			ReferenceID:  paymentInfo.Payment.ReferenceID,
+			InvoiceURL:   paymentInfo.Payment.InvoiceURL,
 			Instructions: paymentInfo.Payment.Instructions,
 		}}
 

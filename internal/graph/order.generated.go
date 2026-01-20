@@ -2279,6 +2279,35 @@ func (ec *executionContext) fieldContext_PaymentDetail_paymentCode(_ context.Con
 	return fc, nil
 }
 
+func (ec *executionContext) _PaymentDetail_invoiceURL(ctx context.Context, field graphql.CollectedField, obj *model.PaymentDetail) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PaymentDetail_invoiceURL,
+		func(ctx context.Context) (any, error) {
+			return obj.InvoiceURL, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_PaymentDetail_invoiceURL(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PaymentDetail",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _PaymentDetail_referenceId(ctx context.Context, field graphql.CollectedField, obj *model.PaymentDetail) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2559,6 +2588,8 @@ func (ec *executionContext) fieldContext_PaymentOrderInfoResponse_payment(_ cont
 				return ec.fieldContext_PaymentDetail_bank(ctx, field)
 			case "paymentCode":
 				return ec.fieldContext_PaymentDetail_paymentCode(ctx, field)
+			case "invoiceURL":
+				return ec.fieldContext_PaymentDetail_invoiceURL(ctx, field)
 			case "referenceId":
 				return ec.fieldContext_PaymentDetail_referenceId(ctx, field)
 			case "instructions":
@@ -4186,6 +4217,8 @@ func (ec *executionContext) _PaymentDetail(ctx context.Context, sel ast.Selectio
 			out.Values[i] = ec._PaymentDetail_bank(ctx, field, obj)
 		case "paymentCode":
 			out.Values[i] = ec._PaymentDetail_paymentCode(ctx, field, obj)
+		case "invoiceURL":
+			out.Values[i] = ec._PaymentDetail_invoiceURL(ctx, field, obj)
 		case "referenceId":
 			out.Values[i] = ec._PaymentDetail_referenceId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

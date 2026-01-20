@@ -91,6 +91,7 @@ type PaymentDetail struct {
 	Method       payment.ChannelCode `json:"method"`
 	Bank         *string             `json:"bank,omitempty"`        // Pointer because it might be null for some methods
 	PaymentCode  *string             `json:"paymentCode,omitempty"` // Pointer because it might be null
+	InvoiceURL   *string             `json:"invoiceUrl,omitempty"`  // For redirects
 	ReferenceID  string              `json:"referenceId"`
 	Instructions []string            `json:"instructions"`
 }

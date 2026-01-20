@@ -162,3 +162,10 @@ func FormatIDR(amount int64) string {
 
 	return "Rp " + strings.Join(parts, ".")
 }
+
+func NormalizePhoneID(phone string) string {
+	if strings.HasPrefix(phone, "0") {
+		return "+62" + phone[1:]
+	}
+	return phone
+}

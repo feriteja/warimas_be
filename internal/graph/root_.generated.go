@@ -291,6 +291,7 @@ type ComplexityRoot struct {
 	PaymentDetail struct {
 		Bank         func(childComplexity int) int
 		Instructions func(childComplexity int) int
+		InvoiceURL   func(childComplexity int) int
 		Method       func(childComplexity int) int
 		PaymentCode  func(childComplexity int) int
 		ReferenceID  func(childComplexity int) int
@@ -1705,6 +1706,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.PaymentDetail.Instructions(childComplexity), true
+
+	case "PaymentDetail.invoiceURL":
+		if e.complexity.PaymentDetail.InvoiceURL == nil {
+			break
+		}
+
+		return e.complexity.PaymentDetail.InvoiceURL(childComplexity), true
 
 	case "PaymentDetail.method":
 		if e.complexity.PaymentDetail.Method == nil {

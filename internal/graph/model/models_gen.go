@@ -343,6 +343,7 @@ type PaymentDetail struct {
 	Method       string   `json:"method"`
 	Bank         *string  `json:"bank,omitempty"`
 	PaymentCode  *string  `json:"paymentCode,omitempty"`
+	InvoiceURL   *string  `json:"invoiceURL,omitempty"`
 	ReferenceID  string   `json:"referenceId"`
 	Instructions []string `json:"instructions"`
 }

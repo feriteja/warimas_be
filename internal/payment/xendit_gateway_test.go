@@ -2,6 +2,7 @@ package payment
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -30,6 +31,11 @@ func TestXenditGateway_CreateInvoice(t *testing.T) {
 	externalID := "ord-123"
 	amount := int64(100000)
 	email := "test@example.com"
+	buyer := BuyerInfo{
+		Name:  "Buyer",
+		Email: &email,
+		Phone: "08123456789",
+	}
 	items := []XenditItem{{Name: "Item 1", Price: 100000, Quantity: 1}}
 	channel := ChannelCode(MethodBCAVA)
 
@@ -68,7 +74,7 @@ func TestXenditGateway_CreateInvoice(t *testing.T) {
 			}
 		})
 
-		resp, err := gw.CreateInvoice(externalID, "Buyer", amount, email, items, channel)
+		resp, err := gw.CreateInvoice(context.Background(), externalID, buyer, amount, items, channel)
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
 		assert.Equal(t, "pr-123", resp.ProviderPaymentID)
@@ -97,7 +103,7 @@ func TestXenditGateway_CreateInvoice(t *testing.T) {
 			}
 		})
 
-		resp, err := gw.CreateInvoice(externalID, "Buyer", amount, email, items, channel)
+		resp, err := gw.CreateInvoice(context.Background(), externalID, buyer, amount, items, channel)
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
 		assert.Equal(t, "pr-123", resp.ProviderPaymentID)
@@ -112,7 +118,7 @@ func TestXenditGateway_CreateInvoice(t *testing.T) {
 			}
 		})
 
-		_, err := gw.CreateInvoice(externalID, "Buyer", amount, email, items, channel)
+		_, err := gw.CreateInvoice(context.Background(), externalID, buyer, amount, items, channel)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "xendit error")
 	})
@@ -122,7 +128,7 @@ func TestXenditGateway_CreateInvoice(t *testing.T) {
 			return nil, errors.New("connection refused")
 		})
 
-		_, err := gw.CreateInvoice(externalID, "Buyer", amount, email, items, channel)
+		_, err := gw.CreateInvoice(context.Background(), externalID, buyer, amount, items, channel)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "connection refused")
 	})
@@ -136,7 +142,7 @@ func TestXenditGateway_CreateInvoice(t *testing.T) {
 			}
 		})
 
-		_, err := gw.CreateInvoice(externalID, "Buyer", amount, email, items, channel)
+		_, err := gw.CreateInvoice(context.Background(), externalID, buyer, amount, items, channel)
 		assert.Error(t, err)
 	})
 
@@ -156,9 +162,43 @@ func TestXenditGateway_CreateInvoice(t *testing.T) {
 			}
 		})
 
-		resp, err := gw.CreateInvoice(externalID, "Buyer", amount, email, items, channel)
+		resp, err := gw.CreateInvoice(context.Background(), externalID, buyer, amount, items, channel)
 		assert.NoError(t, err)
 		assert.Equal(t, "", resp.PaymentCode)
+	})
+
+	t.Run("Success_WithRedirectURL", func(t *testing.T) {
+		// Mock Response with a redirect URL in actions
+		respBody := `{
+			"payment_request_id": "pr-456",
+			"reference_id": "ord-456",
+			"status": "PENDING",
+			"channel_code": "SHOPEEPAY",
+			"channel_properties": {
+				"expires_at": "2024-12-31T23:59:59Z"
+			},
+			"actions": [
+				{
+					"descriptor": "WEB_URL",
+					"value": "https://shopee.co.id/pay"
+				}
+			]
+		}`
+
+		gw.httpClient.Transport = MockRoundTripper(func(req *http.Request) *http.Response {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewBufferString(respBody)),
+				Header:     make(http.Header),
+			}
+		})
+
+		resp, err := gw.CreateInvoice(context.Background(), "ord-456", buyer, amount, items, ChannelCode(MethodSHOPEE))
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, "pr-456", resp.ProviderPaymentID)
+		assert.Equal(t, "", resp.PaymentCode)                        // No payment code in this case
+		assert.Equal(t, "https://shopee.co.id/pay", resp.InvoiceURL) // Check the URL
 	})
 }
 
@@ -185,7 +225,7 @@ func TestXenditGateway_GetPaymentStatus(t *testing.T) {
 			}
 		})
 
-		status, err := gw.GetPaymentStatus(externalID)
+		status, err := gw.GetPaymentStatus(context.Background(), externalID)
 		assert.NoError(t, err)
 		assert.Equal(t, "PAID", status.Status)
 		assert.NotNil(t, status.PaidAt)
@@ -200,7 +240,7 @@ func TestXenditGateway_GetPaymentStatus(t *testing.T) {
 			}
 		})
 
-		_, err := gw.GetPaymentStatus(externalID)
+		_, err := gw.GetPaymentStatus(context.Background(), externalID)
 		assert.Error(t, err)
 		assert.Equal(t, "invoice not found", err.Error())
 	})
@@ -210,7 +250,7 @@ func TestXenditGateway_GetPaymentStatus(t *testing.T) {
 			return nil, errors.New("network error")
 		})
 
-		_, err := gw.GetPaymentStatus(externalID)
+		_, err := gw.GetPaymentStatus(context.Background(), externalID)
 		assert.Error(t, err)
 	})
 
@@ -223,7 +263,7 @@ func TestXenditGateway_GetPaymentStatus(t *testing.T) {
 			}
 		})
 
-		_, err := gw.GetPaymentStatus(externalID)
+		_, err := gw.GetPaymentStatus(context.Background(), externalID)
 		assert.Error(t, err)
 	})
 }
@@ -274,7 +314,7 @@ func TestXenditGateway_CancelPayment(t *testing.T) {
 			}
 		})
 
-		err := gw.CancelPayment(externalID)
+		err := gw.CancelPayment(context.Background(), externalID)
 		assert.NoError(t, err)
 	})
 
@@ -283,7 +323,7 @@ func TestXenditGateway_CancelPayment(t *testing.T) {
 			return nil, errors.New("net error")
 		})
 
-		err := gw.CancelPayment(externalID)
+		err := gw.CancelPayment(context.Background(), externalID)
 		assert.Error(t, err)
 	})
 
@@ -296,7 +336,7 @@ func TestXenditGateway_CancelPayment(t *testing.T) {
 			}
 		})
 
-		err := gw.CancelPayment(externalID)
+		err := gw.CancelPayment(context.Background(), externalID)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "xendit cancel error")
 	})
