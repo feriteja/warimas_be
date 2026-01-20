@@ -177,6 +177,7 @@ func (r *repository) GetProductsByGroup(
 	SELECT
 	    c.id AS category_id,
 	    c.name AS category_name,
+	    c.slug AS category_slug,
 	    s.id AS subcategory_id,
 	    s.name AS subcategory_name,
 	    COALESCE(p_total.total_products, 0) AS total_products,
@@ -252,6 +253,7 @@ func (r *repository) GetProductsByGroup(
 		var (
 			categoryID      sql.NullString
 			categoryName    sql.NullString
+			categorySlug    sql.NullString
 			subcategoryID   sql.NullString
 			subcategoryName sql.NullString
 			totalProducts   sql.NullInt32
@@ -276,6 +278,7 @@ func (r *repository) GetProductsByGroup(
 		if err := rows.Scan(
 			&categoryID,
 			&categoryName,
+			&categorySlug,
 			&subcategoryID,
 			&subcategoryName,
 			&totalProducts,
@@ -299,6 +302,7 @@ func (r *repository) GetProductsByGroup(
 		if _, ok := categoryMap[catID]; !ok {
 			categoryMap[catID] = &ProductByCategory{
 				CategoryName:  categoryName.String,
+				CategorySlug:  categorySlug.String,
 				TotalProducts: int(totalProducts.Int32),
 				Products:      make([]*Product, 0, limitPerCategory),
 			}

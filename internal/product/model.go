@@ -50,6 +50,7 @@ type Product struct {
 }
 type ProductByCategory struct {
 	CategoryName  string
+	CategorySlug  string
 	TotalProducts int
 	Products      []*Product
 }

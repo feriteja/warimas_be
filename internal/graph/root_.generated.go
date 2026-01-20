@@ -327,6 +327,7 @@ type ComplexityRoot struct {
 
 	ProductByCategory struct {
 		CategoryName  func(childComplexity int) int
+		CategorySlug  func(childComplexity int) int
 		Products      func(childComplexity int) int
 		TotalProducts func(childComplexity int) int
 	}
@@ -1889,21 +1890,28 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Product.Variants(childComplexity), true
 
-	case "ProductByCategory.CategoryName":
+	case "ProductByCategory.categoryName":
 		if e.complexity.ProductByCategory.CategoryName == nil {
 			break
 		}
 
 		return e.complexity.ProductByCategory.CategoryName(childComplexity), true
 
-	case "ProductByCategory.Products":
+	case "ProductByCategory.categorySlug":
+		if e.complexity.ProductByCategory.CategorySlug == nil {
+			break
+		}
+
+		return e.complexity.ProductByCategory.CategorySlug(childComplexity), true
+
+	case "ProductByCategory.products":
 		if e.complexity.ProductByCategory.Products == nil {
 			break
 		}
 
 		return e.complexity.ProductByCategory.Products(childComplexity), true
 
-	case "ProductByCategory.TotalProducts":
+	case "ProductByCategory.totalProducts":
 		if e.complexity.ProductByCategory.TotalProducts == nil {
 			break
 		}

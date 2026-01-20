@@ -32,8 +32,9 @@ func MapProductByCategoryToGraphQL(
 	}
 
 	return &model.ProductByCategory{
-		CategoryName:  &e.CategoryName,
+		CategoryName:  e.CategoryName,
 		TotalProducts: int32(e.TotalProducts),
+		CategorySlug:  e.CategorySlug,
 		Products:      products,
 	}
 }

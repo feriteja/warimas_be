@@ -377,9 +377,10 @@ type Product struct {
 }
 
 type ProductByCategory struct {
-	CategoryName  *string    `json:"CategoryName,omitempty"`
-	TotalProducts int32      `json:"TotalProducts"`
-	Products      []*Product `json:"Products,omitempty"`
+	CategoryName  string     `json:"categoryName"`
+	CategorySlug  string     `json:"categorySlug"`
+	TotalProducts int32      `json:"totalProducts"`
+	Products      []*Product `json:"products,omitempty"`
 }
 
 type ProductCart struct {

@@ -488,23 +488,23 @@ func (ec *executionContext) fieldContext_Product_updatedAt(_ context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _ProductByCategory_CategoryName(ctx context.Context, field graphql.CollectedField, obj *model.ProductByCategory) (ret graphql.Marshaler) {
+func (ec *executionContext) _ProductByCategory_categoryName(ctx context.Context, field graphql.CollectedField, obj *model.ProductByCategory) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_ProductByCategory_CategoryName,
+		ec.fieldContext_ProductByCategory_categoryName,
 		func(ctx context.Context) (any, error) {
 			return obj.CategoryName, nil
 		},
 		nil,
-		ec.marshalOString2ᚖstring,
+		ec.marshalNString2string,
 		true,
-		false,
+		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_ProductByCategory_CategoryName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_ProductByCategory_categoryName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ProductByCategory",
 		Field:      field,
@@ -517,12 +517,41 @@ func (ec *executionContext) fieldContext_ProductByCategory_CategoryName(_ contex
 	return fc, nil
 }
 
-func (ec *executionContext) _ProductByCategory_TotalProducts(ctx context.Context, field graphql.CollectedField, obj *model.ProductByCategory) (ret graphql.Marshaler) {
+func (ec *executionContext) _ProductByCategory_categorySlug(ctx context.Context, field graphql.CollectedField, obj *model.ProductByCategory) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_ProductByCategory_TotalProducts,
+		ec.fieldContext_ProductByCategory_categorySlug,
+		func(ctx context.Context) (any, error) {
+			return obj.CategorySlug, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ProductByCategory_categorySlug(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProductByCategory",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProductByCategory_totalProducts(ctx context.Context, field graphql.CollectedField, obj *model.ProductByCategory) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ProductByCategory_totalProducts,
 		func(ctx context.Context) (any, error) {
 			return obj.TotalProducts, nil
 		},
@@ -533,7 +562,7 @@ func (ec *executionContext) _ProductByCategory_TotalProducts(ctx context.Context
 	)
 }
 
-func (ec *executionContext) fieldContext_ProductByCategory_TotalProducts(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_ProductByCategory_totalProducts(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ProductByCategory",
 		Field:      field,
@@ -546,12 +575,12 @@ func (ec *executionContext) fieldContext_ProductByCategory_TotalProducts(_ conte
 	return fc, nil
 }
 
-func (ec *executionContext) _ProductByCategory_Products(ctx context.Context, field graphql.CollectedField, obj *model.ProductByCategory) (ret graphql.Marshaler) {
+func (ec *executionContext) _ProductByCategory_products(ctx context.Context, field graphql.CollectedField, obj *model.ProductByCategory) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_ProductByCategory_Products,
+		ec.fieldContext_ProductByCategory_products,
 		func(ctx context.Context) (any, error) {
 			return obj.Products, nil
 		},
@@ -562,7 +591,7 @@ func (ec *executionContext) _ProductByCategory_Products(ctx context.Context, fie
 	)
 }
 
-func (ec *executionContext) fieldContext_ProductByCategory_Products(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_ProductByCategory_products(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ProductByCategory",
 		Field:      field,
@@ -1699,15 +1728,23 @@ func (ec *executionContext) _ProductByCategory(ctx context.Context, sel ast.Sele
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("ProductByCategory")
-		case "CategoryName":
-			out.Values[i] = ec._ProductByCategory_CategoryName(ctx, field, obj)
-		case "TotalProducts":
-			out.Values[i] = ec._ProductByCategory_TotalProducts(ctx, field, obj)
+		case "categoryName":
+			out.Values[i] = ec._ProductByCategory_categoryName(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "Products":
-			out.Values[i] = ec._ProductByCategory_Products(ctx, field, obj)
+		case "categorySlug":
+			out.Values[i] = ec._ProductByCategory_categorySlug(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalProducts":
+			out.Values[i] = ec._ProductByCategory_totalProducts(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "products":
+			out.Values[i] = ec._ProductByCategory_products(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
