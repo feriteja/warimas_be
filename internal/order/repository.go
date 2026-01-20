@@ -18,6 +18,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var ErrDB = errors.New("database error")
+
 type Repository interface {
 	// CreateOrder(userID uint) (*Order, error)
 	FetchOrders(
@@ -120,6 +122,11 @@ func (r *repository) GetOrderBySessionID(
 	sessionID uuid.UUID,
 ) (*Order, error) {
 
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "GetOrderBySessionID"),
+	)
+
 	query := `
 		SELECT id, status, total_amount, external_id
 		FROM orders
@@ -134,7 +141,8 @@ func (r *repository) GetOrderBySessionID(
 		return nil, nil
 	}
 	if err != nil {
-		return nil, err
+		log.Error("failed to get order by session id", zap.Error(err))
+		return nil, ErrDB
 	}
 
 	return &o, nil
@@ -181,7 +189,7 @@ func (r *repository) GetOrderByExternalID(
 			zap.String("external_id", externalID),
 			zap.Error(err),
 		)
-		return nil, err
+		return nil, ErrDB
 	}
 
 	log.Info("order fetched successfully",
@@ -209,7 +217,7 @@ func (r *repository) CreateOrderTx(
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		log.Error("failed to begin transaction", zap.Error(err))
-		return err
+		return ErrDB
 	}
 	defer tx.Rollback()
 
@@ -244,7 +252,7 @@ func (r *repository) CreateOrderTx(
 	).Scan(&order.ID)
 	if err != nil {
 		log.Error("failed to insert order", zap.Error(err))
-		return err
+		return ErrDB
 	}
 
 	log.Info("order created",
@@ -281,7 +289,7 @@ func (r *repository) CreateOrderTx(
 				zap.String("variant_id", item.VariantID),
 				zap.Error(err),
 			)
-			return err
+			return ErrDB
 		}
 
 		// Deduct stock (safe)
@@ -298,7 +306,7 @@ func (r *repository) CreateOrderTx(
 				zap.String("variant_id", item.VariantID),
 				zap.Error(err),
 			)
-			return err
+			return ErrDB
 		}
 
 		rows, _ := res.RowsAffected()
@@ -316,7 +324,7 @@ func (r *repository) CreateOrderTx(
 	// 4. Commit
 	if err := tx.Commit(); err != nil {
 		log.Error("failed to commit order transaction", zap.Error(err))
-		return err
+		return ErrDB
 	}
 
 	log.Info("order transaction committed successfully",
@@ -452,7 +460,7 @@ func (r *repository) GetOrderDetail(
 		}
 
 		log.Error("failed to query order", zap.Error(err))
-		return nil, err
+		return nil, ErrDB
 	}
 
 	// Fetch order items
@@ -463,7 +471,7 @@ func (r *repository) GetOrderDetail(
 	`, orderID)
 	if err != nil {
 		log.Error("failed to query order items", zap.Error(err))
-		return nil, err
+		return nil, ErrDB
 	}
 	defer rows.Close()
 
@@ -484,7 +492,7 @@ func (r *repository) GetOrderDetail(
 			&item.QuantityType,
 		); err != nil {
 			log.Error("failed to scan order item", zap.Error(err))
-			return nil, err
+			return nil, ErrDB
 		}
 
 		o.Items = append(o.Items, &item)
@@ -492,7 +500,7 @@ func (r *repository) GetOrderDetail(
 
 	if err := rows.Err(); err != nil {
 		log.Error("row iteration error", zap.Error(err))
-		return nil, err
+		return nil, ErrDB
 	}
 
 	log.Debug("order fetched successfully",
@@ -547,7 +555,7 @@ func (r *repository) GetOrderDetailByExternalID(
 		}
 
 		log.Error("failed to query order", zap.Error(err))
-		return nil, err
+		return nil, ErrDB
 	}
 
 	// Fetch order items
@@ -558,7 +566,7 @@ func (r *repository) GetOrderDetailByExternalID(
 	`, o.ID)
 	if err != nil {
 		log.Error("failed to query order items", zap.Error(err))
-		return nil, err
+		return nil, ErrDB
 	}
 	defer rows.Close()
 
@@ -579,7 +587,7 @@ func (r *repository) GetOrderDetailByExternalID(
 			&item.QuantityType,
 		); err != nil {
 			log.Error("failed to scan order item", zap.Error(err))
-			return nil, err
+			return nil, ErrDB
 		}
 
 		o.Items = append(o.Items, &item)
@@ -587,7 +595,7 @@ func (r *repository) GetOrderDetailByExternalID(
 
 	if err := rows.Err(); err != nil {
 		log.Error("row iteration error", zap.Error(err))
-		return nil, err
+		return nil, ErrDB
 	}
 
 	log.Debug("order fetched successfully",
@@ -619,7 +627,7 @@ func (r *repository) UpdateOrderStatus(ctx context.Context, orderID uint, status
 
 	if err != nil {
 		log.Error("failed to execute update query", zap.Error(err))
-		return err
+		return ErrDB
 	}
 	rowsAffected, _ := res.RowsAffected()
 	if rowsAffected == 0 {
@@ -652,7 +660,7 @@ func (r *repository) UpdateStatusByReferenceID(
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		log.Error("failed to start transaction", zap.Error(err))
-		return fmt.Errorf("begin transaction: %w", err)
+		return ErrDB
 	}
 
 	defer func() {
@@ -677,7 +685,7 @@ func (r *repository) UpdateStatusByReferenceID(
 		Scan(&sessionID)
 	if err != nil {
 		log.Error("failed to update order status", zap.Error(err))
-		return fmt.Errorf("update orders by external_id: %w", err)
+		return ErrDB
 	}
 
 	log.Info("order status updated",
@@ -696,7 +704,7 @@ func (r *repository) UpdateStatusByReferenceID(
 	res, err := tx.ExecContext(ctx, querySession, status, sessionID)
 	if err != nil {
 		log.Error("failed to update checkout session", zap.Error(err))
-		return fmt.Errorf("update checkout session: %w", err)
+		return ErrDB
 	}
 
 	rows, _ := res.RowsAffected()
@@ -732,7 +740,7 @@ func (r *repository) UpdateStatusByReferenceID(
 	res, err = tx.ExecContext(ctx, queryPayment, args...)
 	if err != nil {
 		log.Error("failed to update payment status", zap.Error(err))
-		return fmt.Errorf("update payment: %w", err)
+		return ErrDB
 	}
 
 	rows, _ = res.RowsAffected()
@@ -749,7 +757,7 @@ func (r *repository) UpdateStatusByReferenceID(
 	// --------------------------------------------------
 	if err = tx.Commit(); err != nil {
 		log.Error("failed to commit transaction", zap.Error(err))
-		return fmt.Errorf("commit transaction: %w", err)
+		return ErrDB
 	}
 
 	log.Info("transaction committed successfully")
@@ -790,7 +798,7 @@ func (r *repository) GetByReferenceID(
 		}
 
 		log.Error("failed to query order", zap.Error(err))
-		return nil, err
+		return nil, ErrDB
 	}
 
 	log.Debug("order fetched successfully",
@@ -844,7 +852,7 @@ func (r *repository) GetVariantForCheckout(
 			"failed to query variant for checkout",
 			zap.Error(err),
 		)
-		return nil, nil, err
+		return nil, nil, ErrDB
 	}
 
 	log.Debug(
@@ -877,7 +885,7 @@ func (r *repository) CreateCheckoutSession(
 			"failed to begin transaction",
 			zap.Error(err),
 		)
-		return err
+		return ErrDB
 	}
 
 	committed := false
@@ -917,7 +925,7 @@ func (r *repository) CreateCheckoutSession(
 			"failed to insert checkout session",
 			zap.Error(err),
 		)
-		return err
+		return ErrDB
 	}
 
 	log.Debug("checkout session inserted")
@@ -948,7 +956,7 @@ func (r *repository) CreateCheckoutSession(
 				zap.String("variant_id", item.VariantID),
 				zap.Error(err),
 			)
-			return err
+			return ErrDB
 		}
 	}
 
@@ -960,7 +968,7 @@ func (r *repository) CreateCheckoutSession(
 			"failed to commit checkout session transaction",
 			zap.Error(err),
 		)
-		return err
+		return ErrDB
 	}
 
 	committed = true
@@ -1126,6 +1134,11 @@ func (r *repository) UpdateSessionAddressAndPricing(
 	session *CheckoutSession,
 ) error {
 
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "UpdateSessionAddressAndPricing"),
+	)
+
 	query := `
 		UPDATE checkout_sessions
 		SET
@@ -1144,7 +1157,11 @@ func (r *repository) UpdateSessionAddressAndPricing(
 		session.ID,
 	)
 
-	return err
+	if err != nil {
+		log.Error("failed to update session address and pricing", zap.Error(err))
+		return ErrDB
+	}
+	return nil
 }
 
 func (r *repository) UpdateSessionPaymentMethod(
@@ -1152,13 +1169,21 @@ func (r *repository) UpdateSessionPaymentMethod(
 	sessionID uuid.UUID,
 	paymentMethod payment.ChannelCode,
 ) error {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "UpdateSessionPaymentMethod"),
+	)
 	query := `
 		UPDATE checkout_sessions
 		SET payment_method = $1
 		WHERE id = $2
 	`
 	_, err := r.db.ExecContext(ctx, query, paymentMethod, sessionID)
-	return err
+	if err != nil {
+		log.Error("failed to update session payment method", zap.Error(err))
+		return ErrDB
+	}
+	return nil
 }
 
 func (r *repository) ValidateVariantStock(
@@ -1166,6 +1191,11 @@ func (r *repository) ValidateVariantStock(
 	variantID string,
 	qty int,
 ) (bool, error) {
+
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "ValidateVariantStock"),
+	)
 
 	query := `
 		SELECT stock >= $1
@@ -1177,13 +1207,22 @@ func (r *repository) ValidateVariantStock(
 	err := r.db.QueryRowContext(ctx, query, qty, variantID).
 		Scan(&ok)
 
-	return ok, err
+	if err != nil {
+		log.Error("failed to validate variant stock", zap.Error(err))
+		return false, ErrDB
+	}
+
+	return ok, nil
 }
 
 func (r *repository) ConfirmCheckoutSession(
 	ctx context.Context,
 	session *CheckoutSession,
 ) error {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "ConfirmCheckoutSession"),
+	)
 
 	query := `
 		UPDATE checkout_sessions
@@ -1199,7 +1238,8 @@ func (r *repository) ConfirmCheckoutSession(
 		session.ID,
 	)
 	if err != nil {
-		return err
+		log.Error("failed to confirm checkout session", zap.Error(err))
+		return ErrDB
 	}
 
 	affected, _ := res.RowsAffected()
@@ -1215,6 +1255,11 @@ func (r *repository) MarkSessionExpired(
 	sessionID uuid.UUID,
 ) error {
 
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "MarkSessionExpired"),
+	)
+
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE checkout_sessions
 		SET status = 'EXPIRED'
@@ -1222,7 +1267,11 @@ func (r *repository) MarkSessionExpired(
 		  AND status = 'PENDING'
 	`, sessionID)
 
-	return err
+	if err != nil {
+		log.Error("failed to mark session expired", zap.Error(err))
+		return ErrDB
+	}
+	return nil
 }
 
 func (r *repository) CountOrders(
@@ -1307,7 +1356,7 @@ func (r *repository) CountOrders(
 		log.Error("failed to count orders",
 			zap.Error(err),
 		)
-		return 0, err
+		return 0, ErrDB
 	}
 
 	log.Info("orders counted",
@@ -1423,7 +1472,7 @@ func (r *repository) FetchOrders(
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		log.Error("failed to query orders", zap.Error(err))
-		return nil, err
+		return nil, ErrDB
 	}
 	defer rows.Close()
 
@@ -1452,13 +1501,22 @@ func (r *repository) FetchOrders(
 		orders = append(orders, &o)
 	}
 
-	return orders, rows.Err()
+	if err := rows.Err(); err != nil {
+		log.Error("rows iteration error", zap.Error(err))
+		return nil, ErrDB
+	}
+
+	return orders, nil
 }
 
 func (r *repository) FetchOrderItems(
 	ctx context.Context,
 	orderIDs []int32,
 ) (map[int32][]*OrderItem, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "FetchOrderItems"),
+	)
 
 	if len(orderIDs) == 0 {
 		return map[int32][]*OrderItem{}, nil
@@ -1472,7 +1530,8 @@ func (r *repository) FetchOrderItems(
 
 	rows, err := r.db.QueryContext(ctx, query, pq.Array(orderIDs))
 	if err != nil {
-		return nil, err
+		log.Error("failed to query order items", zap.Error(err))
+		return nil, ErrDB
 	}
 	defer rows.Close()
 
@@ -1492,10 +1551,16 @@ func (r *repository) FetchOrderItems(
 			&item.VariantID,
 			&item.Subtotal,
 		); err != nil {
-			return nil, err
+			log.Error("failed to scan order item", zap.Error(err))
+			return nil, ErrDB
 		}
 		itemsMap[int32(item.OrderID)] = append(itemsMap[int32(item.OrderID)], &item)
 	}
 
-	return itemsMap, rows.Err()
+	if err := rows.Err(); err != nil {
+		log.Error("rows iteration error", zap.Error(err))
+		return nil, ErrDB
+	}
+
+	return itemsMap, nil
 }
