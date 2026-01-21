@@ -392,7 +392,7 @@ func TestQueryResolver_ProductsHome(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Len(t, res, 1)
-		assert.Equal(t, "Electronics", *res[0].CategoryName)
+		assert.Equal(t, "Electronics", res[0].CategoryName)
 		assert.Equal(t, int32(5), res[0].TotalProducts)
 	})
 

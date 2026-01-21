@@ -264,8 +264,8 @@ func (r *queryResolver) OrderList(ctx context.Context, filter *model.OrderFilter
 	}
 
 	if sort != nil {
-		sortOrder.Field = order.OrderSortField(sort.Field)
-		sortOrder.Direction = order.SortDirection(sort.Direction)
+		sortOrder.Field = order.OrderSortField(sort.Field.String())
+		sortOrder.Direction = order.SortDirection(sort.Direction.String())
 	}
 
 	// Fetch data

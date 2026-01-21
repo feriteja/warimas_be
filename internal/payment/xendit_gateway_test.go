@@ -269,10 +269,11 @@ func TestXenditGateway_GetPaymentStatus(t *testing.T) {
 }
 
 func TestXenditGateway_VerifySignature(t *testing.T) {
-	gw := NewXenditGateway("secret").(*xenditGateway)
 
 	t.Run("SkipInDev", func(t *testing.T) {
-		// Assuming env var XENDIT_CALLBACK_TOKEN is empty in test env
+		// Explicitly set to empty to ensure dev mode is tested
+		t.Setenv("XENDIT_CALLBACK_TOKEN", "")
+		gw := NewXenditGateway("secret").(*xenditGateway)
 		req, _ := http.NewRequest("POST", "/", nil)
 		err := gw.VerifySignature(req)
 		assert.NoError(t, err)
@@ -280,6 +281,7 @@ func TestXenditGateway_VerifySignature(t *testing.T) {
 
 	t.Run("ValidSignature", func(t *testing.T) {
 		t.Setenv("XENDIT_CALLBACK_TOKEN", "valid-token")
+		gw := NewXenditGateway("secret").(*xenditGateway)
 		req, _ := http.NewRequest("POST", "/", nil)
 		req.Header.Set("x-callback-token", "valid-token")
 
@@ -289,6 +291,7 @@ func TestXenditGateway_VerifySignature(t *testing.T) {
 
 	t.Run("InvalidSignature", func(t *testing.T) {
 		t.Setenv("XENDIT_CALLBACK_TOKEN", "valid-token")
+		gw := NewXenditGateway("secret").(*xenditGateway)
 		req, _ := http.NewRequest("POST", "/", nil)
 		req.Header.Set("x-callback-token", "invalid-token")
 

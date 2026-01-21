@@ -436,7 +436,7 @@ func TestService_CreateFromSession(t *testing.T) {
 		// 1. Get Session
 		mockRepo.On("GetCheckoutSession", ctx, externalID).Return(mockSession, nil)
 		// 2. Check Existing Order (Not found)
-		mockRepo.On("GetOrderBySessionID", ctx, sessionID).Return(nil, errors.New("not found"))
+		mockRepo.On("GetOrderBySessionID", ctx, sessionID).Return(nil, nil)
 		// 3. Create Order
 		mockRepo.On("CreateOrderTx", ctx, mock.AnythingOfType("*order.Order"), mockSession).Return(nil)
 
@@ -743,7 +743,8 @@ func TestService_ConfirmSession(t *testing.T) {
 		mockPayRepo := new(MockPaymentRepository)
 		mockPayGate := new(MockPaymentGateway)
 		mockUserRepo := new(MockUserRepository)
-		svc := NewService(mockRepo, mockPayRepo, mockPayGate, nil, mockUserRepo)
+		mockAddrRepo := new(MockAddressRepository)
+		svc := NewService(mockRepo, mockPayRepo, mockPayGate, mockAddrRepo, mockUserRepo)
 
 		pm := payment.MethodBCAVA
 
@@ -790,6 +791,9 @@ func TestService_ConfirmSession(t *testing.T) {
 		// 8. Get User Profile
 		mockUserRepo.On("GetProfile", ctx, userID).Return(&user.Profile{FullName: utils.StrPtr("userName")}, nil)
 
+		// 9. Get Address (fallback for phone)
+		mockAddrRepo.On("GetByID", ctx, addrID).Return(&address.Address{Phone: "08123456789"}, nil)
+
 		res, err := svc.ConfirmSession(ctx, externalID)
 
 		assert.NoError(t, err)
@@ -798,6 +802,7 @@ func TestService_ConfirmSession(t *testing.T) {
 		mockPayGate.AssertExpectations(t)
 		mockPayRepo.AssertExpectations(t)
 		mockUserRepo.AssertExpectations(t)
+		mockAddrRepo.AssertExpectations(t)
 	})
 
 	t.Run("OutOfStock", func(t *testing.T) {
@@ -1608,5 +1613,5 @@ func TestService_GetPaymentOrderInfo_AddressError(t *testing.T) {
 
 	_, err := svc.GetPaymentOrderInfo(ctx, "ext-id")
 	assert.Error(t, err)
-	assert.Equal(t, "addr error", err.Error())
+	assert.Equal(t, "failed to get address", err.Error())
 }
