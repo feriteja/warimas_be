@@ -86,6 +86,7 @@ type ComplexityRoot struct {
 	Category struct {
 		ID            func(childComplexity int) int
 		Name          func(childComplexity int) int
+		Slug          func(childComplexity int) int
 		Subcategories func(childComplexity int) int
 	}
 
@@ -677,6 +678,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Category.Name(childComplexity), true
+
+	case "Category.slug":
+		if e.complexity.Category.Slug == nil {
+			break
+		}
+
+		return e.complexity.Category.Slug(childComplexity), true
 
 	case "Category.subcategories":
 		if e.complexity.Category.Subcategories == nil {

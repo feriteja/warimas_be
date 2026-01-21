@@ -1012,6 +1012,8 @@ func (ec *executionContext) fieldContext_Mutation_addCategory(ctx context.Contex
 				return ec.fieldContext_Category_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Category_name(ctx, field)
+			case "slug":
+				return ec.fieldContext_Category_slug(ctx, field)
 			case "subcategories":
 				return ec.fieldContext_Category_subcategories(ctx, field)
 			}
