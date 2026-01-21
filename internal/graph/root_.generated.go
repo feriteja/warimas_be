@@ -376,6 +376,7 @@ type ComplexityRoot struct {
 		Bio         func(childComplexity int) int
 		CreatedAt   func(childComplexity int) int
 		DateOfBirth func(childComplexity int) int
+		Email       func(childComplexity int) int
 		FullName    func(childComplexity int) int
 		ID          func(childComplexity int) int
 		Phone       func(childComplexity int) int
@@ -2135,6 +2136,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Profile.DateOfBirth(childComplexity), true
+
+	case "Profile.email":
+		if e.complexity.Profile.Email == nil {
+			break
+		}
+
+		return e.complexity.Profile.Email(childComplexity), true
 
 	case "Profile.fullName":
 		if e.complexity.Profile.FullName == nil {

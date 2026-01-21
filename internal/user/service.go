@@ -31,7 +31,11 @@ func NewService(repo Repository) Service {
 }
 
 func (s *service) Register(ctx context.Context, email, password string) (string, *User, error) {
-	log := logger.FromCtx(ctx).With(zap.String("email", email))
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "Register"),
+		zap.String("email", email),
+	)
 
 	log.Info("register service starting")
 	hashed, err := HashPassword(password)
@@ -64,7 +68,11 @@ func (s *service) Register(ctx context.Context, email, password string) (string,
 }
 
 func (s *service) Login(ctx context.Context, email, password string) (string, *User, error) {
-	log := logger.FromCtx(ctx).With(zap.String("email", email))
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "Login"),
+		zap.String("email", email),
+	)
 
 	log.Info("Login attempt",
 		zap.String("email", email),
@@ -103,7 +111,11 @@ func (s *service) Login(ctx context.Context, email, password string) (string, *U
 }
 
 func (s *service) GetUserByEmail(ctx context.Context, email string) (*User, error) {
-	log := logger.FromCtx(ctx).With(zap.String("email", email))
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "GetUserByEmail"),
+		zap.String("email", email),
+	)
 
 	user, err := s.repo.FindByEmail(ctx, email)
 	if err != nil {
@@ -114,7 +126,11 @@ func (s *service) GetUserByEmail(ctx context.Context, email string) (*User, erro
 }
 
 func (s *service) ForgotPassword(ctx context.Context, email string) error {
-	log := logger.FromCtx(ctx).With(zap.String("email", email))
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "ForgotPassword"),
+		zap.String("email", email),
+	)
 
 	// 1. Check if user exists
 	u, err := s.repo.FindByEmail(ctx, email)
@@ -143,7 +159,10 @@ func (s *service) ForgotPassword(ctx context.Context, email string) error {
 }
 
 func (s *service) ResetPassword(ctx context.Context, token, newPassword string) error {
-	log := logger.FromCtx(ctx).With(zap.String("token", token))
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "ResetPassword"),
+	)
 
 	claims, err := ParseJWT(token)
 	if err != nil {
@@ -168,26 +187,25 @@ func (s *service) ResetPassword(ctx context.Context, token, newPassword string) 
 }
 
 func (s *service) GetOrCreateProfile(ctx context.Context, userID uint) (*Profile, error) {
-	log := logger.FromCtx(ctx).With(zap.Uint("user_id", userID))
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "GetOrCreateProfile"),
+		zap.Uint("user_id", userID),
+	)
 
-	// 1. Try to get existing profile
 	profile, err := s.repo.GetProfile(ctx, userID)
 	if err != nil {
-		// If error is anything other than "not found", return it
-		// Assuming repository returns a specific error or we check the error string/type
-		// For now, we'll assume a specific error string or nil profile means not found if err is nil
+
 		if !errors.Is(err, ErrProfileNotFound) {
 			log.Error("failed to get profile", zap.Error(err))
 			return nil, err
 		}
-		// If "profile not found", proceed to create
 	}
 
 	if profile != nil {
 		return profile, nil
 	}
 
-	// 2. Create new profile
 	log.Info("profile not found, creating profile")
 	newProfile := &Profile{UserID: userID}
 
@@ -201,7 +219,11 @@ func (s *service) GetOrCreateProfile(ctx context.Context, userID uint) (*Profile
 }
 
 func (s *service) UpdateProfile(ctx context.Context, params UpdateProfileParams) (*Profile, error) {
-	log := logger.FromCtx(ctx).With(zap.Uint("user_id", params.UserID))
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "service"),
+		zap.String("method", "UpdateProfile"),
+		zap.Uint("user_id", params.UserID),
+	)
 
 	// Construct profile object with fields to update
 	p := &Profile{

@@ -1861,6 +1861,8 @@ func (ec *executionContext) fieldContext_Mutation_updateProfile(ctx context.Cont
 				return ec.fieldContext_Profile_userId(ctx, field)
 			case "fullName":
 				return ec.fieldContext_Profile_fullName(ctx, field)
+			case "email":
+				return ec.fieldContext_Profile_email(ctx, field)
 			case "bio":
 				return ec.fieldContext_Profile_bio(ctx, field)
 			case "avatarUrl":
@@ -2970,6 +2972,8 @@ func (ec *executionContext) fieldContext_Query_myProfile(_ context.Context, fiel
 				return ec.fieldContext_Profile_userId(ctx, field)
 			case "fullName":
 				return ec.fieldContext_Profile_fullName(ctx, field)
+			case "email":
+				return ec.fieldContext_Profile_email(ctx, field)
 			case "bio":
 				return ec.fieldContext_Profile_bio(ctx, field)
 			case "avatarUrl":
