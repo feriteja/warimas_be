@@ -1312,7 +1312,7 @@ func (ec *executionContext) unmarshalInputNewProduct(ctx context.Context, obj an
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "imageUrl", "description", "categoryId", "subcategoryID"}
+	fieldsInOrder := [...]string{"name", "imageUrl", "description", "categoryId", "subcategoryId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -1347,9 +1347,9 @@ func (ec *executionContext) unmarshalInputNewProduct(ctx context.Context, obj an
 				return it, err
 			}
 			it.CategoryID = data
-		case "subcategoryID":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("subcategoryID"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+		case "subcategoryId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("subcategoryId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
 			if err != nil {
 				return it, err
 			}

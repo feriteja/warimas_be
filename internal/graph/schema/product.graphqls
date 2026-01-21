@@ -92,7 +92,7 @@ input NewProduct {
   imageUrl: String
   description: String
   categoryId: ID!
-  subcategoryID: String!
+  subcategoryId: ID!
 }
 
 input UpdateProduct {

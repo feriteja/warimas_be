@@ -192,7 +192,7 @@ type NewProduct struct {
 	ImageURL      *string `json:"imageUrl,omitempty"`
 	Description   *string `json:"description,omitempty"`
 	CategoryID    string  `json:"categoryId"`
-	SubcategoryID string  `json:"subcategoryID"`
+	SubcategoryID string  `json:"subcategoryId"`
 }
 
 type NewVariant struct {
