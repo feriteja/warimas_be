@@ -2,18 +2,19 @@
 package payment
 
 import (
+	"context"
 	"net/http"
 )
 
 type Gateway interface {
-	CreateInvoice(externalID string,
-		buyerName string,
+	CreateInvoice(ctx context.Context,
+		externalID string,
+		buyer BuyerInfo,
 		amount int64,
-		customerEmail string,
 		items []XenditItem,
 		channelCode ChannelCode,
 	) (*PaymentResponse, error)
-	GetPaymentStatus(externalID string) (*PaymentStatus, error)
-	CancelPayment(externalID string) error
+	GetPaymentStatus(ctx context.Context, externalID string) (*PaymentStatus, error)
+	CancelPayment(ctx context.Context, externalID string) error
 	VerifySignature(r *http.Request) error
 }

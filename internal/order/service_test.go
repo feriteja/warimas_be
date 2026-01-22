@@ -235,16 +235,16 @@ type MockPaymentGateway struct {
 	mock.Mock
 }
 
-func (m *MockPaymentGateway) CreateInvoice(externalID, userEmail string, amount int64, payerEmail string, items []payment.XenditItem, channel payment.ChannelCode) (*payment.PaymentResponse, error) {
-	args := m.Called(externalID, userEmail, amount, payerEmail, items, channel)
+func (m *MockPaymentGateway) CreateInvoice(ctx context.Context, externalID string, buyer payment.BuyerInfo, amount int64, items []payment.XenditItem, channel payment.ChannelCode) (*payment.PaymentResponse, error) {
+	args := m.Called(ctx, externalID, buyer, amount, items, channel)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*payment.PaymentResponse), args.Error(1)
 }
 
-func (m *MockPaymentGateway) GetPaymentStatus(externalID string) (*payment.PaymentStatus, error) {
-	args := m.Called(externalID)
+func (m *MockPaymentGateway) GetPaymentStatus(ctx context.Context, externalID string) (*payment.PaymentStatus, error) {
+	args := m.Called(ctx, externalID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -268,8 +268,8 @@ func (m *MockUserRepository) Create(ctx context.Context, u *user.User) error {
 	return args.Error(0)
 }
 
-func (m *MockPaymentGateway) CancelPayment(externalID string) error {
-	args := m.Called(externalID)
+func (m *MockPaymentGateway) CancelPayment(ctx context.Context, externalID string) error {
+	args := m.Called(ctx, externalID)
 	return args.Error(0)
 }
 
@@ -436,7 +436,7 @@ func TestService_CreateFromSession(t *testing.T) {
 		// 1. Get Session
 		mockRepo.On("GetCheckoutSession", ctx, externalID).Return(mockSession, nil)
 		// 2. Check Existing Order (Not found)
-		mockRepo.On("GetOrderBySessionID", ctx, sessionID).Return(nil, errors.New("not found"))
+		mockRepo.On("GetOrderBySessionID", ctx, sessionID).Return(nil, nil)
 		// 3. Create Order
 		mockRepo.On("CreateOrderTx", ctx, mock.AnythingOfType("*order.Order"), mockSession).Return(nil)
 
@@ -743,7 +743,8 @@ func TestService_ConfirmSession(t *testing.T) {
 		mockPayRepo := new(MockPaymentRepository)
 		mockPayGate := new(MockPaymentGateway)
 		mockUserRepo := new(MockUserRepository)
-		svc := NewService(mockRepo, mockPayRepo, mockPayGate, nil, mockUserRepo)
+		mockAddrRepo := new(MockAddressRepository)
+		svc := NewService(mockRepo, mockPayRepo, mockPayGate, mockAddrRepo, mockUserRepo)
 
 		pm := payment.MethodBCAVA
 
@@ -782,13 +783,16 @@ func TestService_ConfirmSession(t *testing.T) {
 			InvoiceURL:        "http://invoice",
 			Status:            "PENDING",
 		}
-		mockPayGate.On("CreateInvoice", mock.AnythingOfType("string"), "userName", int64(50000), "test@example.com", mock.Anything, payment.ChannelCode(payment.MethodBCAVA)).Return(mockPayResp, nil)
+		mockPayGate.On("CreateInvoice", ctx, mock.AnythingOfType("string"), mock.AnythingOfType("payment.BuyerInfo"), int64(50000), mock.Anything, payment.ChannelCode(payment.MethodBCAVA)).Return(mockPayResp, nil)
 
 		// 7. Save Payment
 		mockPayRepo.On("SavePayment", ctx, mock.AnythingOfType("*payment.Payment")).Return(nil)
 
 		// 8. Get User Profile
 		mockUserRepo.On("GetProfile", ctx, userID).Return(&user.Profile{FullName: utils.StrPtr("userName")}, nil)
+
+		// 9. Get Address (fallback for phone)
+		mockAddrRepo.On("GetByID", ctx, addrID).Return(&address.Address{Phone: "08123456789"}, nil)
 
 		res, err := svc.ConfirmSession(ctx, externalID)
 
@@ -798,6 +802,7 @@ func TestService_ConfirmSession(t *testing.T) {
 		mockPayGate.AssertExpectations(t)
 		mockPayRepo.AssertExpectations(t)
 		mockUserRepo.AssertExpectations(t)
+		mockAddrRepo.AssertExpectations(t)
 	})
 
 	t.Run("OutOfStock", func(t *testing.T) {
@@ -1352,6 +1357,9 @@ func TestService_GetPaymentOrderInfo(t *testing.T) {
 		res, err := svc.GetPaymentOrderInfo(ctx, externalID)
 		assert.NoError(t, err)
 		assert.Equal(t, 50000, res.TotalAmount)
+		assert.NotNil(t, res.Payment.PaymentCode)
+		assert.Equal(t, "123456", *res.Payment.PaymentCode)
+		assert.Nil(t, res.Payment.InvoiceURL) // Should be nil because it's an empty string
 	})
 
 	t.Run("PaymentNotFound", func(t *testing.T) {
@@ -1543,7 +1551,7 @@ func TestService_OrderToPaymentProcess_GatewayError(t *testing.T) {
 		PaymentMethod: &pm,
 	}
 
-	mockPayGate.On("CreateInvoice", orderExtID, "Guest", int64(10000), mock.Anything, mock.Anything, payment.ChannelCode(payment.MethodBCAVA)).Return(nil, errors.New("gateway error"))
+	mockPayGate.On("CreateInvoice", ctx, orderExtID, mock.AnythingOfType("payment.BuyerInfo"), int64(10000), mock.Anything, payment.ChannelCode(payment.MethodBCAVA)).Return(nil, errors.New("gateway error"))
 
 	_, err := svc.OrderToPaymentProcess(ctx, mockSession, orderExtID, orderID)
 	assert.Error(t, err)
@@ -1568,7 +1576,7 @@ func TestService_OrderToPaymentProcess_SavePaymentError(t *testing.T) {
 	}
 	mockPayResp := &payment.PaymentResponse{ProviderPaymentID: "pay-1", Status: "PENDING"}
 
-	mockPayGate.On("CreateInvoice", orderExtID, "Guest", int64(10000), mock.Anything, mock.Anything, payment.ChannelCode(payment.MethodBCAVA)).Return(mockPayResp, nil)
+	mockPayGate.On("CreateInvoice", ctx, orderExtID, mock.AnythingOfType("payment.BuyerInfo"), int64(10000), mock.Anything, payment.ChannelCode(payment.MethodBCAVA)).Return(mockPayResp, nil)
 	mockPayRepo.On("SavePayment", ctx, mock.Anything).Return(errors.New("db error"))
 
 	_, err := svc.OrderToPaymentProcess(ctx, mockSession, orderExtID, orderID)
@@ -1605,5 +1613,5 @@ func TestService_GetPaymentOrderInfo_AddressError(t *testing.T) {
 
 	_, err := svc.GetPaymentOrderInfo(ctx, "ext-id")
 	assert.Error(t, err)
-	assert.Equal(t, "addr error", err.Error())
+	assert.Equal(t, "failed to get address", err.Error())
 }

@@ -60,7 +60,8 @@ func (r *repository) GetCategories(
 	query := `
 		SELECT
 			c.id,
-			c.name
+			c.name,
+			c.slug
 		FROM category c
 	`
 
@@ -111,7 +112,7 @@ func (r *repository) GetCategories(
 
 	for rows.Next() {
 		var c Category
-		if err := rows.Scan(&c.ID, &c.Name); err != nil {
+		if err := rows.Scan(&c.ID, &c.Name, &c.Slug); err != nil {
 			log.Error("Row scan failed", zap.Error(err))
 			return nil, 0, err
 		}

@@ -28,6 +28,7 @@ type Profile struct {
 	Bio         *string
 	AvatarURL   *string
 	Phone       *string
+	Email       *string
 	DateOfBirth *time.Time
 	CreatedAt   time.Time
 	UpdatedAt   time.Time

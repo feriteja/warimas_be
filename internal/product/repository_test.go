@@ -24,12 +24,12 @@ func TestRepository_GetProductsByGroup(t *testing.T) {
 		repo := NewRepository(db)
 
 		rows := sqlmock.NewRows([]string{
-			"category_id", "category_name", "subcategory_id", "subcategory_name", "total_products",
+			"category_id", "category_name", "category_slug", "subcategory_id", "subcategory_name", "total_products",
 			"product_id", "product_name", "seller_id", "slug", "status",
 			"variant_id", "variant_product_id", "variant_name", "variant_price", "stock", "imageurl", "quantity_type",
 			"seller_name",
 		}).AddRow(
-			"cat1", "Category 1", "sub1", "Sub 1", 5,
+			"cat1", "Category 1", "cat-slug-1", "sub1", "Sub 1", 5,
 			"p1", "Product 1", "s1", "slug-1", "active",
 			"v1", "p1", "Var 1", 100.0, 10, "img.jpg", "pcs",
 			"Seller A",

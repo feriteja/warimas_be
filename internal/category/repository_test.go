@@ -77,9 +77,9 @@ func TestRepository_GetCategories(t *testing.T) {
 		mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM category c").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(2))
 
 		// 2. Data Query
-		rows := sqlmock.NewRows([]string{"id", "name"}).
-			AddRow("cat-1", "A").
-			AddRow("cat-2", "B")
+		rows := sqlmock.NewRows([]string{"id", "name", "slug"}).
+			AddRow("cat-1", "A", "slug-a").
+			AddRow("cat-2", "B", "slug-b")
 
 		mock.ExpectQuery("SELECT .* FROM category c ORDER BY c.name ASC LIMIT \\$1 OFFSET \\$2").
 			WithArgs(limit, 0). // Limit, Offset (page 1 = offset 0)
@@ -100,7 +100,7 @@ func TestRepository_GetCategories(t *testing.T) {
 		mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM category c WHERE c.name ILIKE \\$1").WithArgs("%elec%").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
 		// 2. Data Query
-		rows := sqlmock.NewRows([]string{"id", "name"}).AddRow("cat-1", "Electronics")
+		rows := sqlmock.NewRows([]string{"id", "name", "slug"}).AddRow("cat-1", "Electronics", "electronics")
 
 		mock.ExpectQuery("SELECT .* FROM category c WHERE c.name ILIKE \\$1 ORDER BY c.name ASC LIMIT \\$2 OFFSET \\$3").
 			WithArgs("%elec%", limit, 0).

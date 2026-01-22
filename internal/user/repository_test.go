@@ -162,12 +162,12 @@ func TestRepository_GetProfile(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		rows := sqlmock.NewRows([]string{
-			"id", "user_id", "full_name", "bio", "avatar_url", "phone", "date_of_birth", "created_at", "updated_at",
+			"id", "user_id", "full_name", "bio", "avatar_url", "phone", "date_of_birth", "created_at", "updated_at", "email",
 		}).AddRow(
-			uuid.New(), userID, "John Doe", "Bio", "http://avatar", "123456", time.Now(), time.Now(), time.Now(),
+			uuid.New(), userID, "John Doe", "Bio", "http://avatar", "123456", time.Now(), time.Now(), time.Now(), "test@example.com",
 		)
 
-		mock.ExpectQuery(`SELECT id, user_id, full_name, bio, avatar_url, phone, date_of_birth, created_at, updated_at FROM profiles WHERE user_id = \$1`).
+		mock.ExpectQuery(`SELECT p.id, p.user_id, p.full_name, p.bio, p.avatar_url, p.phone, p.date_of_birth, p.created_at, p.updated_at, u.email FROM profiles p INNER JOIN users u ON p.user_id = u.id WHERE p.user_id = \$1`).
 			WithArgs(userID).
 			WillReturnRows(rows)
 

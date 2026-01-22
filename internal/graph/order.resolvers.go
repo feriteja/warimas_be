@@ -264,8 +264,8 @@ func (r *queryResolver) OrderList(ctx context.Context, filter *model.OrderFilter
 	}
 
 	if sort != nil {
-		sortOrder.Field = order.OrderSortField(sort.Field)
-		sortOrder.Direction = order.SortDirection(sort.Direction)
+		sortOrder.Field = order.OrderSortField(sort.Field.String())
+		sortOrder.Direction = order.SortDirection(sort.Direction.String())
 	}
 
 	// Fetch data
@@ -422,6 +422,7 @@ func (r *queryResolver) PaymentOrderInfo(ctx context.Context, externalID string)
 			Method:       string(paymentInfo.Payment.Method),
 			PaymentCode:  paymentInfo.Payment.PaymentCode,
 			ReferenceID:  paymentInfo.Payment.ReferenceID,
+			InvoiceURL:   paymentInfo.Payment.InvoiceURL,
 			Instructions: paymentInfo.Payment.Instructions,
 		}}
 

@@ -17,6 +17,7 @@ func MapCategoryToGraphQL(c *Category) *model.Category {
 	return &model.Category{
 		ID:            c.ID,
 		Name:          c.Name,
+		Slug:          c.Slug,
 		Subcategories: items,
 	}
 }

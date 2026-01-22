@@ -25,6 +25,12 @@ type Payment struct {
 	ExpireAt          time.Time
 }
 
+type BuyerInfo struct {
+	Name  string
+	Email *string
+	Phone string
+}
+
 type OrderItem struct {
 	ProductID uint
 	Quantity  int
@@ -106,8 +112,8 @@ type XenditPaymentResponse struct {
 	Updated time.Time `json:"updated"`
 
 	ChannelProperties struct {
-		DisplayName string    `json:"display_name,omitempty"`
-		ExpiresAt   time.Time `json:"expires_at"`
+		DisplayName string     `json:"display_name,omitempty"`
+		ExpiresAt   *time.Time `json:"expires_at"`
 	} `json:"channel_properties"`
 
 	Actions []struct {

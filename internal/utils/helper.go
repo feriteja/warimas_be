@@ -22,27 +22,28 @@ var (
 	multiDashRegex = regexp.MustCompile(`-+`)
 )
 
-func Slugify(input string, sellerID string) string {
-	// Get the first part of sellerID
-	sellerPrefix := strings.Split(sellerID, "-")[0]
+func Slugify(input, sellerID string) string {
+	parts := strings.SplitN(sellerID, "-", 2)
+	sellerPrefix := parts[0]
+	if sellerPrefix == "" {
+		sellerPrefix = "seller"
+	}
 
-	// Convert input to lowercase
-	slug := strings.ToLower(input)
-
-	// Trim whitespace
-	slug = strings.TrimSpace(slug)
-
-	// Replace non-alphanumeric characters with dash
+	slug := strings.ToLower(strings.TrimSpace(input))
 	slug = nonAlnumRegex.ReplaceAllString(slug, "-")
-
-	// Remove multiple dashes
 	slug = multiDashRegex.ReplaceAllString(slug, "-")
-
-	// Trim leading & trailing dashes
 	slug = strings.Trim(slug, "-")
 
-	// Prepend sellerPrefix to slug
+	if slug == "" {
+		slug = "item"
+	}
+
 	slug = sellerPrefix + "-" + slug
+
+	const maxLen = 150
+	if len(slug) > maxLen {
+		slug = slug[:maxLen]
+	}
 
 	return slug
 }
@@ -161,4 +162,11 @@ func FormatIDR(amount int64) string {
 	parts = append([]string{s[:n]}, parts...)
 
 	return "Rp " + strings.Join(parts, ".")
+}
+
+func NormalizePhoneID(phone string) string {
+	if strings.HasPrefix(phone, "0") {
+		return "+62" + phone[1:]
+	}
+	return phone
 }

@@ -86,6 +86,7 @@ type ComplexityRoot struct {
 	Category struct {
 		ID            func(childComplexity int) int
 		Name          func(childComplexity int) int
+		Slug          func(childComplexity int) int
 		Subcategories func(childComplexity int) int
 	}
 
@@ -291,6 +292,7 @@ type ComplexityRoot struct {
 	PaymentDetail struct {
 		Bank         func(childComplexity int) int
 		Instructions func(childComplexity int) int
+		InvoiceURL   func(childComplexity int) int
 		Method       func(childComplexity int) int
 		PaymentCode  func(childComplexity int) int
 		ReferenceID  func(childComplexity int) int
@@ -326,6 +328,7 @@ type ComplexityRoot struct {
 
 	ProductByCategory struct {
 		CategoryName  func(childComplexity int) int
+		CategorySlug  func(childComplexity int) int
 		Products      func(childComplexity int) int
 		TotalProducts func(childComplexity int) int
 	}
@@ -373,6 +376,7 @@ type ComplexityRoot struct {
 		Bio         func(childComplexity int) int
 		CreatedAt   func(childComplexity int) int
 		DateOfBirth func(childComplexity int) int
+		Email       func(childComplexity int) int
 		FullName    func(childComplexity int) int
 		ID          func(childComplexity int) int
 		Phone       func(childComplexity int) int
@@ -675,6 +679,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Category.Name(childComplexity), true
+
+	case "Category.slug":
+		if e.complexity.Category.Slug == nil {
+			break
+		}
+
+		return e.complexity.Category.Slug(childComplexity), true
 
 	case "Category.subcategories":
 		if e.complexity.Category.Subcategories == nil {
@@ -1706,6 +1717,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.PaymentDetail.Instructions(childComplexity), true
 
+	case "PaymentDetail.invoiceURL":
+		if e.complexity.PaymentDetail.InvoiceURL == nil {
+			break
+		}
+
+		return e.complexity.PaymentDetail.InvoiceURL(childComplexity), true
+
 	case "PaymentDetail.method":
 		if e.complexity.PaymentDetail.Method == nil {
 			break
@@ -1881,21 +1899,28 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Product.Variants(childComplexity), true
 
-	case "ProductByCategory.CategoryName":
+	case "ProductByCategory.categoryName":
 		if e.complexity.ProductByCategory.CategoryName == nil {
 			break
 		}
 
 		return e.complexity.ProductByCategory.CategoryName(childComplexity), true
 
-	case "ProductByCategory.Products":
+	case "ProductByCategory.categorySlug":
+		if e.complexity.ProductByCategory.CategorySlug == nil {
+			break
+		}
+
+		return e.complexity.ProductByCategory.CategorySlug(childComplexity), true
+
+	case "ProductByCategory.products":
 		if e.complexity.ProductByCategory.Products == nil {
 			break
 		}
 
 		return e.complexity.ProductByCategory.Products(childComplexity), true
 
-	case "ProductByCategory.TotalProducts":
+	case "ProductByCategory.totalProducts":
 		if e.complexity.ProductByCategory.TotalProducts == nil {
 			break
 		}
@@ -2111,6 +2136,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Profile.DateOfBirth(childComplexity), true
+
+	case "Profile.email":
+		if e.complexity.Profile.Email == nil {
+			break
+		}
+
+		return e.complexity.Profile.Email(childComplexity), true
 
 	case "Profile.fullName":
 		if e.complexity.Profile.FullName == nil {

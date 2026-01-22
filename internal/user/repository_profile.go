@@ -12,18 +12,23 @@ import (
 
 // GetProfile fetches a user's profile by user ID.
 func (r *repository) GetProfile(ctx context.Context, userID uint) (*Profile, error) {
-	log := logger.FromCtx(ctx).With(zap.Uint("user_id", userID))
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "GetProfile"),
+		zap.Uint("user_id", userID),
+	)
 
 	query := `
-		SELECT id, user_id, full_name, bio, avatar_url, phone, date_of_birth, created_at, updated_at
-		FROM profiles
-		WHERE user_id = $1
+		SELECT p.id, p.user_id, p.full_name, p.bio, p.avatar_url, p.phone, p.date_of_birth, p.created_at, p.updated_at, u.email
+		FROM profiles p
+		INNER JOIN users u ON p.user_id = u.id
+		WHERE p.user_id = $1
 	`
 	row := r.db.QueryRowContext(ctx, query, userID)
 
 	var p Profile
 	err := row.Scan(
-		&p.ID, &p.UserID, &p.FullName, &p.Bio, &p.AvatarURL, &p.Phone, &p.DateOfBirth, &p.CreatedAt, &p.UpdatedAt,
+		&p.ID, &p.UserID, &p.FullName, &p.Bio, &p.AvatarURL, &p.Phone, &p.DateOfBirth, &p.CreatedAt, &p.UpdatedAt, &p.Email,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -40,6 +45,12 @@ func (r *repository) GetProfile(ctx context.Context, userID uint) (*Profile, err
 
 // CreateProfile creates a new profile for a user.
 func (r *repository) CreateProfile(ctx context.Context, p *Profile) (*Profile, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "CreateProfile"),
+		zap.Uint("user_id", p.UserID),
+	)
+
 	query := `
 		INSERT INTO profiles (user_id, full_name, bio, avatar_url, phone, date_of_birth)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -50,17 +61,22 @@ func (r *repository) CreateProfile(ctx context.Context, p *Profile) (*Profile, e
 	).Scan(&p.ID, &p.CreatedAt, &p.UpdatedAt)
 
 	if err != nil {
-		log := logger.FromCtx(ctx).With(zap.Uint("user_id", p.UserID))
 		log.Error("failed to create profile", zap.Error(err))
 		return nil, err
 	}
-	log := logger.FromCtx(ctx).With(zap.String("profile_id", p.ID.String()), zap.Uint("user_id", p.UserID))
-	log.Info("profile created successfully")
+
+	log.Info("profile created successfully", zap.String("profile_id", p.ID.String()))
 	return p, nil
 }
 
 // UpdateProfile updates an existing profile.
 func (r *repository) UpdateProfile(ctx context.Context, p *Profile) (*Profile, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "repository"),
+		zap.String("method", "UpdateProfile"),
+		zap.Uint("user_id", p.UserID),
+	)
+
 	// Using COALESCE to keep existing values if input is nil
 	query := `
 		UPDATE profiles
@@ -81,10 +97,10 @@ func (r *repository) UpdateProfile(ctx context.Context, p *Profile) (*Profile, e
 	)
 
 	if err != nil {
-		log := logger.FromCtx(ctx).With(zap.Uint("user_id", p.UserID))
 		log.Error("failed to update profile", zap.Error(err))
 		return nil, err
 	}
 
+	log.Info("profile updated successfully")
 	return p, nil
 }

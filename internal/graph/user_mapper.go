@@ -22,6 +22,7 @@ func mapProfileToGraphQL(profile *user.Profile) *model.Profile {
 		Bio:         profile.Bio,
 		AvatarURL:   profile.AvatarURL,
 		Phone:       profile.Phone,
+		Email:       profile.Email,
 		DateOfBirth: dob,
 		CreatedAt:   utils.StrPtr(profile.CreatedAt.Format(time.RFC3339)),
 		UpdatedAt:   utils.StrPtr(profile.UpdatedAt.Format(time.RFC3339)),

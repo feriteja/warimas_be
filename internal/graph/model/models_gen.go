@@ -79,6 +79,7 @@ type CartSortInput struct {
 type Category struct {
 	ID            string         `json:"id"`
 	Name          string         `json:"name"`
+	Slug          string         `json:"slug"`
 	Subcategories []*Subcategory `json:"subcategories"`
 }
 
@@ -191,7 +192,7 @@ type NewProduct struct {
 	ImageURL      *string `json:"imageUrl,omitempty"`
 	Description   *string `json:"description,omitempty"`
 	CategoryID    string  `json:"categoryId"`
-	SubcategoryID string  `json:"subcategoryID"`
+	SubcategoryID string  `json:"subcategoryId"`
 }
 
 type NewVariant struct {
@@ -343,6 +344,7 @@ type PaymentDetail struct {
 	Method       string   `json:"method"`
 	Bank         *string  `json:"bank,omitempty"`
 	PaymentCode  *string  `json:"paymentCode,omitempty"`
+	InvoiceURL   *string  `json:"invoiceURL,omitempty"`
 	ReferenceID  string   `json:"referenceId"`
 	Instructions []string `json:"instructions"`
 }
@@ -376,9 +378,10 @@ type Product struct {
 }
 
 type ProductByCategory struct {
-	CategoryName  *string    `json:"CategoryName,omitempty"`
-	TotalProducts int32      `json:"TotalProducts"`
-	Products      []*Product `json:"Products,omitempty"`
+	CategoryName  string     `json:"categoryName"`
+	CategorySlug  string     `json:"categorySlug"`
+	TotalProducts int32      `json:"totalProducts"`
+	Products      []*Product `json:"products,omitempty"`
 }
 
 type ProductCart struct {
@@ -439,6 +442,7 @@ type Profile struct {
 	ID          string  `json:"id"`
 	UserID      string  `json:"userId"`
 	FullName    *string `json:"fullName,omitempty"`
+	Email       *string `json:"email,omitempty"`
 	Bio         *string `json:"bio,omitempty"`
 	AvatarURL   *string `json:"avatarUrl,omitempty"`
 	Phone       *string `json:"phone,omitempty"`

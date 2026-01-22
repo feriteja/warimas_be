@@ -157,11 +157,15 @@ func (s *service) OrderToPaymentProcess(ctx context.Context, session *CheckoutSe
 	}
 
 	var userName string
+	var userPhone string
 	if session.UserID != nil && *session.UserID > 0 {
 		userProfile, err := s.userRepo.GetProfile(ctx, uint(*session.UserID))
 		if err == nil && userProfile != nil {
 			if userProfile.FullName != nil {
 				userName = *userProfile.FullName
+			}
+			if userProfile.Phone != nil {
+				userPhone = *userProfile.Phone
 			}
 		} else {
 			logger.FromCtx(ctx).Warn("failed to fetch user profile for invoice", zap.Error(err))
@@ -176,6 +180,13 @@ func (s *service) OrderToPaymentProcess(ctx context.Context, session *CheckoutSe
 		}
 	}
 
+	if userPhone == "" && session.AddressID != nil {
+		addr, err := s.addressRepo.GetByID(ctx, *session.AddressID)
+		if err == nil && addr != nil {
+			userPhone = addr.Phone
+		}
+	}
+
 	if userName == "" {
 		userName = "Guest"
 	}
@@ -186,10 +197,16 @@ func (s *service) OrderToPaymentProcess(ctx context.Context, session *CheckoutSe
 
 	}
 
-	payResp, err := s.paymentGate.CreateInvoice(externalID,
-		userName,
+	buyer := &payment.BuyerInfo{
+		Name:  userName,
+		Email: &userEmail,
+		Phone: userPhone,
+	}
+
+	payResp, err := s.paymentGate.CreateInvoice(ctx,
+		externalID,
+		*buyer,
 		int64(session.TotalPrice),
-		userEmail,
 		items,
 		paymentMethod)
 
@@ -1191,6 +1208,14 @@ func (s *service) GetPaymentOrderInfo(
 		},
 	)
 
+	var paymentCode, invoiceURL *string
+	if paymentData.PaymentCode != "" {
+		paymentCode = &paymentData.PaymentCode
+	}
+	if paymentData.InvoiceURL != "" {
+		invoiceURL = &paymentData.InvoiceURL
+	}
+
 	paymentInfo := &PaymentOrderInfoResponse{
 		OrderExternalID: externalID,
 		Status:          PaymentStatus(paymentData.Status),
@@ -1209,7 +1234,8 @@ func (s *service) GetPaymentOrderInfo(
 		},
 		Payment: PaymentDetail{
 			Method:       paymentData.PaymentMethod,
-			PaymentCode:  &paymentData.PaymentCode,
+			PaymentCode:  paymentCode,
+			InvoiceURL:   invoiceURL,
 			ReferenceID:  paymentData.ExternalReference,
 			Instructions: instructions,
 		},

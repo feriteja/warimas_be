@@ -72,9 +72,10 @@ type ProductCart {
 }
 
 type ProductByCategory {
-  CategoryName: String
-  TotalProducts: Int!
-  Products: [Product]
+  categoryName: String!
+  categorySlug: String!
+  totalProducts: Int!
+  products: [Product]
 }
 
 type ProductPage {
@@ -91,7 +92,7 @@ input NewProduct {
   imageUrl: String
   description: String
   categoryId: ID!
-  subcategoryID: String!
+  subcategoryId: ID!
 }
 
 input UpdateProduct {

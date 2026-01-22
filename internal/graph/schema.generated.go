@@ -1012,6 +1012,8 @@ func (ec *executionContext) fieldContext_Mutation_addCategory(ctx context.Contex
 				return ec.fieldContext_Category_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Category_name(ctx, field)
+			case "slug":
+				return ec.fieldContext_Category_slug(ctx, field)
 			case "subcategories":
 				return ec.fieldContext_Category_subcategories(ctx, field)
 			}
@@ -1859,6 +1861,8 @@ func (ec *executionContext) fieldContext_Mutation_updateProfile(ctx context.Cont
 				return ec.fieldContext_Profile_userId(ctx, field)
 			case "fullName":
 				return ec.fieldContext_Profile_fullName(ctx, field)
+			case "email":
+				return ec.fieldContext_Profile_email(ctx, field)
 			case "bio":
 				return ec.fieldContext_Profile_bio(ctx, field)
 			case "avatarUrl":
@@ -2839,12 +2843,14 @@ func (ec *executionContext) fieldContext_Query_productsHome(ctx context.Context,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "CategoryName":
-				return ec.fieldContext_ProductByCategory_CategoryName(ctx, field)
-			case "TotalProducts":
-				return ec.fieldContext_ProductByCategory_TotalProducts(ctx, field)
-			case "Products":
-				return ec.fieldContext_ProductByCategory_Products(ctx, field)
+			case "categoryName":
+				return ec.fieldContext_ProductByCategory_categoryName(ctx, field)
+			case "categorySlug":
+				return ec.fieldContext_ProductByCategory_categorySlug(ctx, field)
+			case "totalProducts":
+				return ec.fieldContext_ProductByCategory_totalProducts(ctx, field)
+			case "products":
+				return ec.fieldContext_ProductByCategory_products(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ProductByCategory", field.Name)
 		},
@@ -2966,6 +2972,8 @@ func (ec *executionContext) fieldContext_Query_myProfile(_ context.Context, fiel
 				return ec.fieldContext_Profile_userId(ctx, field)
 			case "fullName":
 				return ec.fieldContext_Profile_fullName(ctx, field)
+			case "email":
+				return ec.fieldContext_Profile_email(ctx, field)
 			case "bio":
 				return ec.fieldContext_Profile_bio(ctx, field)
 			case "avatarUrl":

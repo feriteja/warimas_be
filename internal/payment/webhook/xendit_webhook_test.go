@@ -608,13 +608,13 @@ func (m *MockGateway) VerifySignature(r *http.Request) error {
 }
 
 // Stubs
-func (m *MockGateway) CreateInvoice(extID, email string, amt int64, payer string, items []payment.XenditItem, ch payment.ChannelCode) (*payment.PaymentResponse, error) {
+func (m *MockGateway) CreateInvoice(ctx context.Context, extID string, buyer payment.BuyerInfo, amt int64, items []payment.XenditItem, ch payment.ChannelCode) (*payment.PaymentResponse, error) {
 	return nil, nil
 }
-func (m *MockGateway) GetPaymentStatus(extID string) (*payment.PaymentStatus, error) {
+func (m *MockGateway) GetPaymentStatus(ctx context.Context, extID string) (*payment.PaymentStatus, error) {
 	return nil, nil
 }
-func (m *MockGateway) CancelPayment(extID string) error {
+func (m *MockGateway) CancelPayment(ctx context.Context, extID string) error {
 	args := m.Called(extID)
 	return args.Error(0)
 }

@@ -20,11 +20,17 @@ import (
 
 // Register is the resolver for the register field.
 func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error) {
-	log := logger.FromCtx(ctx)
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "Register"),
+		zap.String("email", input.Email),
+	)
+
+	log.Info("register request received")
 
 	token, u, err := r.UserSvc.Register(ctx, input.Email, input.Password)
 	if err != nil {
-		log.Warn("register failed", zap.String("email", input.Email), zap.Error(err))
+		log.Warn("register failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -43,7 +49,6 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 
 	log.Info("user registered successfully",
 		zap.String("user_id", fmt.Sprint(u.ID)),
-		zap.String("email", u.Email),
 	)
 
 	return &model.AuthResponse{
@@ -58,16 +63,17 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error) {
-	log := logger.FromCtx(ctx)
-
-	log.Info("Login resolver called",
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "Login"),
 		zap.String("email", input.Email),
 	)
 
+	log.Info("login request received")
+
 	token, u, err := r.UserSvc.Login(ctx, input.Email, input.Password)
 	if err != nil {
-		log.Warn("Login failed",
-			zap.String("email", input.Email),
+		log.Warn("login failed",
 			zap.Error(err),
 		)
 		return nil, err
@@ -86,9 +92,8 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 		})
 	}
 
-	log.Info("Login successful",
+	log.Info("login successful",
 		zap.String("user_id", fmt.Sprint(u.ID)),
-		zap.String("email", u.Email),
 		zap.String("role", string(u.Role)),
 	)
 
@@ -104,16 +109,20 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 
 // ForgotPassword is the resolver for the forgotPassword field.
 func (r *mutationResolver) ForgotPassword(ctx context.Context, input model.ForgotPasswordInput) (*model.ForgotPasswordResponse, error) {
-	log := logger.FromCtx(ctx)
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "ForgotPassword"),
+		zap.String("email", input.Email),
+	)
 
-	log.Info("forgot password request received", zap.String("email", input.Email))
+	log.Info("forgot password request received")
 
 	if err := r.UserSvc.ForgotPassword(ctx, input.Email); err != nil {
 		log.Error("forgot password failed", zap.Error(err))
 		return nil, err
 	}
 
-	log.Info("forgot password email sent", zap.String("email", input.Email))
+	log.Info("forgot password email sent")
 
 	return &model.ForgotPasswordResponse{
 		Success: true,
@@ -123,7 +132,10 @@ func (r *mutationResolver) ForgotPassword(ctx context.Context, input model.Forgo
 
 // ResetPassword is the resolver for the resetPassword field.
 func (r *mutationResolver) ResetPassword(ctx context.Context, input model.ResetPasswordInput) (*model.ResetPasswordResponse, error) {
-	log := logger.FromCtx(ctx)
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "ResetPassword"),
+	)
 
 	log.Info("reset password request received")
 
@@ -131,6 +143,8 @@ func (r *mutationResolver) ResetPassword(ctx context.Context, input model.ResetP
 		log.Error("reset password failed", zap.Error(err))
 		return nil, err
 	}
+
+	log.Info("password reset successful")
 
 	return &model.ResetPasswordResponse{
 		Success: true,
@@ -140,7 +154,12 @@ func (r *mutationResolver) ResetPassword(ctx context.Context, input model.ResetP
 
 // Logout is the resolver for the logout field.
 func (r *mutationResolver) Logout(ctx context.Context) (bool, error) {
-	log := logger.FromCtx(ctx)
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "Logout"),
+	)
+
+	log.Info("logout request received")
 
 	w := transport.GetResponseWriter(ctx)
 	if w != nil {
@@ -161,14 +180,20 @@ func (r *mutationResolver) Logout(ctx context.Context) (bool, error) {
 }
 
 // UpdateProfile is the resolver for the updateProfile field.
-// UpdateProfile is the resolver for the updateProfile field.
 func (r *mutationResolver) UpdateProfile(ctx context.Context, input model.UpdateProfileInput) (*model.Profile, error) {
-	log := logger.FromCtx(ctx)
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "UpdateProfile"),
+	)
 
 	userID, ok := utils.GetUserIDFromContext(ctx)
 	if !ok {
+		log.Warn("unauthorized update profile attempt")
 		return nil, fmt.Errorf("unauthorized")
 	}
+
+	log = log.With(zap.Uint("user_id", userID))
+	log.Info("update profile request received")
 
 	var dob *time.Time
 	if input.DateOfBirth != nil {
@@ -191,28 +216,38 @@ func (r *mutationResolver) UpdateProfile(ctx context.Context, input model.Update
 
 	updated, err := r.UserSvc.UpdateProfile(ctx, params)
 	if err != nil {
+		log.Error("failed to update profile", zap.Error(err))
 		return nil, err
 	}
+
+	log.Info("profile updated successfully")
 
 	return mapProfileToGraphQL(updated), nil
 }
 
 // MyProfile is the resolver for the myProfile field.
 func (r *queryResolver) MyProfile(ctx context.Context) (*model.Profile, error) {
-	log := logger.FromCtx(ctx)
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "MyProfile"),
+	)
 
 	userID, ok := utils.GetUserIDFromContext(ctx)
 	if !ok {
+		log.Warn("unauthorized my profile attempt")
 		return nil, fmt.Errorf("unauthorized")
 	}
 
-	// Assuming UserSvc has GetOrCreateProfile method
-	// You need to implement GetOrCreateProfile in your user service
+	log = log.With(zap.Uint("user_id", userID))
+	log.Info("fetch my profile request received")
+
 	profile, err := r.UserSvc.GetOrCreateProfile(ctx, userID)
 	if err != nil {
 		log.Error("failed to get or create profile", zap.Error(err))
 		return nil, err
 	}
+
+	log.Info("profile fetched successfully")
 
 	return mapProfileToGraphQL(profile), nil
 }

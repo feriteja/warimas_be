@@ -251,6 +251,7 @@ type PaymentDetail {
   method: String!
   bank: String
   paymentCode: String
+  invoiceURL: String
   referenceId: String!
   instructions: [String!]!
 }

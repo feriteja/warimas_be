@@ -59,6 +59,7 @@ type Profile {
   id: ID!
   userId: ID!
   fullName: String
+  email: String
   bio: String
   avatarUrl: String
   phone: String
