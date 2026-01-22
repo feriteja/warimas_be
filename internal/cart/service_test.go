@@ -137,14 +137,6 @@ func (m *MockProductRepository) GetList(ctx context.Context, opts product.Produc
 	return r0, r1, args.Error(2)
 }
 
-func (m *MockProductRepository) GetPackages(ctx context.Context, filter *product.PackageFilterInput, sort *product.PackageSortInput, limit, page int32, includeCount bool) ([]*product.Package, error) {
-	args := m.Called(ctx, filter, sort, limit, page, includeCount)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([]*product.Package), args.Error(1)
-}
-
 func (m *MockProductRepository) GetProductsByGroup(ctx context.Context, opts product.ProductQueryOptions) ([]product.ProductByCategory, error) {
 	args := m.Called(ctx, opts)
 	if args.Get(0) == nil {

@@ -1360,78 +1360,6 @@ func (ec *executionContext) unmarshalInputNewProduct(ctx context.Context, obj an
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputPackageFilterInput(ctx context.Context, obj any) (model.PackageFilterInput, error) {
-	var it model.PackageFilterInput
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"id", "name"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "id":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ID = data
-		case "name":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Name = data
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputPackageSortInput(ctx context.Context, obj any) (model.PackageSortInput, error) {
-	var it model.PackageSortInput
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	if _, present := asMap["direction"]; !present {
-		asMap["direction"] = "ASC"
-	}
-
-	fieldsInOrder := [...]string{"field", "direction"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "field":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
-			data, err := ec.unmarshalNPackageSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageSortField(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Field = data
-		case "direction":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
-			data, err := ec.unmarshalNSortDirection2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐSortDirection(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Direction = data
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputProductFilterInput(ctx context.Context, obj any) (model.ProductFilterInput, error) {
 	var it model.ProductFilterInput
 	asMap := map[string]any{}
@@ -1935,16 +1863,6 @@ func (ec *executionContext) unmarshalNNewProduct2warimasᚑbeᚋinternalᚋgraph
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalNPackageSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageSortField(ctx context.Context, v any) (model.PackageSortField, error) {
-	var res model.PackageSortField
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNPackageSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageSortField(ctx context.Context, sel ast.SelectionSet, v model.PackageSortField) graphql.Marshaler {
-	return v
-}
-
 func (ec *executionContext) marshalNProduct2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐProduct(ctx context.Context, sel ast.SelectionSet, v model.Product) graphql.Marshaler {
 	return ec._Product(ctx, sel, &v)
 }
@@ -2094,22 +2012,6 @@ func (ec *executionContext) marshalNProductSortField2warimasᚑbeᚋinternalᚋg
 func (ec *executionContext) unmarshalNUpdateProduct2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐUpdateProduct(ctx context.Context, v any) (model.UpdateProduct, error) {
 	res, err := ec.unmarshalInputUpdateProduct(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOPackageFilterInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageFilterInput(ctx context.Context, v any) (*model.PackageFilterInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputPackageFilterInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOPackageSortInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageSortInput(ctx context.Context, v any) (*model.PackageSortInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputPackageSortInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalOProduct2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐProduct(ctx context.Context, sel ast.SelectionSet, v []*model.Product) graphql.Marshaler {

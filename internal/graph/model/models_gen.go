@@ -10,6 +10,17 @@ import (
 	"time"
 )
 
+type AddPackageInput struct {
+	Name  string                 `json:"name"`
+	Items []*AddPackageItemInput `json:"items"`
+	Type  *string                `json:"type,omitempty"`
+}
+
+type AddPackageItemInput struct {
+	VariantID string `json:"variantId"`
+	Quantity  int32  `json:"quantity"`
+}
+
 type AddToCartInput struct {
 	VariantID string `json:"variantId"`
 	Quantity  int32  `json:"quantity"`
@@ -269,16 +280,21 @@ type OrderTimestamps struct {
 }
 
 type Package struct {
-	ID       string         `json:"id"`
-	Name     string         `json:"name"`
-	ImageURL *string        `json:"imageUrl,omitempty"`
-	UserID   *string        `json:"userId,omitempty"`
-	Items    []*PackageItem `json:"items"`
+	ID        string         `json:"id"`
+	Name      string         `json:"name"`
+	ImageURL  *string        `json:"imageUrl,omitempty"`
+	UserID    *int32         `json:"userId,omitempty"`
+	Items     []*PackageItem `json:"items"`
+	Type      string         `json:"type"`
+	IsActive  bool           `json:"isActive"`
+	CreatedAt string         `json:"createdAt"`
+	UpdatedAt string         `json:"updatedAt"`
 }
 
 type PackageFilterInput struct {
 	ID   *string `json:"id,omitempty"`
 	Name *string `json:"name,omitempty"`
+	Type *string `json:"type,omitempty"`
 }
 
 type PackageItem struct {
@@ -293,10 +309,9 @@ type PackageItem struct {
 	UpdatedAt string  `json:"updatedAt"`
 }
 
-type PackageResponse struct {
-	Success bool       `json:"success"`
-	Message *string    `json:"message,omitempty"`
-	Data    []*Package `json:"data,omitempty"`
+type PackageListResponse struct {
+	Items    []*Package `json:"items"`
+	PageInfo *PageInfo  `json:"pageInfo"`
 }
 
 type PackageSortInput struct {

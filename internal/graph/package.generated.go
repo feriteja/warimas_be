@@ -126,7 +126,7 @@ func (ec *executionContext) _Package_userId(ctx context.Context, field graphql.C
 			return obj.UserID, nil
 		},
 		nil,
-		ec.marshalOString2ᚖstring,
+		ec.marshalOInt2ᚖint32,
 		true,
 		false,
 	)
@@ -139,7 +139,7 @@ func (ec *executionContext) fieldContext_Package_userId(_ context.Context, field
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -189,6 +189,122 @@ func (ec *executionContext) fieldContext_Package_items(_ context.Context, field 
 				return ec.fieldContext_PackageItem_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type PackageItem", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Package_type(ctx context.Context, field graphql.CollectedField, obj *model.Package) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Package_type,
+		func(ctx context.Context) (any, error) {
+			return obj.Type, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Package_type(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Package",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Package_isActive(ctx context.Context, field graphql.CollectedField, obj *model.Package) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Package_isActive,
+		func(ctx context.Context) (any, error) {
+			return obj.IsActive, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Package_isActive(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Package",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Package_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Package) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Package_createdAt,
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Package_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Package",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Package_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.Package) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Package_updatedAt,
+		func(ctx context.Context) (any, error) {
+			return obj.UpdatedAt, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Package_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Package",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -455,83 +571,25 @@ func (ec *executionContext) fieldContext_PackageItem_updatedAt(_ context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _PackageResponse_success(ctx context.Context, field graphql.CollectedField, obj *model.PackageResponse) (ret graphql.Marshaler) {
+func (ec *executionContext) _PackageListResponse_items(ctx context.Context, field graphql.CollectedField, obj *model.PackageListResponse) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_PackageResponse_success,
+		ec.fieldContext_PackageListResponse_items,
 		func(ctx context.Context) (any, error) {
-			return obj.Success, nil
+			return obj.Items, nil
 		},
 		nil,
-		ec.marshalNBoolean2bool,
+		ec.marshalNPackage2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageᚄ,
 		true,
 		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_PackageResponse_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_PackageListResponse_items(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "PackageResponse",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _PackageResponse_message(ctx context.Context, field graphql.CollectedField, obj *model.PackageResponse) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_PackageResponse_message,
-		func(ctx context.Context) (any, error) {
-			return obj.Message, nil
-		},
-		nil,
-		ec.marshalOString2ᚖstring,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_PackageResponse_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "PackageResponse",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _PackageResponse_data(ctx context.Context, field graphql.CollectedField, obj *model.PackageResponse) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_PackageResponse_data,
-		func(ctx context.Context) (any, error) {
-			return obj.Data, nil
-		},
-		nil,
-		ec.marshalOPackage2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackage,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_PackageResponse_data(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "PackageResponse",
+		Object:     "PackageListResponse",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -547,8 +605,59 @@ func (ec *executionContext) fieldContext_PackageResponse_data(_ context.Context,
 				return ec.fieldContext_Package_userId(ctx, field)
 			case "items":
 				return ec.fieldContext_Package_items(ctx, field)
+			case "type":
+				return ec.fieldContext_Package_type(ctx, field)
+			case "isActive":
+				return ec.fieldContext_Package_isActive(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Package_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Package_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Package", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PackageListResponse_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.PackageListResponse) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PackageListResponse_pageInfo,
+		func(ctx context.Context) (any, error) {
+			return obj.PageInfo, nil
+		},
+		nil,
+		ec.marshalNPageInfo2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPageInfo,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PackageListResponse_pageInfo(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PackageListResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "totalItems":
+				return ec.fieldContext_PageInfo_totalItems(ctx, field)
+			case "totalPages":
+				return ec.fieldContext_PageInfo_totalPages(ctx, field)
+			case "page":
+				return ec.fieldContext_PageInfo_page(ctx, field)
+			case "limit":
+				return ec.fieldContext_PageInfo_limit(ctx, field)
+			case "hasNextPage":
+				return ec.fieldContext_PageInfo_hasNextPage(ctx, field)
+			case "hasPreviousPage":
+				return ec.fieldContext_PageInfo_hasPreviousPage(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
 		},
 	}
 	return fc, nil
@@ -557,6 +666,160 @@ func (ec *executionContext) fieldContext_PackageResponse_data(_ context.Context,
 // endregion **************************** field.gotpl *****************************
 
 // region    **************************** input.gotpl *****************************
+
+func (ec *executionContext) unmarshalInputAddPackageInput(ctx context.Context, obj any) (model.AddPackageInput, error) {
+	var it model.AddPackageInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "items", "type"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "items":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("items"))
+			data, err := ec.unmarshalNAddPackageItemInput2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐAddPackageItemInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Items = data
+		case "type":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("type"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Type = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputAddPackageItemInput(ctx context.Context, obj any) (model.AddPackageItemInput, error) {
+	var it model.AddPackageItemInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"variantId", "quantity"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "variantId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("variantId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.VariantID = data
+		case "quantity":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quantity"))
+			data, err := ec.unmarshalNInt2int32(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Quantity = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputPackageFilterInput(ctx context.Context, obj any) (model.PackageFilterInput, error) {
+	var it model.PackageFilterInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "name", "type"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "type":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("type"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Type = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputPackageSortInput(ctx context.Context, obj any) (model.PackageSortInput, error) {
+	var it model.PackageSortInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	if _, present := asMap["direction"]; !present {
+		asMap["direction"] = "ASC"
+	}
+
+	fieldsInOrder := [...]string{"field", "direction"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "field":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			data, err := ec.unmarshalNPackageSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageSortField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Field = data
+		case "direction":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			data, err := ec.unmarshalNSortDirection2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐSortDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Direction = data
+		}
+	}
+
+	return it, nil
+}
 
 // endregion **************************** input.gotpl *****************************
 
@@ -593,6 +856,26 @@ func (ec *executionContext) _Package(ctx context.Context, sel ast.SelectionSet, 
 			out.Values[i] = ec._Package_userId(ctx, field, obj)
 		case "items":
 			out.Values[i] = ec._Package_items(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "type":
+			out.Values[i] = ec._Package_type(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "isActive":
+			out.Values[i] = ec._Package_isActive(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._Package_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._Package_updatedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -698,26 +981,27 @@ func (ec *executionContext) _PackageItem(ctx context.Context, sel ast.SelectionS
 	return out
 }
 
-var packageResponseImplementors = []string{"PackageResponse"}
+var packageListResponseImplementors = []string{"PackageListResponse"}
 
-func (ec *executionContext) _PackageResponse(ctx context.Context, sel ast.SelectionSet, obj *model.PackageResponse) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, packageResponseImplementors)
+func (ec *executionContext) _PackageListResponse(ctx context.Context, sel ast.SelectionSet, obj *model.PackageListResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, packageListResponseImplementors)
 
 	out := graphql.NewFieldSet(fields)
 	deferred := make(map[string]*graphql.FieldSet)
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("PackageResponse")
-		case "success":
-			out.Values[i] = ec._PackageResponse_success(ctx, field, obj)
+			out.Values[i] = graphql.MarshalString("PackageListResponse")
+		case "items":
+			out.Values[i] = ec._PackageListResponse_items(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "message":
-			out.Values[i] = ec._PackageResponse_message(ctx, field, obj)
-		case "data":
-			out.Values[i] = ec._PackageResponse_data(ctx, field, obj)
+		case "pageInfo":
+			out.Values[i] = ec._PackageListResponse_pageInfo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -744,6 +1028,89 @@ func (ec *executionContext) _PackageResponse(ctx context.Context, sel ast.Select
 // endregion **************************** object.gotpl ****************************
 
 // region    ***************************** type.gotpl *****************************
+
+func (ec *executionContext) unmarshalNAddPackageInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐAddPackageInput(ctx context.Context, v any) (model.AddPackageInput, error) {
+	res, err := ec.unmarshalInputAddPackageInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNAddPackageItemInput2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐAddPackageItemInputᚄ(ctx context.Context, v any) ([]*model.AddPackageItemInput, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]*model.AddPackageItemInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNAddPackageItemInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐAddPackageItemInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) unmarshalNAddPackageItemInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐAddPackageItemInput(ctx context.Context, v any) (*model.AddPackageItemInput, error) {
+	res, err := ec.unmarshalInputAddPackageItemInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPackage2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackage(ctx context.Context, sel ast.SelectionSet, v model.Package) graphql.Marshaler {
+	return ec._Package(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPackage2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Package) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNPackage2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackage(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNPackage2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackage(ctx context.Context, sel ast.SelectionSet, v *model.Package) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Package(ctx, sel, v)
+}
 
 func (ec *executionContext) marshalNPackageItem2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageItemᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.PackageItem) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
@@ -799,66 +1166,44 @@ func (ec *executionContext) marshalNPackageItem2ᚖwarimasᚑbeᚋinternalᚋgra
 	return ec._PackageItem(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNPackageResponse2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageResponse(ctx context.Context, sel ast.SelectionSet, v model.PackageResponse) graphql.Marshaler {
-	return ec._PackageResponse(ctx, sel, &v)
+func (ec *executionContext) marshalNPackageListResponse2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageListResponse(ctx context.Context, sel ast.SelectionSet, v model.PackageListResponse) graphql.Marshaler {
+	return ec._PackageListResponse(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNPackageResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageResponse(ctx context.Context, sel ast.SelectionSet, v *model.PackageResponse) graphql.Marshaler {
+func (ec *executionContext) marshalNPackageListResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageListResponse(ctx context.Context, sel ast.SelectionSet, v *model.PackageListResponse) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
 		}
 		return graphql.Null
 	}
-	return ec._PackageResponse(ctx, sel, v)
+	return ec._PackageListResponse(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalOPackage2ᚕᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackage(ctx context.Context, sel ast.SelectionSet, v []*model.Package) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalOPackage2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackage(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	return ret
+func (ec *executionContext) unmarshalNPackageSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageSortField(ctx context.Context, v any) (model.PackageSortField, error) {
+	var res model.PackageSortField
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOPackage2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackage(ctx context.Context, sel ast.SelectionSet, v *model.Package) graphql.Marshaler {
+func (ec *executionContext) marshalNPackageSortField2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageSortField(ctx context.Context, sel ast.SelectionSet, v model.PackageSortField) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalOPackageFilterInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageFilterInput(ctx context.Context, v any) (*model.PackageFilterInput, error) {
 	if v == nil {
-		return graphql.Null
+		return nil, nil
 	}
-	return ec._Package(ctx, sel, v)
+	res, err := ec.unmarshalInputPackageFilterInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOPackageSortInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageSortInput(ctx context.Context, v any) (*model.PackageSortInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputPackageSortInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 // endregion ***************************** type.gotpl *****************************

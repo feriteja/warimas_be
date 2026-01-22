@@ -6,11 +6,119 @@ package graph
 
 import (
 	"context"
-	"fmt"
 	"warimas-be/internal/graph/model"
+	"warimas-be/internal/packages"
 )
 
-// PackageRecomamendation is the resolver for the packageRecomamendation field.
-func (r *queryResolver) PackageRecomamendation(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) (*model.PackageResponse, error) {
-	panic(fmt.Errorf("not implemented: PackageRecomamendation - packageRecomamendation"))
+// AddPackage is the resolver for the addPackage field.
+func (r *mutationResolver) AddPackage(ctx context.Context, input model.AddPackageInput) (*model.Package, error) {
+	pkgType := "personal"
+	if input.Type != nil {
+		pkgType = *input.Type
+	}
+
+	items := make([]packages.CreatePackageItemInput, len(input.Items))
+	for i, item := range input.Items {
+		items[i] = packages.CreatePackageItemInput{
+			VariantID: item.VariantID,
+			Quantity:  int32(item.Quantity),
+		}
+	}
+
+	pkg, err := r.PackageSvc.AddPackage(ctx, packages.CreatePackageInput{
+		Name:  input.Name,
+		Type:  pkgType,
+		Items: items,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return mapPackageToGraphQL(pkg), nil
+}
+
+// Packages is the resolver for the packages field.
+func (r *queryResolver) Packages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32, includeDisabled *bool) (*model.PackageListResponse, error) {
+	var pkgFilter *packages.PackageFilterInput
+	if filter != nil {
+		pkgFilter = &packages.PackageFilterInput{
+			ID:   filter.ID,
+			Name: filter.Name,
+		}
+	}
+
+	var pkgSort *packages.PackageSortInput
+	if sort != nil {
+		pkgSort = &packages.PackageSortInput{
+			Field:     packages.PackageSortField(sort.Field.String()),
+			Direction: packages.SortDirection(sort.Direction.String()),
+		}
+	}
+
+	l := int32(20)
+	if limit != nil {
+		l = int32(*limit)
+	}
+	p := int32(1)
+	if page != nil {
+		p = int32(*page)
+	}
+
+	pkgs, total, err := r.PackageSvc.GetPackages(ctx, pkgFilter, pkgSort, l, p)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]*model.Package, len(pkgs))
+	for i, pkg := range pkgs {
+		items[i] = mapPackageToGraphQL(pkg)
+	}
+
+	totalPages := int32((total + int64(l) - 1) / int64(l))
+
+	return &model.PackageListResponse{
+		Items: items,
+		PageInfo: &model.PageInfo{
+			TotalItems:      int32(total),
+			TotalPages:      totalPages,
+			Page:            p,
+			Limit:           l,
+			HasNextPage:     p < totalPages,
+			HasPreviousPage: p > 1,
+		},
+	}, nil
+}
+
+func mapPackageToGraphQL(p *packages.Package) *model.Package {
+	items := make([]*model.PackageItem, len(p.Items))
+	for i, item := range p.Items {
+		items[i] = &model.PackageItem{
+			ID:        item.ID,
+			PackageID: item.PackageID,
+			VariantID: item.VariantID,
+			ImageURL:  item.ImageURL,
+			Name:      item.Name,
+			Price:     item.Price,
+			Quantity:  item.Quantity,
+			CreatedAt: item.CreatedAt,
+			UpdatedAt: item.UpdatedAt,
+		}
+	}
+
+	var userID int32
+	if p.UserID != nil {
+		userID = int32(*p.UserID)
+	}
+
+	return &model.Package{
+		ID:        p.ID,
+		Name:      p.Name,
+		ImageURL:  p.ImageURL,
+		UserID:    &userID,
+		Items:     items,
+		Type:      p.Type,
+		IsActive:  true,
+		CreatedAt: p.CreatedAt,
+		UpdatedAt: p.UpdatedAt,
+	}
 }

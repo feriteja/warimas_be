@@ -21,7 +21,6 @@ type Service interface {
 	Update(ctx context.Context, input UpdateProductInput) (Product, error)
 	CreateVariants(ctx context.Context, input []*NewVariantInput) ([]*Variant, error)
 	UpdateVariants(ctx context.Context, input []*UpdateVariantInput) ([]*Variant, error)
-	GetPackages(ctx context.Context, filter *PackageFilterInput, sort *PackageSortInput, limit, page int32) ([]*Package, error)
 	GetProductByID(ctx context.Context, productID string) (*Product, error)
 }
 
@@ -243,41 +242,6 @@ func (s *service) UpdateVariants(
 	}
 
 	return s.repo.BulkUpdateVariants(ctx, input, sellerID)
-}
-
-func (s *service) GetPackages(
-	ctx context.Context,
-	filter *PackageFilterInput,
-	sort *PackageSortInput,
-	limit, page int32,
-) ([]*Package, error) {
-
-	// ---------- PAGINATION ----------
-	if limit <= 0 {
-		limit = 20
-	}
-	if limit > 100 {
-		limit = 100
-	}
-
-	if page <= 0 {
-		page = 1
-	}
-
-	offset := (page - 1) * limit
-
-	// ---------- AUTH ----------
-	role := utils.GetUserRoleFromContext(ctx)
-	includeDisabled := role == "ADMIN"
-
-	return s.repo.GetPackages(
-		ctx,
-		filter,
-		sort,
-		limit,
-		offset,
-		includeDisabled,
-	)
 }
 
 func (s *service) GetProductByID(ctx context.Context, productID string) (*Product, error) {
