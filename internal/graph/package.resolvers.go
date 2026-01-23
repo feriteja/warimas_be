@@ -64,6 +64,7 @@ func (r *queryResolver) Packages(ctx context.Context, filter *model.PackageFilte
 		pkgFilter = &packages.PackageFilterInput{
 			ID:   filter.ID,
 			Name: filter.Name,
+			Type: filter.Type,
 		}
 		log = log.With(zap.Any("filter", filter))
 	}

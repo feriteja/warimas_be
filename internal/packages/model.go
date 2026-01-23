@@ -10,6 +10,7 @@ const (
 type PackageFilterInput struct {
 	ID   *string
 	Name *string
+	Type *string
 }
 
 type PackageSortField string

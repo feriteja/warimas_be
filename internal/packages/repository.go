@@ -14,7 +14,7 @@ import (
 )
 
 type Repository interface {
-	GetPackages(ctx context.Context, filter *PackageFilterInput, sort *PackageSortInput, limit, page int32, includeDisabled bool) ([]*Package, int64, error)
+	GetPackages(ctx context.Context, filter *PackageFilterInput, sort *PackageSortInput, limit, page int32, includeDisabled bool, viewerID *uint) ([]*Package, int64, error)
 	CreatePackage(ctx context.Context, input CreatePackageInput, userID uint) (*Package, error)
 }
 
@@ -26,12 +26,14 @@ func NewRepository(db *sql.DB) Repository {
 	return &repository{db: db}
 }
 
+// packages type is ['personal','promotion']
 func (r *repository) GetPackages(
 	ctx context.Context,
 	filter *PackageFilterInput,
 	sort *PackageSortInput,
 	limit, page int32,
 	includeDisabled bool,
+	viewerID *uint,
 ) ([]*Package, int64, error) {
 
 	// ---------- PAGINATION ----------
@@ -67,6 +69,15 @@ func (r *repository) GetPackages(
 	// ---------- ENABLE / DISABLE ----------
 	if !includeDisabled {
 		whereClause += " AND p.is_active = TRUE"
+
+		// Visibility: Users can only see non-personal packages OR their own personal packages
+		if viewerID != nil {
+			whereClause += fmt.Sprintf(" AND (p.type != 'personal' OR p.user_id = $%d)", argIndex)
+			args = append(args, *viewerID)
+			argIndex++
+		} else {
+			whereClause += " AND p.type != 'personal'"
+		}
 	}
 
 	// ---------- FILTERING ----------
@@ -80,6 +91,12 @@ func (r *repository) GetPackages(
 		if filter.Name != nil && *filter.Name != "" {
 			whereClause += fmt.Sprintf(" AND p.name ILIKE $%d", argIndex)
 			args = append(args, "%"+*filter.Name+"%")
+			argIndex++
+		}
+
+		if filter.Type != nil && *filter.Type != "" {
+			whereClause += fmt.Sprintf(" AND p.type = $%d", argIndex)
+			args = append(args, *filter.Type)
 			argIndex++
 		}
 	}
@@ -119,12 +136,13 @@ func (r *repository) GetPackages(
 			pi.variant_id,
 			pi.name,
 			pi.image_url,
-			pi.price,
 			pi.quantity,
 			pi.created_at,
-			pi.updated_at
+			pi.updated_at,
+			v.price
 		FROM packages p
 		LEFT JOIN package_items pi ON p.id = pi.package_id
+		LEFT JOIN variants v ON pi.variant_id = v.id
 	` + whereClause + " ORDER BY " + orderBy + fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
 
 	args = append(args, limit, offset)
@@ -175,10 +193,10 @@ func (r *repository) GetPackages(
 			&itemVariantID,
 			&itemName,
 			&itemImageURL,
-			&itemPrice,
 			&itemQuantity,
 			&itemCreatedAt,
 			&itemUpdatedAt,
+			&itemPrice,
 		); err != nil {
 			log.Error("failed to scan package row", zap.Error(err))
 			return nil, 0, err

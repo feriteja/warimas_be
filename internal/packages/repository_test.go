@@ -22,21 +22,23 @@ func TestRepository_GetPackages(t *testing.T) {
 		defer db.Close()
 		repo := NewRepository(db)
 		ctx := context.Background()
+		viewerID := uint(1)
 
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(DISTINCT p.id) FROM packages p WHERE p.deleted_at IS NULL AND p.is_active = TRUE")).
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(DISTINCT p.id) FROM packages p WHERE p.deleted_at IS NULL AND p.is_active = TRUE AND (p.type != 'personal' OR p.user_id = $1)")).
+			WithArgs(viewerID).
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
 		rows := sqlmock.NewRows([]string{
 			"p.id", "p.name", "p.image_url", "p.user_id", "p.type", "p.created_at", "p.updated_at",
-			"pi.id", "pi.variant_id", "pi.name", "pi.image_url", "pi.price", "pi.quantity", "pi.created_at", "pi.updated_at",
+			"pi.id", "pi.variant_id", "pi.name", "pi.image_url", "pi.quantity", "pi.created_at", "pi.updated_at", "pi.price",
 		}).AddRow(
 			"pkg1", "Package 1", "img", 1, "personal", now, now,
-			"item1", "v1", "Item 1", "img", 100.0, 1, now, now,
+			"item1", "v1", "Item 1", "img", 1, now, now, 100.0,
 		)
 		mock.ExpectQuery(`SELECT .* FROM packages p`).
 			WillReturnRows(rows)
 
-		pkgs, total, err := repo.GetPackages(ctx, nil, nil, 10, 1, false)
+		pkgs, total, err := repo.GetPackages(ctx, nil, nil, 10, 1, false, &viewerID)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(1), total)
 		assert.Len(t, pkgs, 1)
@@ -53,22 +55,26 @@ func TestRepository_GetPackages(t *testing.T) {
 		defer db.Close()
 		repo := NewRepository(db)
 		ctx := context.Background()
+		viewerID := uint(1)
 
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(DISTINCT p.id) FROM packages p WHERE p.deleted_at IS NULL AND p.is_active = TRUE")).
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(DISTINCT p.id) FROM packages p WHERE p.deleted_at IS NULL AND p.is_active = TRUE AND (p.type != 'personal' OR p.user_id = $1)")).
+			WithArgs(viewerID).
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
 		rows := sqlmock.NewRows([]string{
 			"p.id", "p.name", "p.image_url", "p.user_id", "p.type", "p.created_at", "p.updated_at",
-			"pi.id", "pi.variant_id", "pi.name", "pi.image_url", "pi.price", "pi.quantity", "pi.created_at", "pi.updated_at",
+			"pi.id", "pi.variant_id", "pi.name", "pi.image_url", "pi.quantity", "pi.created_at", "pi.updated_at",
+			"v.price",
 		}).AddRow(
 			"pkg1", "Package 1", "img", 1, "personal", now, now,
-			sql.NullString{}, sql.NullString{}, sql.NullString{}, sql.NullString{}, sql.NullFloat64{}, sql.NullInt32{}, sql.NullTime{}, sql.NullTime{},
+			sql.NullString{}, sql.NullString{}, sql.NullString{},
+			sql.NullString{}, sql.NullInt32{}, sql.NullTime{}, sql.NullTime{}, sql.NullFloat64{},
 		)
 
 		mock.ExpectQuery(`SELECT .* FROM packages p`).
 			WillReturnRows(rows)
 
-		pkgs, total, err := repo.GetPackages(ctx, nil, nil, 10, 1, false)
+		pkgs, total, err := repo.GetPackages(ctx, nil, nil, 10, 1, false, &viewerID)
 		assert.NoError(t, err)
 		assert.Len(t, pkgs, 1)
 		assert.Len(t, pkgs[0].Items, 0)
@@ -85,11 +91,12 @@ func TestRepository_GetPackages(t *testing.T) {
 		defer db.Close()
 		repo := NewRepository(db)
 		ctx := context.Background()
+		viewerID := uint(1)
 
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(DISTINCT p.id) FROM packages p")).
 			WillReturnError(errors.New("db error"))
 
-		pkgs, total, err := repo.GetPackages(ctx, nil, nil, 10, 1, false)
+		pkgs, total, err := repo.GetPackages(ctx, nil, nil, 10, 1, false, &viewerID)
 		assert.Error(t, err)
 		assert.Nil(t, pkgs)
 		assert.Equal(t, int64(0), total)
@@ -102,6 +109,7 @@ func TestRepository_GetPackages(t *testing.T) {
 		defer db.Close()
 		repo := NewRepository(db)
 		ctx := context.Background()
+		viewerID := uint(1)
 
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(DISTINCT p.id) FROM packages p")).
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
@@ -109,7 +117,7 @@ func TestRepository_GetPackages(t *testing.T) {
 		mock.ExpectQuery(`SELECT .* FROM packages p`).
 			WillReturnError(errors.New("db error"))
 
-		pkgs, total, err := repo.GetPackages(ctx, nil, nil, 10, 1, false)
+		pkgs, total, err := repo.GetPackages(ctx, nil, nil, 10, 1, false, &viewerID)
 		assert.Error(t, err)
 		assert.Nil(t, pkgs)
 		assert.Equal(t, int64(0), total)

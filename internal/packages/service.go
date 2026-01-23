@@ -52,13 +52,19 @@ func (s *service) GetPackages(
 	role := utils.GetUserRoleFromContext(ctx)
 	includeDisabled := role == "ADMIN"
 
+	var viewerID *uint
+	if uid, ok := utils.GetUserIDFromContext(ctx); ok {
+		viewerID = &uid
+	}
+
 	pkgs, total, err := s.repo.GetPackages(
 		ctx,
 		filter,
 		sort,
 		limit,
-		page, // Pass page, not offset (repo handles offset calculation)
+		page,
 		includeDisabled,
+		viewerID,
 	)
 	if err != nil {
 		log.Error("failed to get packages", zap.Error(err))

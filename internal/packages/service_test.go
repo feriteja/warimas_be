@@ -26,8 +26,8 @@ func (m *MockRepository) CreatePackage(ctx context.Context, input CreatePackageI
 	return args.Get(0).(*Package), args.Error(1)
 }
 
-func (m *MockRepository) GetPackages(ctx context.Context, filter *PackageFilterInput, sort *PackageSortInput, limit, page int32, includeDisabled bool) ([]*Package, int64, error) {
-	args := m.Called(ctx, filter, sort, limit, page, includeDisabled)
+func (m *MockRepository) GetPackages(ctx context.Context, filter *PackageFilterInput, sort *PackageSortInput, limit, page int32, includeDisabled bool, viewerID *uint) ([]*Package, int64, error) {
+	args := m.Called(ctx, filter, sort, limit, page, includeDisabled, viewerID)
 	if args.Get(0) == nil {
 		return nil, 0, args.Error(2)
 	}
@@ -46,7 +46,7 @@ func TestService_GetPackages(t *testing.T) {
 
 		// Service defaults limit=20, page=1, includeDisabled=false (for USER)
 		expectedPkgs := []*Package{{ID: "1", Name: "test"}}
-		mockRepo.On("GetPackages", ctx, (*PackageFilterInput)(nil), (*PackageSortInput)(nil), limit, page, false).
+		mockRepo.On("GetPackages", ctx, (*PackageFilterInput)(nil), (*PackageSortInput)(nil), limit, page, false, mock.MatchedBy(func(id *uint) bool { return id != nil && *id == 1 })).
 			Return(expectedPkgs, int64(1), nil)
 
 		_, _, err := svc.GetPackages(ctx, nil, nil, 0, 0)
@@ -60,7 +60,7 @@ func TestService_GetPackages(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewService(mockRepo)
 		adminCtx := mockContextWithRole("ADMIN")
-		mockRepo.On("GetPackages", adminCtx, (*PackageFilterInput)(nil), (*PackageSortInput)(nil), limit, page, true).
+		mockRepo.On("GetPackages", adminCtx, (*PackageFilterInput)(nil), (*PackageSortInput)(nil), limit, page, true, mock.MatchedBy(func(id *uint) bool { return id != nil && *id == 1 })).
 			Return([]*Package{}, int64(0), nil)
 
 		_, _, err := svc.GetPackages(adminCtx, nil, nil, 0, 0)
@@ -71,7 +71,7 @@ func TestService_GetPackages(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewService(mockRepo)
 
-		mockRepo.On("GetPackages", ctx, mock.Anything, mock.Anything, int32(100), int32(2), false).
+		mockRepo.On("GetPackages", ctx, mock.Anything, mock.Anything, int32(100), int32(2), false, mock.Anything).
 			Return([]*Package{}, int64(0), nil)
 
 		_, _, err := svc.GetPackages(ctx, nil, nil, 100, 2)
