@@ -62,7 +62,6 @@ extend type Query {
     sort: PackageSortInput
     limit: Int = 20
     page: Int = 1
-    includeDisabled: Boolean = false
   ): PackageListResponse!
 }
 

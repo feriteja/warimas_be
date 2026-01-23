@@ -399,7 +399,7 @@ type ComplexityRoot struct {
 		OrderDetail             func(childComplexity int, orderID string) int
 		OrderDetailByExternalID func(childComplexity int, externalID string) int
 		OrderList               func(childComplexity int, filter *model.OrderFilterInput, sort *model.OrderSortInput, pagination *model.PaginationInput) int
-		Packages                func(childComplexity int, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32, includeDisabled *bool) int
+		Packages                func(childComplexity int, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) int
 		PaymentOrderInfo        func(childComplexity int, externalID string) int
 		ProductDetail           func(childComplexity int, productID string) int
 		ProductList             func(childComplexity int, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) int
@@ -2331,7 +2331,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.Packages(childComplexity, args["filter"].(*model.PackageFilterInput), args["sort"].(*model.PackageSortInput), args["limit"].(*int32), args["page"].(*int32), args["includeDisabled"].(*bool)), true
+		return e.complexity.Query.Packages(childComplexity, args["filter"].(*model.PackageFilterInput), args["sort"].(*model.PackageSortInput), args["limit"].(*int32), args["page"].(*int32)), true
 
 	case "Query.paymentOrderInfo":
 		if e.complexity.Query.PaymentOrderInfo == nil {

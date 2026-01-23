@@ -56,7 +56,7 @@ type QueryResolver interface {
 	OrderDetailByExternalID(ctx context.Context, externalID string) (*model.Order, error)
 	CheckoutSession(ctx context.Context, externalID string) (*model.CheckoutSession, error)
 	PaymentOrderInfo(ctx context.Context, externalID string) (*model.PaymentOrderInfoResponse, error)
-	Packages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32, includeDisabled *bool) (*model.PackageListResponse, error)
+	Packages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) (*model.PackageListResponse, error)
 	ProductList(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) (*model.ProductPage, error)
 	ProductsHome(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) ([]*model.ProductByCategory, error)
 	ProductDetail(ctx context.Context, productID string) (*model.Product, error)
@@ -493,11 +493,6 @@ func (ec *executionContext) field_Query_packages_args(ctx context.Context, rawAr
 		return nil, err
 	}
 	args["page"] = arg3
-	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "includeDisabled", ec.unmarshalOBoolean2ᚖbool)
-	if err != nil {
-		return nil, err
-	}
-	args["includeDisabled"] = arg4
 	return args, nil
 }
 
@@ -2800,7 +2795,7 @@ func (ec *executionContext) _Query_packages(ctx context.Context, field graphql.C
 		ec.fieldContext_Query_packages,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().Packages(ctx, fc.Args["filter"].(*model.PackageFilterInput), fc.Args["sort"].(*model.PackageSortInput), fc.Args["limit"].(*int32), fc.Args["page"].(*int32), fc.Args["includeDisabled"].(*bool))
+			return ec.resolvers.Query().Packages(ctx, fc.Args["filter"].(*model.PackageFilterInput), fc.Args["sort"].(*model.PackageSortInput), fc.Args["limit"].(*int32), fc.Args["page"].(*int32))
 		},
 		nil,
 		ec.marshalNPackageListResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageListResponse,

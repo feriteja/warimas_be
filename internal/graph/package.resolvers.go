@@ -53,7 +53,7 @@ func (r *mutationResolver) AddPackage(ctx context.Context, input model.AddPackag
 }
 
 // Packages is the resolver for the packages field.
-func (r *queryResolver) Packages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32, includeDisabled *bool) (*model.PackageListResponse, error) {
+func (r *queryResolver) Packages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) (*model.PackageListResponse, error) {
 	log := logger.FromCtx(ctx).With(
 		zap.String("layer", "resolver"),
 		zap.String("method", "Packages"),
