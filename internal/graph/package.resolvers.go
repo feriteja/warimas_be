@@ -7,11 +7,24 @@ package graph
 import (
 	"context"
 	"warimas-be/internal/graph/model"
+	"warimas-be/internal/logger"
 	"warimas-be/internal/packages"
+
+	"go.uber.org/zap"
 )
 
 // AddPackage is the resolver for the addPackage field.
 func (r *mutationResolver) AddPackage(ctx context.Context, input model.AddPackageInput) (*model.Package, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "AddPackage"),
+		zap.String("name", input.Name),
+	)
+	if input.Type != nil {
+		log = log.With(zap.String("type", *input.Type))
+	}
+	log.Info("resolver started")
+
 	pkgType := "personal"
 	if input.Type != nil {
 		pkgType = *input.Type
@@ -31,20 +44,28 @@ func (r *mutationResolver) AddPackage(ctx context.Context, input model.AddPackag
 		Items: items,
 	})
 	if err != nil {
+		log.Error("failed to add package", zap.Error(err))
 		return nil, err
 	}
 
-	return mapPackageToGraphQL(pkg), nil
+	log.Info("resolver success", zap.String("package_id", pkg.ID))
+	return packages.MapPackageToGraphQL(pkg), nil
 }
 
 // Packages is the resolver for the packages field.
 func (r *queryResolver) Packages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32, includeDisabled *bool) (*model.PackageListResponse, error) {
+	log := logger.FromCtx(ctx).With(
+		zap.String("layer", "resolver"),
+		zap.String("method", "Packages"),
+	)
+
 	var pkgFilter *packages.PackageFilterInput
 	if filter != nil {
 		pkgFilter = &packages.PackageFilterInput{
 			ID:   filter.ID,
 			Name: filter.Name,
 		}
+		log = log.With(zap.Any("filter", filter))
 	}
 
 	var pkgSort *packages.PackageSortInput
@@ -53,6 +74,7 @@ func (r *queryResolver) Packages(ctx context.Context, filter *model.PackageFilte
 			Field:     packages.PackageSortField(sort.Field.String()),
 			Direction: packages.SortDirection(sort.Direction.String()),
 		}
+		log = log.With(zap.Any("sort", sort))
 	}
 
 	l := int32(20)
@@ -64,17 +86,22 @@ func (r *queryResolver) Packages(ctx context.Context, filter *model.PackageFilte
 		p = int32(*page)
 	}
 
+	log.Info("resolver started", zap.Int32("limit", l), zap.Int32("page", p))
+
 	pkgs, total, err := r.PackageSvc.GetPackages(ctx, pkgFilter, pkgSort, l, p)
 	if err != nil {
+		log.Error("failed to get packages", zap.Error(err))
 		return nil, err
 	}
 
 	items := make([]*model.Package, len(pkgs))
 	for i, pkg := range pkgs {
-		items[i] = mapPackageToGraphQL(pkg)
+		items[i] = packages.MapPackageToGraphQL(pkg)
 	}
 
 	totalPages := int32((total + int64(l) - 1) / int64(l))
+
+	log.Info("resolver success", zap.Int("count", len(items)), zap.Int64("total", total))
 
 	return &model.PackageListResponse{
 		Items: items,
@@ -87,38 +114,4 @@ func (r *queryResolver) Packages(ctx context.Context, filter *model.PackageFilte
 			HasPreviousPage: p > 1,
 		},
 	}, nil
-}
-
-func mapPackageToGraphQL(p *packages.Package) *model.Package {
-	items := make([]*model.PackageItem, len(p.Items))
-	for i, item := range p.Items {
-		items[i] = &model.PackageItem{
-			ID:        item.ID,
-			PackageID: item.PackageID,
-			VariantID: item.VariantID,
-			ImageURL:  item.ImageURL,
-			Name:      item.Name,
-			Price:     item.Price,
-			Quantity:  item.Quantity,
-			CreatedAt: item.CreatedAt,
-			UpdatedAt: item.UpdatedAt,
-		}
-	}
-
-	var userID int32
-	if p.UserID != nil {
-		userID = int32(*p.UserID)
-	}
-
-	return &model.Package{
-		ID:        p.ID,
-		Name:      p.Name,
-		ImageURL:  p.ImageURL,
-		UserID:    &userID,
-		Items:     items,
-		Type:      p.Type,
-		IsActive:  true,
-		CreatedAt: p.CreatedAt,
-		UpdatedAt: p.UpdatedAt,
-	}
 }

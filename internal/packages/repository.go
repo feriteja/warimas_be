@@ -3,7 +3,9 @@ package packages
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 	"warimas-be/internal/logger"
 
@@ -265,7 +267,10 @@ func (r *repository) CreatePackage(ctx context.Context, input CreatePackageInput
 	`, pkgID, input.Name, input.Type, userID, true, now, now)
 	if err != nil {
 		log.Error("failed to insert package", zap.Error(err))
-		return nil, err
+		if strings.Contains(err.Error(), "chk_packages_type") {
+			return nil, errors.New("invalid package type")
+		}
+		return nil, errors.New("failed to create package")
 	}
 
 	// Insert Items
@@ -275,16 +280,16 @@ func (r *repository) CreatePackage(ctx context.Context, input CreatePackageInput
 
 		var vName, vImage string
 		var vPrice float64
-		err := tx.QueryRowContext(ctx, "SELECT name, image_url, price FROM variants WHERE id = $1", item.VariantID).Scan(&vName, &vImage, &vPrice)
+		err := tx.QueryRowContext(ctx, "SELECT name, imageurl, price FROM variants WHERE id = $1", item.VariantID).Scan(&vName, &vImage, &vPrice)
 		if err != nil {
 			log.Error("failed to get variant for package item", zap.String("variant_id", item.VariantID), zap.Error(err))
 			return nil, fmt.Errorf("variant not found: %v", err)
 		}
 
 		_, err = tx.ExecContext(ctx, `
-			INSERT INTO package_items (id, package_id, variant_id, name, image_url, price, quantity, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		`, itemID, pkgID, item.VariantID, vName, vImage, vPrice, item.Quantity, now, now)
+			INSERT INTO package_items (id, package_id, variant_id, name, image_url,  quantity, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		`, itemID, pkgID, item.VariantID, vName, vImage, item.Quantity, now, now)
 		if err != nil {
 			log.Error("failed to insert package item", zap.Error(err))
 			return nil, err

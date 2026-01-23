@@ -16,6 +16,7 @@ import (
 	"warimas-be/internal/logger"
 	"warimas-be/internal/middleware"
 	"warimas-be/internal/order"
+	"warimas-be/internal/packages"
 	"warimas-be/internal/payment"
 	"warimas-be/internal/payment/webhook"
 	"warimas-be/internal/product"
@@ -72,6 +73,7 @@ func newServer(cfg *config.Config, database *sql.DB) *http.ServeMux {
 	paymentRepo := payment.NewRepository(database)
 	categoryRepo := category.NewRepository(database)
 	addressRepo := address.NewRepository(database)
+	packagesRepo := packages.NewRepository(database)
 
 	// -------------------------------------------------------------------------
 	// Init Services
@@ -81,6 +83,7 @@ func newServer(cfg *config.Config, database *sql.DB) *http.ServeMux {
 	cartSvc := cart.NewService(cartRepo, productRepo)
 	categorySvc := category.NewService(categoryRepo)
 	addressSvc := address.NewService(addressRepo)
+	packagesSvc := packages.NewService(packagesRepo)
 
 	paymentGateway := payment.NewXenditGateway(cfg.XenditSecretKey)
 	orderSvc := order.NewService(orderRepo, paymentRepo, paymentGateway, addressRepo, userRepo)
@@ -97,6 +100,7 @@ func newServer(cfg *config.Config, database *sql.DB) *http.ServeMux {
 		OrderSvc:    orderSvc,
 		CategorySvc: categorySvc,
 		AddressSvc:  addressSvc,
+		PackageSvc:  packagesSvc,
 	}
 
 	srv := handler.NewDefaultServer(graph.NewSchema(resolver))

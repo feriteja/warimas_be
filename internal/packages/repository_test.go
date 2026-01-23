@@ -14,16 +14,15 @@ import (
 )
 
 func TestRepository_GetPackages(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	require.NoError(t, err)
-	defer db.Close()
-
-	repo := NewRepository(db)
-	ctx := context.Background()
-
 	now := time.Now()
 
 	t.Run("Success", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		require.NoError(t, err)
+		defer db.Close()
+		repo := NewRepository(db)
+		ctx := context.Background()
+
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(DISTINCT p.id) FROM packages p WHERE p.deleted_at IS NULL AND p.is_active = TRUE")).
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
@@ -49,6 +48,12 @@ func TestRepository_GetPackages(t *testing.T) {
 	})
 
 	t.Run("NoItems", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		require.NoError(t, err)
+		defer db.Close()
+		repo := NewRepository(db)
+		ctx := context.Background()
+
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(DISTINCT p.id) FROM packages p WHERE p.deleted_at IS NULL AND p.is_active = TRUE")).
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
@@ -75,6 +80,12 @@ func TestRepository_GetPackages(t *testing.T) {
 	})
 
 	t.Run("DBErrorOnCount", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		require.NoError(t, err)
+		defer db.Close()
+		repo := NewRepository(db)
+		ctx := context.Background()
+
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(DISTINCT p.id) FROM packages p")).
 			WillReturnError(errors.New("db error"))
 
@@ -86,6 +97,12 @@ func TestRepository_GetPackages(t *testing.T) {
 	})
 
 	t.Run("DBErrorOnQuery", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		require.NoError(t, err)
+		defer db.Close()
+		repo := NewRepository(db)
+		ctx := context.Background()
+
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(DISTINCT p.id) FROM packages p")).
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
@@ -101,12 +118,6 @@ func TestRepository_GetPackages(t *testing.T) {
 }
 
 func TestRepository_CreatePackage(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	require.NoError(t, err)
-	defer db.Close()
-
-	repo := NewRepository(db)
-	ctx := context.Background()
 	userID := uint(1)
 	input := CreatePackageInput{
 		Name: "Test Package",
@@ -117,17 +128,23 @@ func TestRepository_CreatePackage(t *testing.T) {
 	}
 
 	t.Run("Success", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		require.NoError(t, err)
+		defer db.Close()
+		repo := NewRepository(db)
+		ctx := context.Background()
+
 		mock.ExpectBegin()
 		mock.ExpectExec("INSERT INTO packages").
 			WithArgs(sqlmock.AnyArg(), input.Name, input.Type, userID, true, sqlmock.AnyArg(), sqlmock.AnyArg()).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
-		mock.ExpectQuery("SELECT name, image_url, price FROM variants").
+		mock.ExpectQuery("SELECT name, imageurl, price FROM variants").
 			WithArgs("v1").
-			WillReturnRows(sqlmock.NewRows([]string{"name", "image_url", "price"}).AddRow("Variant 1", "img.jpg", 150.0))
+			WillReturnRows(sqlmock.NewRows([]string{"name", "imageurl", "price"}).AddRow("Variant 1", "img.jpg", 150.0))
 
 		mock.ExpectExec("INSERT INTO package_items").
-			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), "v1", "Variant 1", "img.jpg", 150.0, int32(2), sqlmock.AnyArg(), sqlmock.AnyArg()).
+			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), "v1", "Variant 1", "img.jpg", int32(2), sqlmock.AnyArg(), sqlmock.AnyArg()).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
 		mock.ExpectCommit()
@@ -143,33 +160,45 @@ func TestRepository_CreatePackage(t *testing.T) {
 	})
 
 	t.Run("VariantNotFound", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		require.NoError(t, err)
+		defer db.Close()
+		repo := NewRepository(db)
+		ctx := context.Background()
+
 		mock.ExpectBegin()
 		mock.ExpectExec("INSERT INTO packages").
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
-		mock.ExpectQuery("SELECT name, image_url, price FROM variants").
+		mock.ExpectQuery("SELECT name, imageurl, price FROM variants").
 			WithArgs("v1").
 			WillReturnError(sql.ErrNoRows)
 
 		mock.ExpectRollback()
 
-		_, err := repo.CreatePackage(ctx, input, userID)
+		_, err = repo.CreatePackage(ctx, input, userID)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "variant not found")
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
 	t.Run("CommitError", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		require.NoError(t, err)
+		defer db.Close()
+		repo := NewRepository(db)
+		ctx := context.Background()
+
 		mock.ExpectBegin()
 		mock.ExpectExec("INSERT INTO packages").
 			WillReturnResult(sqlmock.NewResult(1, 1))
-		mock.ExpectQuery("SELECT name, image_url, price FROM variants").
-			WillReturnRows(sqlmock.NewRows([]string{"name", "image_url", "price"}).AddRow("Variant 1", "img.jpg", 150.0))
+		mock.ExpectQuery("SELECT name, imageurl, price FROM variants").
+			WillReturnRows(sqlmock.NewRows([]string{"name", "imageurl", "price"}).AddRow("Variant 1", "img.jpg", 150.0))
 		mock.ExpectExec("INSERT INTO package_items").
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit().WillReturnError(errors.New("commit failed"))
 
-		_, err := repo.CreatePackage(ctx, input, userID)
+		_, err = repo.CreatePackage(ctx, input, userID)
 		assert.Error(t, err)
 		assert.Equal(t, "commit failed", err.Error())
 		assert.NoError(t, mock.ExpectationsWereMet())
