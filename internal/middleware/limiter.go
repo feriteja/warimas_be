@@ -126,7 +126,7 @@ func resolveRateTier(r *http.Request) (rate.Limit, int, string) {
 
 	// 2. Auth / Payment (Strict)
 	// Apply to payment webhooks OR if the client explicitly signals an auth action
-	if r.URL.Path == "/webhook/payment" || r.Header.Get("X-Action") == "auth" {
+	if r.URL.Path == "/webhook/payment" || r.Header.Get("X-Action") == "strict" {
 		return limitStrict, burstStrict, "strict"
 	}
 
