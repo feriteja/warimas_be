@@ -121,12 +121,15 @@ func setupRouter(srv *handler.Server, paymentWebhookHandler http.HandlerFunc) *h
 	mux.Handle("/query",
 		middleware.CORS(
 			middleware.LoggingMiddleware(
-				middleware.AuthMiddleware(graphqlHandler),
+				middleware.AuthMiddleware(
+					middleware.RateLimitMiddleware(graphqlHandler),
+				),
 			),
 		),
 	)
 
-	mux.HandleFunc("/webhook/payment", paymentWebhookHandler)
+	// Apply RateLimitMiddleware to webhook (will use "strict" tier based on path)
+	mux.Handle("/webhook/payment", middleware.RateLimitMiddleware(paymentWebhookHandler))
 
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
