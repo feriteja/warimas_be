@@ -158,6 +158,7 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		AddCategory                func(childComplexity int, name string) int
+		AddPackage                 func(childComplexity int, input model.AddPackageInput) int
 		AddSubcategory             func(childComplexity int, categoryID string, name string) int
 		AddToCart                  func(childComplexity int, input model.AddToCartInput) int
 		ConfirmCheckoutSession     func(childComplexity int, input model.ConfirmCheckoutSessionInput) int
@@ -233,11 +234,15 @@ type ComplexityRoot struct {
 	}
 
 	Package struct {
-		ID       func(childComplexity int) int
-		ImageURL func(childComplexity int) int
-		Items    func(childComplexity int) int
-		Name     func(childComplexity int) int
-		UserID   func(childComplexity int) int
+		CreatedAt func(childComplexity int) int
+		ID        func(childComplexity int) int
+		ImageURL  func(childComplexity int) int
+		IsActive  func(childComplexity int) int
+		Items     func(childComplexity int) int
+		Name      func(childComplexity int) int
+		Type      func(childComplexity int) int
+		UpdatedAt func(childComplexity int) int
+		UserID    func(childComplexity int) int
 	}
 
 	PackageItem struct {
@@ -252,10 +257,9 @@ type ComplexityRoot struct {
 		VariantID func(childComplexity int) int
 	}
 
-	PackageResponse struct {
-		Data    func(childComplexity int) int
-		Message func(childComplexity int) int
-		Success func(childComplexity int) int
+	PackageListResponse struct {
+		Items    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
 	}
 
 	PageInfo struct {
@@ -395,7 +399,7 @@ type ComplexityRoot struct {
 		OrderDetail             func(childComplexity int, orderID string) int
 		OrderDetailByExternalID func(childComplexity int, externalID string) int
 		OrderList               func(childComplexity int, filter *model.OrderFilterInput, sort *model.OrderSortInput, pagination *model.PaginationInput) int
-		PackageRecomamendation  func(childComplexity int, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) int
+		Packages                func(childComplexity int, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) int
 		PaymentOrderInfo        func(childComplexity int, externalID string) int
 		ProductDetail           func(childComplexity int, productID string) int
 		ProductList             func(childComplexity int, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) int
@@ -979,6 +983,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.AddCategory(childComplexity, args["name"].(string)), true
 
+	case "Mutation.addPackage":
+		if e.complexity.Mutation.AddPackage == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_addPackage_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AddPackage(childComplexity, args["input"].(model.AddPackageInput)), true
+
 	case "Mutation.addSubcategory":
 		if e.complexity.Mutation.AddSubcategory == nil {
 			break
@@ -1451,6 +1467,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.OrderTimestamps.UpdatedAt(childComplexity), true
 
+	case "Package.createdAt":
+		if e.complexity.Package.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.Package.CreatedAt(childComplexity), true
+
 	case "Package.id":
 		if e.complexity.Package.ID == nil {
 			break
@@ -1465,6 +1488,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Package.ImageURL(childComplexity), true
 
+	case "Package.isActive":
+		if e.complexity.Package.IsActive == nil {
+			break
+		}
+
+		return e.complexity.Package.IsActive(childComplexity), true
+
 	case "Package.items":
 		if e.complexity.Package.Items == nil {
 			break
@@ -1478,6 +1508,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Package.Name(childComplexity), true
+
+	case "Package.type":
+		if e.complexity.Package.Type == nil {
+			break
+		}
+
+		return e.complexity.Package.Type(childComplexity), true
+
+	case "Package.updatedAt":
+		if e.complexity.Package.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.Package.UpdatedAt(childComplexity), true
 
 	case "Package.userId":
 		if e.complexity.Package.UserID == nil {
@@ -1549,26 +1593,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.PackageItem.VariantID(childComplexity), true
 
-	case "PackageResponse.data":
-		if e.complexity.PackageResponse.Data == nil {
+	case "PackageListResponse.items":
+		if e.complexity.PackageListResponse.Items == nil {
 			break
 		}
 
-		return e.complexity.PackageResponse.Data(childComplexity), true
+		return e.complexity.PackageListResponse.Items(childComplexity), true
 
-	case "PackageResponse.message":
-		if e.complexity.PackageResponse.Message == nil {
+	case "PackageListResponse.pageInfo":
+		if e.complexity.PackageListResponse.PageInfo == nil {
 			break
 		}
 
-		return e.complexity.PackageResponse.Message(childComplexity), true
-
-	case "PackageResponse.success":
-		if e.complexity.PackageResponse.Success == nil {
-			break
-		}
-
-		return e.complexity.PackageResponse.Success(childComplexity), true
+		return e.complexity.PackageListResponse.PageInfo(childComplexity), true
 
 	case "PageInfo.hasNextPage":
 		if e.complexity.PageInfo.HasNextPage == nil {
@@ -2284,17 +2321,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.OrderList(childComplexity, args["filter"].(*model.OrderFilterInput), args["sort"].(*model.OrderSortInput), args["pagination"].(*model.PaginationInput)), true
 
-	case "Query.packageRecomamendation":
-		if e.complexity.Query.PackageRecomamendation == nil {
+	case "Query.packages":
+		if e.complexity.Query.Packages == nil {
 			break
 		}
 
-		args, err := ec.field_Query_packageRecomamendation_args(ctx, rawArgs)
+		args, err := ec.field_Query_packages_args(ctx, rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Query.PackageRecomamendation(childComplexity, args["filter"].(*model.PackageFilterInput), args["sort"].(*model.PackageSortInput), args["limit"].(*int32), args["page"].(*int32)), true
+		return e.complexity.Query.Packages(childComplexity, args["filter"].(*model.PackageFilterInput), args["sort"].(*model.PackageSortInput), args["limit"].(*int32), args["page"].(*int32)), true
 
 	case "Query.paymentOrderInfo":
 		if e.complexity.Query.PaymentOrderInfo == nil {
@@ -2637,6 +2674,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	opCtx := graphql.GetOperationContext(ctx)
 	ec := executionContext{opCtx, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputAddPackageInput,
+		ec.unmarshalInputAddPackageItemInput,
 		ec.unmarshalInputAddToCartInput,
 		ec.unmarshalInputAddressInput,
 		ec.unmarshalInputCartFilterInput,

@@ -1,9 +1,47 @@
+enum PackageSortField {
+  NAME
+  CREATED_AT
+}
+
+input PackageFilterInput {
+  id: ID
+  name: String
+  type: String
+}
+
+input PackageSortInput {
+  field: PackageSortField!
+  direction: SortDirection! = ASC
+}
+
+input AddPackageInput {
+  name: String!
+  items: [AddPackageItemInput!]! # Type is optional on creation, will default to 'personal' in DB
+  type: String # The database defaults this to 'personal' if not provided
+}
+
+input AddPackageItemInput {
+  variantId: ID!
+  quantity: Int!
+}
+
+# The main Package entity, now with more details.
 type Package {
   id: ID!
   name: String!
   imageUrl: String
-  userId: String
+  userId: Int
   items: [PackageItem!]!
+  type: String!
+  isActive: Boolean!
+  createdAt: String!
+  updatedAt: String!
+}
+
+# A paginated list of packages, which is more flexible than a simple array.
+type PackageListResponse {
+  items: [Package!]!
+  pageInfo: PageInfo!
 }
 
 type PackageItem {
@@ -18,17 +56,15 @@ type PackageItem {
   updatedAt: String!
 }
 
-type PackageResponse {
-  success: Boolean!
-  message: String
-  data: [Package]
-}
-
 extend type Query {
-  packageRecomamendation(
+  packages(
     filter: PackageFilterInput
     sort: PackageSortInput
     limit: Int = 20
-    page: Int = 0
-  ): PackageResponse!
+    page: Int = 1
+  ): PackageListResponse!
+}
+
+extend type Mutation {
+  addPackage(input: AddPackageInput!): Package!
 }

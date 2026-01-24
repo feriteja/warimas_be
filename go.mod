@@ -11,6 +11,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/vektah/gqlparser/v2 v2.5.30
 	golang.org/x/crypto v0.43.0
+	golang.org/x/time v0.14.0
 )
 
 require (

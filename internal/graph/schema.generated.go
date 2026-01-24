@@ -32,6 +32,7 @@ type MutationResolver interface {
 	UpdateSessionAddress(ctx context.Context, input model.UpdateSessionAddressInput) (*model.UpdateSessionAddressResponse, error)
 	UpdateSessionPaymentMethod(ctx context.Context, input model.UpdateSessionPaymentMethodInput) (*model.UpdateSessionPaymentMethodResponse, error)
 	ConfirmCheckoutSession(ctx context.Context, input model.ConfirmCheckoutSessionInput) (*model.ConfirmCheckoutSessionResponse, error)
+	AddPackage(ctx context.Context, input model.AddPackageInput) (*model.Package, error)
 	CreateProduct(ctx context.Context, input model.NewProduct) (*model.Product, error)
 	UpdateProduct(ctx context.Context, input model.UpdateProduct) (*model.Product, error)
 	Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error)
@@ -55,7 +56,7 @@ type QueryResolver interface {
 	OrderDetailByExternalID(ctx context.Context, externalID string) (*model.Order, error)
 	CheckoutSession(ctx context.Context, externalID string) (*model.CheckoutSession, error)
 	PaymentOrderInfo(ctx context.Context, externalID string) (*model.PaymentOrderInfoResponse, error)
-	PackageRecomamendation(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) (*model.PackageResponse, error)
+	Packages(ctx context.Context, filter *model.PackageFilterInput, sort *model.PackageSortInput, limit *int32, page *int32) (*model.PackageListResponse, error)
 	ProductList(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) (*model.ProductPage, error)
 	ProductsHome(ctx context.Context, filter *model.ProductFilterInput, sort *model.ProductSortInput, page *int32, limit *int32) ([]*model.ProductByCategory, error)
 	ProductDetail(ctx context.Context, productID string) (*model.Product, error)
@@ -74,6 +75,17 @@ func (ec *executionContext) field_Mutation_addCategory_args(ctx context.Context,
 		return nil, err
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_addPackage_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNAddPackageInput2warimasᚑbeᚋinternalᚋgraphᚋmodelᚐAddPackageInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -458,7 +470,7 @@ func (ec *executionContext) field_Query_orderList_args(ctx context.Context, rawA
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_packageRecomamendation_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+func (ec *executionContext) field_Query_packages_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "filter", ec.unmarshalOPackageFilterInput2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageFilterInput)
@@ -1425,6 +1437,67 @@ func (ec *executionContext) fieldContext_Mutation_confirmCheckoutSession(ctx con
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_confirmCheckoutSession_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_addPackage(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_addPackage,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().AddPackage(ctx, fc.Args["input"].(model.AddPackageInput))
+		},
+		nil,
+		ec.marshalNPackage2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackage,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_addPackage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Package_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Package_name(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_Package_imageUrl(ctx, field)
+			case "userId":
+				return ec.fieldContext_Package_userId(ctx, field)
+			case "items":
+				return ec.fieldContext_Package_items(ctx, field)
+			case "type":
+				return ec.fieldContext_Package_type(ctx, field)
+			case "isActive":
+				return ec.fieldContext_Package_isActive(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Package_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Package_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Package", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_addPackage_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -2714,24 +2787,24 @@ func (ec *executionContext) fieldContext_Query_paymentOrderInfo(ctx context.Cont
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_packageRecomamendation(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Query_packages(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Query_packageRecomamendation,
+		ec.fieldContext_Query_packages,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().PackageRecomamendation(ctx, fc.Args["filter"].(*model.PackageFilterInput), fc.Args["sort"].(*model.PackageSortInput), fc.Args["limit"].(*int32), fc.Args["page"].(*int32))
+			return ec.resolvers.Query().Packages(ctx, fc.Args["filter"].(*model.PackageFilterInput), fc.Args["sort"].(*model.PackageSortInput), fc.Args["limit"].(*int32), fc.Args["page"].(*int32))
 		},
 		nil,
-		ec.marshalNPackageResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageResponse,
+		ec.marshalNPackageListResponse2ᚖwarimasᚑbeᚋinternalᚋgraphᚋmodelᚐPackageListResponse,
 		true,
 		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_Query_packageRecomamendation(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_packages(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -2739,14 +2812,12 @@ func (ec *executionContext) fieldContext_Query_packageRecomamendation(ctx contex
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "success":
-				return ec.fieldContext_PackageResponse_success(ctx, field)
-			case "message":
-				return ec.fieldContext_PackageResponse_message(ctx, field)
-			case "data":
-				return ec.fieldContext_PackageResponse_data(ctx, field)
+			case "items":
+				return ec.fieldContext_PackageListResponse_items(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_PackageListResponse_pageInfo(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type PackageResponse", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type PackageListResponse", field.Name)
 		},
 	}
 	defer func() {
@@ -2756,7 +2827,7 @@ func (ec *executionContext) fieldContext_Query_packageRecomamendation(ctx contex
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_packageRecomamendation_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Query_packages_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -3231,6 +3302,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "addPackage":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addPackage(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "createProduct":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createProduct(ctx, field)
@@ -3576,7 +3654,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "packageRecomamendation":
+		case "packages":
 			field := field
 
 			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
@@ -3585,7 +3663,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_packageRecomamendation(ctx, field)
+				res = ec._Query_packages(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}

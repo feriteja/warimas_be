@@ -6,6 +6,7 @@ import (
 	"warimas-be/internal/cart"
 	"warimas-be/internal/category"
 	"warimas-be/internal/order"
+	"warimas-be/internal/packages"
 	"warimas-be/internal/product"
 	"warimas-be/internal/user"
 
@@ -20,6 +21,7 @@ type Resolver struct {
 	OrderSvc    order.Service
 	CategorySvc category.Service
 	AddressSvc  address.Service
+	PackageSvc  packages.Service
 }
 
 func NewSchema(r *Resolver) graphql.ExecutableSchema {

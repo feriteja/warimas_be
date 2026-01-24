@@ -69,9 +69,6 @@ func (m *MockProductService) UpdateVariants(ctx context.Context, input []*produc
 	}
 	return args.Get(0).([]*product.Variant), args.Error(1)
 }
-func (m *MockProductService) GetPackages(ctx context.Context, filter *product.PackageFilterInput, sort *product.PackageSortInput, limit, page int32) ([]*product.Package, error) {
-	return nil, nil
-}
 
 // --- Tests ---
 
